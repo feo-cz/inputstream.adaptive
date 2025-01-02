@@ -75,8 +75,8 @@ double UTILS::XML::ParseDuration(std::string_view durationStr)
   if (durationStr.empty())
     return 0;
 
-  std::cmatch matches;
-  std::regex_match(durationStr.data(), matches, pattern);
+  std::match_results<std::string_view::const_iterator> matches;
+  std::regex_match(durationStr.cbegin(), durationStr.cend(), matches, pattern);
 
   if (matches.size() == 0)
   {
