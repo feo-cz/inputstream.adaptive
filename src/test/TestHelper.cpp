@@ -174,7 +174,7 @@ bool DASHTestTree::DownloadManifestUpd(std::string_view url,
                                        const std::vector<std::string>& respHeaders,
                                        UTILS::CURL::HTTPResponse& resp)
 {
-  m_manifestUpdUrl = url.data();
+  m_manifestUpdUrl = url;
 
   if (testHelper::DownloadFile(url, reqHeaders, respHeaders, resp))
   {
