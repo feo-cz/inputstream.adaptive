@@ -45,14 +45,14 @@ const pugi::xml_node TraverseTags(const pugi::xml_node node, const std::string& 
 }
 } // unnamed namespace
 
-double UTILS::XML::ParseDate(std::string_view timeStr,
+double UTILS::XML::ParseDate(const char* timeStr,
                              double fallback /* = std::numeric_limits<double>::max() */)
 {
   int year, mon, day, hour, minu;
   double sec;
 
   // This code dont take in account of timezone
-  if (std::sscanf(timeStr.data(), "%d-%d-%dT%d:%d:%lf", &year, &mon, &day, &hour, &minu, &sec) == 6)
+  if (std::sscanf(timeStr, "%d-%d-%dT%d:%d:%lf", &year, &mon, &day, &hour, &minu, &sec) == 6)
   {
     tm tmd{0};
     tmd.tm_year = year - 1900;
@@ -96,10 +96,10 @@ double UTILS::XML::ParseDuration(std::string_view durationStr)
          hours * (60 * 60) + minutes * 60 + seconds;
 }
 
-size_t UTILS::XML::CountChilds(pugi::xml_node node, std::string_view childTagName /* = "" */)
+size_t UTILS::XML::CountChilds(pugi::xml_node node, const char* childTagName /* = "" */)
 {
   size_t count{0};
-  for (xml_node nodeChild : node.children(childTagName.data()))
+  for (xml_node nodeChild : node.children(childTagName))
   {
     count++;
   }
@@ -127,36 +127,32 @@ xml_attribute UTILS::XML::FirstAttributeNoPrefix(pugi::xml_node node,
 }
 
 std::string_view UTILS::XML::GetAttrib(pugi::xml_node& node,
-                                       std::string_view name,
-                                       std::string_view defaultValue /* = "" */)
+                                       const char* name,
+                                       const char* defaultValue /* = "" */)
 {
-  return node.attribute(name.data()).as_string(defaultValue.data());
+  return node.attribute(name).as_string(defaultValue);
 }
 
-int UTILS::XML::GetAttribInt(pugi::xml_node& node,
-                             std::string_view name,
-                             int defaultValue /* = 0 */)
+int UTILS::XML::GetAttribInt(pugi::xml_node& node, const char* name, int defaultValue /* = 0 */)
 {
-  return node.attribute(name.data()).as_int(defaultValue);
+  return node.attribute(name).as_int(defaultValue);
 }
 
 uint32_t UTILS::XML::GetAttribUint32(pugi::xml_node& node,
-                                     std::string_view name,
+                                     const char* name,
                                      uint32_t defaultValue /* = 0 */)
 {
-  return node.attribute(name.data()).as_uint(defaultValue);
+  return node.attribute(name).as_uint(defaultValue);
 }
 
-uint64_t UTILS::XML::GetAttribUint64(pugi::xml_node& node,
-                                     std::string_view name,
-                                     uint64_t defaultValue)
+uint64_t UTILS::XML::GetAttribUint64(pugi::xml_node& node, const char* name, uint64_t defaultValue)
 {
-  return node.attribute(name.data()).as_ullong(defaultValue);
+  return node.attribute(name).as_ullong(defaultValue);
 }
 
-bool UTILS::XML::QueryAttrib(pugi::xml_node& node, std::string_view name, std::string& value)
+bool UTILS::XML::QueryAttrib(pugi::xml_node& node, const char* name, std::string& value)
 {
-  xml_attribute attrib = node.attribute(name.data());
+  xml_attribute attrib = node.attribute(name);
   if (attrib)
   {
     value = attrib.as_string();
@@ -165,9 +161,9 @@ bool UTILS::XML::QueryAttrib(pugi::xml_node& node, std::string_view name, std::s
   return false;
 }
 
-bool UTILS::XML::QueryAttrib(pugi::xml_node& node, std::string_view name, int& value)
+bool UTILS::XML::QueryAttrib(pugi::xml_node& node, const char* name, int& value)
 {
-  xml_attribute attrib = node.attribute(name.data());
+  xml_attribute attrib = node.attribute(name);
   if (attrib)
   {
     value = attrib.as_int();
@@ -176,9 +172,9 @@ bool UTILS::XML::QueryAttrib(pugi::xml_node& node, std::string_view name, int& v
   return false;
 }
 
-bool UTILS::XML::QueryAttrib(pugi::xml_node& node, std::string_view name, uint32_t& value)
+bool UTILS::XML::QueryAttrib(pugi::xml_node& node, const char* name, uint32_t& value)
 {
-  xml_attribute attrib = node.attribute(name.data());
+  xml_attribute attrib = node.attribute(name);
   if (attrib)
   {
     value = attrib.as_uint();
@@ -187,9 +183,9 @@ bool UTILS::XML::QueryAttrib(pugi::xml_node& node, std::string_view name, uint32
   return false;
 }
 
-bool UTILS::XML::QueryAttrib(pugi::xml_node& node, std::string_view name, uint64_t& value)
+bool UTILS::XML::QueryAttrib(pugi::xml_node& node, const char* name, uint64_t& value)
 {
-  xml_attribute attrib = node.attribute(name.data());
+  xml_attribute attrib = node.attribute(name);
   if (attrib)
   {
     value = attrib.as_ullong();

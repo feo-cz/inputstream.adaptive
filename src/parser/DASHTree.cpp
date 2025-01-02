@@ -309,7 +309,8 @@ void adaptive::CDashTree::ParseTagMPDAttribs(pugi::xml_node nodeMPD)
 
   std::string availabilityStartTimeStr;
   if (XML::QueryAttrib(nodeMPD, "availabilityStartTime", availabilityStartTimeStr))
-    available_time_ = static_cast<uint64_t>(XML::ParseDate(availabilityStartTimeStr) * 1000);
+    available_time_ =
+        static_cast<uint64_t>(XML::ParseDate(availabilityStartTimeStr.c_str()) * 1000);
 
   // If TSB is not set but availabilityStartTime, use the last one as TSB
   // since all segments from availabilityStartTime are available

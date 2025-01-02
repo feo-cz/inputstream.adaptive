@@ -257,7 +257,7 @@ void adaptive::CHLSTree::FixMediaSequence(std::stringstream& streamData,
 
     if (tagName == "#EXT-X-PROGRAM-DATE-TIME")
     {
-      dateTime = static_cast<uint64_t>(XML::ParseDate(tagValue, 0) * 1000);
+      dateTime = static_cast<uint64_t>(XML::ParseDate(tagValue.c_str(), 0) * 1000);
     }
     else if (tagName == "#EXTINF")
     {
@@ -314,7 +314,7 @@ void adaptive::CHLSTree::FixDiscSequence(std::stringstream& streamData, uint32_t
 
     if (tagName == "#EXT-X-PROGRAM-DATE-TIME")
     {
-      dateTime = static_cast<uint64_t>(XML::ParseDate(tagValue, 0) * 1000);
+      dateTime = static_cast<uint64_t>(XML::ParseDate(tagValue.c_str(), 0) * 1000);
     }
     else if (tagName == "#EXTINF")
     {
@@ -565,7 +565,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
     }
     else if (tagName == "#EXT-X-PROGRAM-DATE-TIME" && !isSkipUntilDiscont)
     {
-      programDateTime = static_cast<uint64_t>(XML::ParseDate(tagValue, 0) * 1000);
+      programDateTime = static_cast<uint64_t>(XML::ParseDate(tagValue.c_str(), 0) * 1000);
       // Set or update the period start, only from the first program date time value
       if (period->GetStart() == 0 || period->GetStart() == NO_VALUE)
         period->SetStart(programDateTime);

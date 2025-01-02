@@ -34,7 +34,7 @@ namespace XML
  * \param fallback [OPT] The fallback value when parse fails, by default set as max uint64_t value
  * \return The parsed date in seconds, or fallback value when fails.
  */
-double ParseDate(std::string_view timeStr, double fallback = std::numeric_limits<double>::max());
+double ParseDate(const char* timeStr, double fallback = std::numeric_limits<double>::max());
 
 /*!
  * \brief Parses an XML duration string.
@@ -53,7 +53,7 @@ double ParseDuration(std::string_view durationStr);
  * \param childTagName [OPT] Search for a specific child tag, if empty count all children
  * \return The number of childrens.
  */
-size_t CountChilds(pugi::xml_node node, std::string_view childTagName = "");
+size_t CountChilds(pugi::xml_node node, const char* childTagName = "");
 
 /*!
  * \brief Find the first attribute that have the specified name without take in account the prefix (prefix:name).
@@ -70,9 +70,7 @@ pugi::xml_attribute FirstAttributeNoPrefix(pugi::xml_node node, std::string_view
  * \param defaultValue The default fallback value.
  * \return If the attribute exist return the attribute value, otherwise the default fallback value.
  */
-std::string_view GetAttrib(pugi::xml_node& node,
-                           std::string_view name,
-                           std::string_view defaultValue = "");
+std::string_view GetAttrib(pugi::xml_node& node, const char* name, const char* defaultValue = "");
 
 /*!
  * \brief Get the specified attribute name.
@@ -81,7 +79,7 @@ std::string_view GetAttrib(pugi::xml_node& node,
  * \param defaultValue The default fallback value.
  * \return If the attribute exist return the attribute value, otherwise the default fallback value.
  */
-int GetAttribInt(pugi::xml_node& node, std::string_view name, int defaultValue = 0);
+int GetAttribInt(pugi::xml_node& node, const char* name, int defaultValue = 0);
 /*!
  * \brief Get the specified attribute name.
  * \param node The node where search the attribute.
@@ -89,7 +87,7 @@ int GetAttribInt(pugi::xml_node& node, std::string_view name, int defaultValue =
  * \param defaultValue The default fallback value.
  * \return If the attribute exist return the attribute value, otherwise the default fallback value.
  */
-uint32_t GetAttribUint32(pugi::xml_node& node, std::string_view name, uint32_t defaultValue = 0);
+uint32_t GetAttribUint32(pugi::xml_node& node, const char* name, uint32_t defaultValue = 0);
 /*!
  * \brief Get the specified attribute.
  * \param node The node where search the attribute.
@@ -97,7 +95,7 @@ uint32_t GetAttribUint32(pugi::xml_node& node, std::string_view name, uint32_t d
  * \param defaultValue The default fallback value.
  * \return If the attribute exist return the attribute value, otherwise the default fallback value.
  */
-uint64_t GetAttribUint64(pugi::xml_node& node, std::string_view name, uint64_t defaultValue = 0);
+uint64_t GetAttribUint64(pugi::xml_node& node, const char* name, uint64_t defaultValue = 0);
 
 /*!
  * \brief Query to try get the specified attribute.
@@ -106,7 +104,7 @@ uint64_t GetAttribUint64(pugi::xml_node& node, std::string_view name, uint64_t d
  * \param value[OUT] Output the value of the attribute, if the attribute does not exist the variable will not be modified.
  * \return True if the attribute exists, otherwise false.
  */
-bool QueryAttrib(pugi::xml_node& node, std::string_view name, std::string& value);
+bool QueryAttrib(pugi::xml_node& node, const char* name, std::string& value);
 /*!
  * \brief Query to try get the specified attribute.
  * \param node The node where search the attribute.
@@ -114,7 +112,7 @@ bool QueryAttrib(pugi::xml_node& node, std::string_view name, std::string& value
  * \param value[OUT] Output the value of the attribute, if the attribute does not exist the variable will not be modified.
  * \return True if the attribute exists, otherwise false.
  */
-bool QueryAttrib(pugi::xml_node& node, std::string_view name, int& value);
+bool QueryAttrib(pugi::xml_node& node, const char* name, int& value);
 /*!
  * \brief Query to try get the specified attribute.
  * \param node The node where search the attribute.
@@ -122,7 +120,7 @@ bool QueryAttrib(pugi::xml_node& node, std::string_view name, int& value);
  * \param value[OUT] Output the value of the attribute, if the attribute does not exist the variable will not be modified.
  * \return True if the attribute exists, otherwise false.
  */
-bool QueryAttrib(pugi::xml_node& node, std::string_view name, uint32_t& value);
+bool QueryAttrib(pugi::xml_node& node, const char* name, uint32_t& value);
 /*!
  * \brief Query to try get the specified attribute.
  * \param node The node where search the attribute.
@@ -130,7 +128,7 @@ bool QueryAttrib(pugi::xml_node& node, std::string_view name, uint32_t& value);
  * \param value[OUT] Output the value of the attribute, if the attribute does not exist the variable will not be modified.
  * \return True if the attribute exists, otherwise false.
  */
-bool QueryAttrib(pugi::xml_node& node, std::string_view name, uint64_t& value);
+bool QueryAttrib(pugi::xml_node& node, const char* name, uint64_t& value);
 
 /*!
  * \brief Get value from an unknown XML nodes path,
