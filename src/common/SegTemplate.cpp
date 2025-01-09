@@ -19,12 +19,6 @@ using namespace PLAYLIST;
 using namespace UTILS;
 using namespace kodi::tools;
 
-PLAYLIST::CSegmentTemplate::CSegmentTemplate(const std::optional<CSegmentTemplate>& other)
-{
-  if (other.has_value())
-    *this = *other;
-}
-
 std::string PLAYLIST::CSegmentTemplate::GetInitialization() const
 {
   if (!m_initialization.empty())

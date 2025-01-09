@@ -12,12 +12,6 @@
 
 using namespace PLAYLIST;
 
-PLAYLIST::CSegmentList::CSegmentList(const std::optional<CSegmentList>& other)
-{
-  if (other.has_value())
-    *this = *other;
-}
-
 void PLAYLIST::CSegmentList::SetInitRange(std::string_view range)
 {
   if (!ParseRangeRFC(range, m_initRangeBegin, m_initRangeEnd))

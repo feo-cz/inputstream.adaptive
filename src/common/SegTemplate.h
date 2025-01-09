@@ -29,7 +29,6 @@ class ATTR_DLL_LOCAL CSegmentTemplate
 {
 public:
   CSegmentTemplate() = default;
-  CSegmentTemplate(const std::optional<CSegmentTemplate>& other);
   ~CSegmentTemplate() = default;
 
   std::string GetInitialization() const;

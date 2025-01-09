@@ -29,7 +29,6 @@ class ATTR_DLL_LOCAL CSegmentList
 {
 public:
   CSegmentList() = default;
-  CSegmentList(const std::optional<CSegmentList>& other);
   ~CSegmentList() = default;
 
   uint64_t GetStartNumber() const { return m_startNumber; }
