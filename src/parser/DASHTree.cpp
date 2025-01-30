@@ -466,13 +466,14 @@ void adaptive::CDashTree::ParseTagAdaptationSet(pugi::xml_node nodeAdp, PLAYLIST
 
     if (schemeIdUri == "urn:mpeg:dash:role:2011")
     {
-      if (value == "subtitle")
-        contentType = "text";
-      else if (value == "forced") // ISA custom attribute
+      //! @todo: If no complains, remove commented lines on Kodi 23
+      // if ((value == "subtitle" || value == "caption") && contentType.empty())
+      //   contentType = "text";
+      if (value == "forced") // ISA custom attribute
         adpSet->SetIsForced(true);
       else if (value == "main")
         adpSet->SetIsDefault(true);
-      else if (value == "caption" || value == "alternate" || value == "commentary")
+      else if (value == "alternate" || value == "commentary")
         adpSet->SetIsImpaired(true);
     }
   }
