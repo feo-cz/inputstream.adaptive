@@ -163,6 +163,13 @@ void TTML2SRT::ParseTagBody(pugi::xml_node nodeTT)
   // Parse <body> <div> child tags
   for (xml_node nodeDiv : nodeBody.children("div"))
   {
+    // Subtitles that make use of images to show text are not supported
+    if (nodeDiv.attribute("smpte:backgroundImage") || nodeDiv.attribute("tts:backgroundImage"))
+    {
+      LOG::LogF(LOGWARNING,
+                "The \"backgroundImage\" attribute to show subtitles images is not supported.");
+    }
+
     // Parse <body> <div> <p> child tags
     for (xml_node nodeP : nodeDiv.children("p"))
     {
@@ -275,6 +282,13 @@ TTML2SRT::Style TTML2SRT::ParseStyle(pugi::xml_node node)
 
   style.id = XML::GetAttrib(node, "xml:id");
   style.color = XML::GetAttrib(node, "tts:color");
+
+  // Subtitles that make use of images to show text are not supported
+  if (node.attribute("tts:backgroundImage"))
+  {
+    LOG::LogF(LOGWARNING,
+              "The \"backgroundImage\" attribute to show subtitles images is not supported.");
+  }
 
   std::string styleVal;
   if (XML::QueryAttrib(node, "tts:textDecoration", styleVal))
