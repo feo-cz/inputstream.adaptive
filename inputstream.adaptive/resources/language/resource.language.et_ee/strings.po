@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: translations@kodi.tv\n"
-"PO-Revision-Date: 2025-01-17 02:09+0000\n"
-"Last-Translator: rimasx <riks_12@hot.ee>\n"
+"PO-Revision-Date: 2025-02-15 01:50+0000\n"
+"Last-Translator: Toomas Tänava <toomas.tanava@mail.ee>\n"
 "Language-Team: Estonian <https://kodi.weblate.cloud/projects/kodi-add-ons-videoplayer-inputstream/inputstream-adaptive/et_ee/>\n"
 "Language: et_ee\n"
 "MIME-Version: 1.0\n"
@@ -21,7 +21,7 @@ msgstr "InputStream klient kohanduvate voogude jaoks"
 
 msgctxt "Addon Description"
 msgid "InputStream client for adaptive streams. Common streaming protocols such as MPEG-DASH, HLS and Microsoft Smooth Streaming are supported.[CR][CR]The add-on also has support for DRM protected streams, such as Google Widevine, Microsoft PlayReady and others.[CR][CR]For documentation visit: https://github.com/xbmc/inputstream.adaptive"
-msgstr "InputStream klient adaptiivsete voogude jaoks. Toetatakse levinud voogedastusprotokolle, nagu MPEG-DASH, HLS ja Microsoft Smooth Streaming.[CR][CR]Lisamoodul toetab ka DRM-iga kaitstud vooge, nagu Google Widevine, Microsoft PlayReady ja teised.[CR][CR][CR] ]Dokumentatsiooni saamiseks külasta aadressi https://github.com/xbmc/inputstream.adaptive"
+msgstr "InputStream klient adaptiivsete voogude jaoks. Toetatakse levinud voogedastusprotokolle, nagu MPEG-DASH, HLS ja Microsoft Smooth Streaming.[CR][CR]Lisamoodul toetab ka DRM-iga kaitstud vooge, nagu Google Widevine, Microsoft PlayReady ja teised.[CR][CR]Dokumentatsiooni saamiseks külasta aadressi https://github.com/xbmc/inputstream.adaptive"
 
 #. Category title
 msgctxt "#30100"
