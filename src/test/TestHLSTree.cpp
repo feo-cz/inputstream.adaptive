@@ -18,6 +18,7 @@ class HLSTreeTest : public ::testing::Test
 protected:
   void SetUp() override
   {
+    CSrvBroker::GetInstance()->Initialize();
     m_reprChooser = new CTestRepresentationChooserDefault();
     tree = new HLSTestTree();
   }
@@ -49,7 +50,7 @@ protected:
   {
     testHelper::testFile = filePath;
 
-    CSrvBroker::GetInstance()->Init({});
+    CSrvBroker::GetInstance()->InitStage1({});
 
     // Download the manifest
     UTILS::CURL::HTTPResponse resp;

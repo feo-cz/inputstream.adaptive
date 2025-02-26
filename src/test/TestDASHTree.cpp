@@ -23,6 +23,7 @@ class DASHTreeTest : public ::testing::Test
 protected:
   void SetUp() override
   {
+    CSrvBroker::GetInstance()->Initialize();
     m_reprChooser = new CTestRepresentationChooserDefault();
     tree = new DASHTestTree();
   }
@@ -53,7 +54,7 @@ protected:
   {
     testHelper::testFile = filePath;
 
-    CSrvBroker::GetInstance()->Init(m_kodiProps);
+    CSrvBroker::GetInstance()->InitStage1(m_kodiProps);
 
     // Download the manifest
     UTILS::CURL::HTTPResponse resp;

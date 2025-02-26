@@ -120,7 +120,7 @@ public:
   CCompKodiProps() = default;
   ~CCompKodiProps() = default;
 
-  void Init(const std::map<std::string, std::string>& props);
+  void InitStage1(const std::map<std::string, std::string>& props);
 
   // \brief HTTP headers used for any HTTP request
   const std::map<std::string, std::string>& GetCommonHeaders() const { return m_commonHeaders; }
