@@ -21,10 +21,6 @@
 #include <mutex>
 #include <string_view>
 
-// \brief Current version of gtest dont support compare std::string_view values
-//        this shortens the conversion needed
-using STR = std::string;
-
 constexpr std::string_view URN_WIDEVINE = "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed";
 
 std::string GetEnv(const std::string& var);
