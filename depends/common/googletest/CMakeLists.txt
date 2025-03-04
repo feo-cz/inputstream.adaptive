@@ -23,14 +23,10 @@ set(GOOGLETEST_VERSION 1.16.0)
 # https://github.com/google/googletest/issues/3843
 set(CMAKE_DEBUG_POSTFIX "d")
 
-if (CMAKE_VERSION VERSION_LESS "3.1")
-  add_definitions(-std=c++14)
-else()
-  set(CMAKE_CXX_STANDARD 14)
-  set(CMAKE_CXX_STANDARD_REQUIRED ON)
-  if(NOT CYGWIN)
-    set(CMAKE_CXX_EXTENSIONS OFF)
-  endif()
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(NOT CYGWIN)
+  set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
 enable_testing()
