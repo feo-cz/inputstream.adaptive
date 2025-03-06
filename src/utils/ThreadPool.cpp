@@ -8,11 +8,6 @@
 
 #include "ThreadPool.h"
 
-UTILS::THREAD::ThreadPool::~ThreadPool()
-{
-  Stop();
-}
-
 void UTILS::THREAD::ThreadPool::Stop()
 {
   {
@@ -24,6 +19,14 @@ void UTILS::THREAD::ThreadPool::Stop()
 
   for (const auto& executor : m_executors)
     executor->Join();
+}
+
+void UTILS::THREAD::ThreadPool::Reset()
+{
+  Stop();
+  m_activeExecutors = 0;
+  m_executors.clear();
+  m_isStopped = false;
 }
 
 std::optional<std::function<void()>> UTILS::THREAD::ThreadPool::TakeTask()

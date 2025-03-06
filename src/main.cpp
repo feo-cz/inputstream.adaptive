@@ -13,6 +13,7 @@
 #include "SrvBroker.h"
 #include "Stream.h"
 #include "samplereader/SampleReaderFactory.h"
+#include "utils/ThreadPool.h"
 #include "utils/log.h"
 
 using namespace PLAYLIST;
@@ -55,6 +56,7 @@ void CInputStreamAdaptive::Close(void)
 {
   LOG::Log(LOGDEBUG, "Close()");
   m_session = nullptr;
+  UTILS::THREAD::GlobalThreadPool.Reset();
   CSrvBroker::GetInstance()->Deinitialize();
 }
 
