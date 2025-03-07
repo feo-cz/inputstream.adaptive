@@ -1,3 +1,17 @@
+v22.1.13 (2025-03-07)
+- Fix possible persistent data in memory between played videos (cause of playback errors)
+- Fix building errors when more recents Windows SDK are used
+- Fix building with CMake 4.0
+- Updated pugixml dependency to 1.15
+- Updated rapidjson dependency to upstream
+- Updated dlfcn-win32 dependency to 1.4.2
+- Updated googletest dependency to 1.16.0
+- Add ARM64 config support to CDM library
+- [DASH] Deprecated custom «role» tag with «forced» value
+- [DASH] Add support to «role» tag with «forced-subtiltle» value
+- Add log warning for unsupported TTML image-based subtitles
+- Updated translations
+
 v22.1.12 (2025-01-13)
 - Implemented thread pool to prevent intensive thread uses on demux read
 - Fix crash due to ODR violation on tests project
