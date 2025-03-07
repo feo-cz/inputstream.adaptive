@@ -32,7 +32,10 @@ class ThreadPool
 {
 public:
   ThreadPool() = default;
-  ~ThreadPool();
+  ~ThreadPool() = default;
+
+  ThreadPool(ThreadPool& other) = delete; // Not clonable
+  void operator=(const ThreadPool&) = delete; // Not assignable
 
   /*!
    * \brief Execute a callable on a thread pool thread
@@ -80,6 +83,11 @@ public:
    * \brief Don't allow execution of new tasks and block until all running tasks completed
    */
   void Stop();
+
+  /*!
+   * \brief Don't allow execution of new tasks and block until all running tasks completed, then reset the thread pool
+   */
+  void Reset();
 
 private:
   class Executor

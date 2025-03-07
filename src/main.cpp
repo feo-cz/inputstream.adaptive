@@ -13,6 +13,7 @@
 #include "SrvBroker.h"
 #include "Stream.h"
 #include "samplereader/SampleReaderFactory.h"
+#include "utils/ThreadPool.h"
 #include "utils/log.h"
 
 using namespace PLAYLIST;
@@ -21,6 +22,7 @@ using namespace SESSION;
 CInputStreamAdaptive::CInputStreamAdaptive(const kodi::addon::IInstanceInfo& instance)
   : CInstanceInputStream(instance)
 {
+  CSrvBroker::GetInstance()->Initialize();
 }
 
 ADDON_STATUS CInputStreamAdaptive::CreateInstance(const kodi::addon::IInstanceInfo& instance,
@@ -38,7 +40,7 @@ bool CInputStreamAdaptive::Open(const kodi::addon::InputstreamProperty& props)
 {
   LOG::Log(LOGDEBUG, "Open()");
 
-  CSrvBroker::GetInstance()->Init(props.GetProperties());
+  CSrvBroker::GetInstance()->InitStage1(props.GetProperties());
 
   m_session = std::make_shared<CSession>();
 
@@ -54,6 +56,8 @@ void CInputStreamAdaptive::Close(void)
 {
   LOG::Log(LOGDEBUG, "Close()");
   m_session = nullptr;
+  UTILS::THREAD::GlobalThreadPool.Reset();
+  CSrvBroker::GetInstance()->Deinitialize();
 }
 
 bool CInputStreamAdaptive::GetStreamIds(std::vector<unsigned int>& ids)

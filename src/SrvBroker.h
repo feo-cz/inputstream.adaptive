@@ -46,9 +46,14 @@ public:
   void operator=(const CSrvBroker&) = delete; // Not assignable
 
   /*
+   * \brief Initialize service broker components, when the add-on is created.
+   */
+  void Initialize();
+
+  /*
    * \brief Initialize service broker components, on addon initialization.
    */
-  void Init(const std::map<std::string, std::string>& kodiProps);
+  void InitStage1(const std::map<std::string, std::string>& kodiProps);
 
   /*
    * \brief Initialize service broker components, on session initialization.
@@ -61,6 +66,11 @@ public:
     static CSrvBroker instance;
     return &instance;
   }
+
+  /*
+   * \brief Deinitialize service broker components, when the add-on is terminated.
+   */
+  void Deinitialize();
 
   /*
    * \brief Get Kodi properties component, to read Kodi (Listitem / playlist files "STRM") properties.
