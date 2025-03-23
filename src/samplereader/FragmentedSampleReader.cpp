@@ -466,6 +466,9 @@ void CFragmentedSampleReader::UpdateSampleDescription()
       return;
     }
   }
+  else {
+    m_protectedDesc = nullptr;
+  }
 
   LOG::LogF(LOGDEBUG, "Codec fourcc: %s (%u)", CODEC::FourCCToString(desc->GetFormat()).c_str(),
             desc->GetFormat());
