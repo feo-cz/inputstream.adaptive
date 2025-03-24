@@ -76,7 +76,7 @@ bool RemoveDirectory(std::string_view path, bool recursive = true);
  * \param path The filename with or without a path.
  * \return The file extension if found, otherwise empty string.
  */
-std::string GetFileExtension(std::string path);
+std::string GetFileExtension(std::string_view path);
 
 } // namespace FILESYS
 } // namespace UTILS
