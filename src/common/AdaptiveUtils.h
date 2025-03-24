@@ -84,7 +84,7 @@ enum class StreamType
  * \param streamType The stream type to convert
  * \return Human readable StreamType string
  */
-std::string_view StreamTypeToString(const StreamType streamType);
+std::string StreamTypeToString(const StreamType streamType);
 
 /*!
  * \brief Parse a range string, as RFC 7233 (e.g. for DASH).

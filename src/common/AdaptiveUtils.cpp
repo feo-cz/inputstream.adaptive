@@ -27,7 +27,7 @@
 
 using namespace UTILS;
 
-std::string_view PLAYLIST::StreamTypeToString(const StreamType streamType)
+std::string PLAYLIST::StreamTypeToString(const StreamType streamType)
 {
   switch (streamType)
   {
@@ -132,7 +132,7 @@ AP4_Movie* PLAYLIST::CreateMovieAtom(adaptive::AdaptiveStream& adStream,
     // will use a generic CodecHandler instead of AudioCodecHandler, because will be not able do determine the codec
     LOG::LogF(LOGDEBUG,
               "Created sample description atom of unknown type for codec \"%s\" because unhandled",
-              codecName.data());
+              codecName.c_str());
     sampleDesc = new AP4_SampleDescription(AP4_SampleDescription::TYPE_UNKNOWN, 0, 0);
   }
 

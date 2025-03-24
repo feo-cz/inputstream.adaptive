@@ -162,20 +162,20 @@ adaptive::CHLSTree::CHLSTree(const CHLSTree& left) : AdaptiveTree(left)
 }
 
 void adaptive::CHLSTree::Configure(CHOOSER::IRepresentationChooser* reprChooser,
-                                   std::string_view manifestUpdateParam)
+                                   const std::string& manifestUpdateParam)
 {
   AdaptiveTree::Configure(reprChooser, manifestUpdateParam);
   m_decrypter = std::make_unique<AESDecrypter>();
 }
 
-bool adaptive::CHLSTree::Open(std::string_view url,
+bool adaptive::CHLSTree::Open(const std::string& url,
                               const std::map<std::string, std::string>& headers,
                               const std::string& data)
 {
   SaveManifest(nullptr, data, url);
 
   manifest_url_ = url;
-  base_url_ = URL::GetUrlPath(url.data());
+  base_url_ = URL::GetUrlPath(url);
 
   if (!ParseManifest(data))
   {

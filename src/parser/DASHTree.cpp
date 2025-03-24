@@ -105,12 +105,12 @@ adaptive::CDashTree::CDashTree(const CDashTree& left) : AdaptiveTree(left)
 }
 
 void adaptive::CDashTree::Configure(CHOOSER::IRepresentationChooser* reprChooser,
-                                    std::string_view manifestUpdParams)
+                                    const std::string& manifestUpdParams)
 {
   AdaptiveTree::Configure(reprChooser, manifestUpdParams);
 }
 
-bool adaptive::CDashTree::Open(std::string_view url,
+bool adaptive::CDashTree::Open(const std::string& url,
                                const std::map<std::string, std::string>& headers,
                                const std::string& data)
 {
@@ -118,7 +118,7 @@ bool adaptive::CDashTree::Open(std::string_view url,
 
   m_manifestRespHeaders = headers;
   manifest_url_ = url;
-  base_url_ = URL::GetUrlPath(url.data());
+  base_url_ = URL::GetUrlPath(url);
 
   if (!ParseManifest(data))
     return false;
@@ -340,7 +340,7 @@ void adaptive::CDashTree::ParseTagMPDAttribs(pugi::xml_node nodeMPD)
   }
 }
 
-void adaptive::CDashTree::ParseTagPeriod(pugi::xml_node nodePeriod, std::string_view mpdUrl)
+void adaptive::CDashTree::ParseTagPeriod(pugi::xml_node nodePeriod, const std::string& mpdUrl)
 {
   std::unique_ptr<CPeriod> period = CPeriod::MakeUniquePtr();
 
@@ -387,7 +387,7 @@ void adaptive::CDashTree::ParseTagPeriod(pugi::xml_node nodePeriod, std::string_
     if (URL::IsUrlAbsolute(baseUrl))
       period->SetBaseUrl(baseUrl);
     else
-      period->SetBaseUrl(URL::Join(mpdUrl.data(), baseUrl));
+      period->SetBaseUrl(URL::Join(mpdUrl, baseUrl));
   }
 
   // Parse <SegmentTemplate> tag
@@ -791,7 +791,7 @@ void adaptive::CDashTree::ParseTagRepresentation(pugi::xml_node nodeRepr,
     if (URL::IsUrlAbsolute(baseUrl))
       repr->SetBaseUrl(baseUrl);
     else
-      repr->SetBaseUrl(URL::Join(adpSet->GetBaseUrl().data(), baseUrl.data()));
+      repr->SetBaseUrl(URL::Join(adpSet->GetBaseUrl(), baseUrl.data()));
   }
 
   // Parse <SegmentBase> tag

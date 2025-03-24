@@ -38,9 +38,9 @@ public:
   virtual CHLSTree* Clone() const override { return new CHLSTree{*this}; }
 
   virtual void Configure(CHOOSER::IRepresentationChooser* reprChooser,
-                         std::string_view manifestUpdateParam) override;
+                         const std::string& manifestUpdateParam) override;
 
-  virtual bool Open(std::string_view url,
+  virtual bool Open(const std::string& url,
                     const std::map<std::string, std::string>& headers,
                     const std::string& data) override;
 

@@ -31,7 +31,7 @@ adaptive::CSmoothTree::CSmoothTree(const CSmoothTree& left) : AdaptiveTree(left)
 {
 }
 
-bool adaptive::CSmoothTree::Open(std::string_view url,
+bool adaptive::CSmoothTree::Open(const std::string& url,
                                  const std::map<std::string, std::string>& headers,
                                  const std::string& data)
 {
@@ -39,7 +39,7 @@ bool adaptive::CSmoothTree::Open(std::string_view url,
   SaveManifest("", data, "");
 
   manifest_url_ = url;
-  base_url_ = URL::GetUrlPath(url.data());
+  base_url_ = URL::GetUrlPath(url);
 
   if (!ParseManifest(data))
     return false;

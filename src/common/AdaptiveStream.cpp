@@ -64,7 +64,7 @@ AdaptiveStream::AdaptiveStream(AdaptiveTree* tree,
   clsId = globalClsId++;
   LOG::Log(LOGDEBUG,
            "Created AdaptiveStream [AS-%u] with adaptation set ID: \"%s\", stream type: %s", clsId,
-           adp->GetId().c_str(), StreamTypeToString(adp->GetStreamType()).data());
+           adp->GetId().c_str(), StreamTypeToString(adp->GetStreamType()).c_str());
 }
 
 AdaptiveStream::~AdaptiveStream()
