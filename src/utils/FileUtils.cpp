@@ -110,9 +110,9 @@ bool UTILS::FILESYS::CheckDuplicateFilePath(std::string& filePath, uint32_t file
   return true;
 }
 
-bool UTILS::FILESYS::RemoveDirectory(std::string_view path, bool recursive /* = true */)
+bool UTILS::FILESYS::RemoveDirectory(const std::string& path, bool recursive /* = true */)
 {
-  return kodi::vfs::RemoveDirectory(path.data(), recursive);
+  return kodi::vfs::RemoveDirectory(path, recursive);
 }
 
 std::string UTILS::FILESYS::GetFileExtension(std::string_view path)
