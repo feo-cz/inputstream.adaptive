@@ -45,7 +45,7 @@ public:
 
   void SetInitSourceUrl(std::string_view url) { m_initSourceUrl = url; }
 
-  void SetInitRange(std::string_view range);
+  void SetInitRange(const std::string& range);
   bool HasInitialization() { return m_initRangeBegin != NO_VALUE && m_initRangeEnd != NO_VALUE; }
   CSegment MakeInitSegment();
 

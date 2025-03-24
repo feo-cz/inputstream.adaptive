@@ -905,7 +905,7 @@ void adaptive::CDashTree::ParseTagRepresentation(pugi::xml_node nodeRepr,
 
       uint64_t rangeStart{0};
       uint64_t rangeEnd{0};
-      if (ParseRangeRFC(XML::GetAttrib(node, "mediaRange"), rangeStart, rangeEnd))
+      if (ParseRangeRFC(XML::GetAttrib(node, "mediaRange").data(), rangeStart, rangeEnd))
       {
         seg.range_begin_ = rangeStart;
         seg.range_end_ = rangeEnd;

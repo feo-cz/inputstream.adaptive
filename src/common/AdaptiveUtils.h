@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -92,7 +93,7 @@ std::string_view StreamTypeToString(const StreamType streamType);
  * \param end [OUT] The end position
  * \return True when parsed correctly, otherwise false
  */
-bool ParseRangeRFC(std::string_view range, uint64_t& start, uint64_t& end);
+bool ParseRangeRFC(const std::string& range, uint64_t& start, uint64_t& end);
 
 /*!
  * \brief Parse range values, the second value splitted by a separator char is optional.
@@ -101,7 +102,7 @@ bool ParseRangeRFC(std::string_view range, uint64_t& start, uint64_t& end);
  * \param second [OUT] The second optional value, if not parsed nothing will be written
  * \return True when parsed correctly, otherwise false
  */
-bool ParseRangeValues(std::string_view range,
+bool ParseRangeValues(const std::string& range,
                       uint64_t& first,
                       uint64_t& second,
                       char separator = '@');

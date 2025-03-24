@@ -44,12 +44,12 @@ std::string_view PLAYLIST::StreamTypeToString(const StreamType streamType)
   }
 }
 
-bool PLAYLIST::ParseRangeRFC(std::string_view range, uint64_t& start, uint64_t& end)
+bool PLAYLIST::ParseRangeRFC(const std::string& range, uint64_t& start, uint64_t& end)
 {
   //! @todo: must be reworked as https://httpwg.org/specs/rfc7233.html
   uint64_t startVal{0};
   uint64_t endVal{0};
-  if (std::sscanf(range.data(), "%" SCNu64 "-%" SCNu64, &startVal, &endVal) > 0)
+  if (std::sscanf(range.c_str(), "%" SCNu64 "-%" SCNu64, &startVal, &endVal) > 0)
   {
     start = startVal;
     end = endVal;
@@ -58,7 +58,7 @@ bool PLAYLIST::ParseRangeRFC(std::string_view range, uint64_t& start, uint64_t& 
   return false;
 }
 
-bool PLAYLIST::ParseRangeValues(std::string_view range,
+bool PLAYLIST::ParseRangeValues(const std::string& range,
                                 uint64_t& first,
                                 uint64_t& second,
                                 char separator /* = '@' */)
@@ -67,7 +67,7 @@ bool PLAYLIST::ParseRangeValues(std::string_view range,
   pattern.push_back(separator);
   pattern.append("%llu");
 
-  if (std::sscanf(range.data(), pattern.c_str(), &first, &second) > 0)
+  if (std::sscanf(range.c_str(), pattern.c_str(), &first, &second) > 0)
     return true;
 
   return false;

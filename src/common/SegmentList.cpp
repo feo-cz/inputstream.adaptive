@@ -12,7 +12,7 @@
 
 using namespace PLAYLIST;
 
-void PLAYLIST::CSegmentList::SetInitRange(std::string_view range)
+void PLAYLIST::CSegmentList::SetInitRange(const std::string& range)
 {
   if (!ParseRangeRFC(range, m_initRangeBegin, m_initRangeEnd))
     LOG::LogF(LOGERROR, "Failed to parse \"range\" attribute");

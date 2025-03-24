@@ -29,8 +29,8 @@ public:
   CSegmentBase() = default;
   ~CSegmentBase() = default;
 
-  void SetIndexRange(std::string_view indexRange);
-  void SetInitRange(std::string_view range);
+  void SetIndexRange(const std::string& indexRange);
+  void SetInitRange(const std::string& range);
 
   void SetIndexRangeBegin(uint64_t value) { m_indexRangeBegin = value; }
   void SetIndexRangeEnd(uint64_t value) { m_indexRangeEnd = value; }
