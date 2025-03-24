@@ -195,7 +195,7 @@ bool SESSION::CSession::CheckPlayableStreams()
                   LOG::Log(LOGWARNING,
                            "Disabled stream repr ID \"%s\", AdpSet ID \"%s\", "
                            "Secure path decoder on audio stream is not supported",
-                           repr->GetId().data(), adp->GetId().data());
+                           repr->GetId().c_str(), adp->GetId().c_str());
                   repr->isPlayable = false;
                   continue;
                 }
@@ -212,7 +212,7 @@ bool SESSION::CSession::CheckPlayableStreams()
                     LOG::Log(
                         LOGWARNING,
                         "Disabled stream repr ID \"%s\", AdpSet ID \"%s\", as not HDCP compliant",
-                        repr->GetId().data(), adp->GetId().data());
+                        repr->GetId().c_str(), adp->GetId().c_str());
                     repr->isPlayable = false;
                     continue;
                   }
@@ -239,9 +239,10 @@ bool SESSION::CSession::CheckPlayableStreams()
       {
         if (repr->GetWidth() * repr->GetHeight() > kodiPropCfg.resolutionLimit)
         {
-          LOG::Log(LOGWARNING,
-                   "Disabled stream repr ID \"%s\", AdpSet ID \"%s\", it exceeds the resolution limits",
-                   repr->GetId().data(), adp->GetId().data());
+          LOG::Log(
+              LOGWARNING,
+              "Disabled stream repr ID \"%s\", AdpSet ID \"%s\", it exceeds the resolution limits",
+              repr->GetId().c_str(), adp->GetId().c_str());
           repr->isPlayable = false;
         }
       }
@@ -293,7 +294,7 @@ void SESSION::CSession::InitializePeriod()
     if (adp->GetStreamType() == StreamType::NOTYPE)
     {
       LOG::LogF(LOGDEBUG, "Skipped streams on adaptation set id \"%s\" due to unsupported/unknown type",
-                adp->GetId().data());
+                adp->GetId().c_str());
       continue;
     }
 
@@ -419,7 +420,7 @@ void SESSION::CSession::UpdateStream(CStream& stream)
   if (rep->GetContainerType() == ContainerType::INVALID)
   {
     LOG::LogF(LOGERROR, "Container type not valid on stream representation ID: %s",
-              rep->GetId().data());
+              rep->GetId().c_str());
     stream.m_isValid = false;
     return;
   }
@@ -1085,7 +1086,7 @@ std::string SESSION::CSession::GetChapterName(int ch) const
   {
     --ch;
     if (ch >= 0 && ch < static_cast<int>(m_adaptiveTree->m_periods.size()))
-      return m_adaptiveTree->m_periods[ch]->GetId().data();
+      return m_adaptiveTree->m_periods[ch]->GetId();
   }
 
   return "[Unknown]";
@@ -1149,7 +1150,7 @@ bool SESSION::CSession::SeekChapter(int ch)
     CPeriod* nextPeriod = m_adaptiveTree->m_periods[ch].get();
     m_adaptiveTree->m_nextPeriod = nextPeriod;
     LOG::LogF(LOGDEBUG, "Switching to new Period (id=%s, start=%llu, seq=%u)",
-              nextPeriod->GetId().data(), nextPeriod->GetStart(), nextPeriod->GetSequence());
+              nextPeriod->GetId().c_str(), nextPeriod->GetStart(), nextPeriod->GetSequence());
 
     for (auto& stream : m_streams)
     {

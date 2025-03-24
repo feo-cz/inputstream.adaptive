@@ -216,7 +216,7 @@ bool adaptive::CHLSTree::DownloadChildManifest(PLAYLIST::CAdaptationSet* adp,
   if (rep->GetSourceUrl().empty())
   {
     LOG::LogF(LOGERROR, "Cannot download child manifest, no source url on representation id \"%s\"",
-              rep->GetId().data());
+              rep->GetId().c_str());
     return false;
   }
 
@@ -922,7 +922,7 @@ void adaptive::CHLSTree::PrepareSegments(PLAYLIST::CPeriod* period,
   if (rep->IsWaitForSegment() &&
       (rep->GetNextSegment() || m_currentPeriod != m_periods.back().get()))
   {
-    LOG::LogF(LOGDEBUG, "End WaitForSegment stream id \"%s\"", rep->GetId().data());
+    LOG::LogF(LOGDEBUG, "End WaitForSegment stream id \"%s\"", rep->GetId().c_str());
     rep->SetIsWaitForSegment(false);
   }
 }

@@ -510,7 +510,7 @@ void adaptive::CDashTree::ParseTagAdaptationSet(pugi::xml_node nodeAdp, PLAYLIST
   if (adpSet->GetContainerType() == ContainerType::NOTYPE)
   {
     LOG::LogF(LOGWARNING, "Skipped AdaptationSet with id: \"%s\", container type not specified.",
-              adpSet->GetId().data());
+              adpSet->GetId().c_str());
     return;
   }
 
@@ -665,7 +665,7 @@ void adaptive::CDashTree::ParseTagAdaptationSet(pugi::xml_node nodeAdp, PLAYLIST
   if (adpSet->GetRepresentations().empty())
   {
     LOG::LogF(LOGWARNING, "Skipped AdaptationSet with id: \"%s\", has no representations.",
-              adpSet->GetId().data());
+              adpSet->GetId().c_str());
     return;
   }
 
@@ -725,7 +725,7 @@ void adaptive::CDashTree::ParseTagRepresentation(pugi::xml_node nodeRepr,
   {
     LOG::LogF(LOGWARNING,
               "Cannot get codecs for representation with id: \"%s\". Representation skipped.",
-              repr->GetId().data());
+              repr->GetId().c_str());
     return;
   }
 
@@ -1603,7 +1603,7 @@ void adaptive::CDashTree::OnUpdateSegments()
     // new period, insert it
     if (!period)
     {
-      LOG::LogF(LOGDEBUG, "Inserting new Period (id=%s, start=%llu)", updPeriod->GetId().data(),
+      LOG::LogF(LOGDEBUG, "Inserting new Period (id=%s, start=%llu)", updPeriod->GetId().c_str(),
                 updPeriod->GetStart());
 
       updPeriod->SetSequence(m_periodCurrentSeq++);
@@ -1649,7 +1649,7 @@ void adaptive::CDashTree::OnUpdateSegments()
               LOG::LogF(LOGWARNING,
                         "MPD update - Updated timeline has no segments "
                         "(repr. id \"%s\", period id \"%s\")",
-                        repr->GetId().data(), period->GetId().data());
+                        repr->GetId().c_str(), period->GetId().c_str());
               continue;
             }
 
@@ -1666,7 +1666,7 @@ void adaptive::CDashTree::OnUpdateSegments()
                 {
                   LOG::LogF(LOGDEBUG,
                             "MPD update - No new segments (repr. id \"%s\", period id \"%s\")",
-                            repr->GetId().data(), period->GetId().data());
+                            repr->GetId().c_str(), period->GetId().c_str());
                   continue;
                 }
 
@@ -1692,7 +1692,7 @@ void adaptive::CDashTree::OnUpdateSegments()
                               "found [PTS %llu, Number %llu] "
                               "(repr. id \"%s\", period id \"%s\")",
                               segStartPTS, segNumber, segment.startPTS_, segment.m_number,
-                              repr->GetId().data(), period->GetId().data());
+                              repr->GetId().c_str(), period->GetId().c_str());
                     break;
                   }
                 }
@@ -1701,7 +1701,7 @@ void adaptive::CDashTree::OnUpdateSegments()
                 {
                   LOG::LogF(LOGDEBUG,
                             "MPD update - No segment found (repr. id \"%s\", period id \"%s\")",
-                            repr->GetId().data(), period->GetId().data());
+                            repr->GetId().c_str(), period->GetId().c_str());
                 }
                 else
                 {
@@ -1709,14 +1709,14 @@ void adaptive::CDashTree::OnUpdateSegments()
                   repr->current_segment_ = foundSeg;
 
                   LOG::LogF(LOGDEBUG, "MPD update - Done (repr. id \"%s\", period id \"%s\")",
-                            updRepr->GetId().data(), period->GetId().data());
+                            updRepr->GetId().c_str(), period->GetId().c_str());
                 }
               }
 
               if (repr->IsWaitForSegment() && repr->GetNextSegment())
               {
                 repr->SetIsWaitForSegment(false);
-                LOG::LogF(LOGDEBUG, "End WaitForSegment repr. id %s", repr->GetId().data());
+                LOG::LogF(LOGDEBUG, "End WaitForSegment repr. id %s", repr->GetId().c_str());
               }
 
               m_totalTime = updateTree->m_totalTime;
@@ -1775,7 +1775,7 @@ bool adaptive::CDashTree::InsertLiveSegment(PLAYLIST::CPeriod* period,
   if (!segment)
   {
     LOG::LogF(LOGERROR, "Segment at position %zu not found from representation id: %s", pos,
-              repr->GetId().data());
+              repr->GetId().c_str());
     return false;
   }
 
@@ -1787,7 +1787,7 @@ bool adaptive::CDashTree::InsertLiveSegment(PLAYLIST::CPeriod* period,
   segCopy.m_number++;
 
   LOG::LogF(LOGDEBUG, "Insert live segment to adptation set \"%s\" (Start PTS: %llu, number: %llu)",
-            adpSet->GetId().data(), segCopy.startPTS_, segCopy.m_number);
+            adpSet->GetId().c_str(), segCopy.startPTS_, segCopy.m_number);
 
   for (auto& repr : adpSet->GetRepresentations())
   {
@@ -1832,7 +1832,7 @@ bool adaptive::CDashTree::InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
   segCopy.m_number++;
 
   LOG::Log(LOGDEBUG, "Insert fragment to adaptation set \"%s\" (PTS: %llu, number: %llu)",
-           adpSet->GetId().data(), segCopy.startPTS_, segCopy.m_number);
+           adpSet->GetId().c_str(), segCopy.startPTS_, segCopy.m_number);
 
   for (auto& repr : adpSet->GetRepresentations())
   {

@@ -35,7 +35,7 @@ public:
 
   static std::unique_ptr<CPeriod> MakeUniquePtr() { return std::make_unique<CPeriod>(); }
 
-  std::string_view GetId() const { return m_id; }
+  const std::string& GetId() const { return m_id; }
   void SetId(std::string_view id) { m_id = id; }
 
   std::string GetBaseUrl() const { return m_baseUrl; }

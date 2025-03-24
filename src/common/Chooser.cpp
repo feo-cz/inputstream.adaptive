@@ -125,7 +125,7 @@ void CHOOSER::IRepresentationChooser::LogDetails(PLAYLIST::CRepresentation* curr
     LOG::Log(LOGDEBUG,
              "[Repr. chooser] Selected representation\n"
              "ID %s (Bandwidth: %u bit/s, Resolution: %ix%i)",
-             nextRep->GetId().data(), nextRep->GetBandwidth(), nextRep->GetWidth(),
+             nextRep->GetId().c_str(), nextRep->GetBandwidth(), nextRep->GetWidth(),
              nextRep->GetHeight());
   }
   else if (currentRep != nextRep)
@@ -134,8 +134,8 @@ void CHOOSER::IRepresentationChooser::LogDetails(PLAYLIST::CRepresentation* curr
              "[Repr. chooser] Changed representation\n"
              "Current ID %s (Bandwidth: %u bit/s, Resolution: %ix%i)\n"
              "Next ID %s (Bandwidth: %u bit/s, Resolution: %ix%i)",
-             currentRep->GetId().data(), currentRep->GetBandwidth(), currentRep->GetWidth(),
-             currentRep->GetHeight(), nextRep->GetId().data(), nextRep->GetBandwidth(),
+             currentRep->GetId().c_str(), currentRep->GetBandwidth(), currentRep->GetWidth(),
+             currentRep->GetHeight(), nextRep->GetId().c_str(), nextRep->GetBandwidth(),
              nextRep->GetWidth(), nextRep->GetHeight());
   }
 }

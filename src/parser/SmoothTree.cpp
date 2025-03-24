@@ -465,7 +465,7 @@ bool adaptive::CSmoothTree::InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
   segCopy.m_number++;
 
   LOG::Log(LOGDEBUG, "Insert fragment to adaptation set \"%s\" (PTS: %llu, number: %llu)",
-           adpSet->GetId().data(), segCopy.startPTS_, segCopy.m_number);
+           adpSet->GetId().c_str(), segCopy.startPTS_, segCopy.m_number);
 
   for (auto& repr : adpSet->GetRepresentations())
   {

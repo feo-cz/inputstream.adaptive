@@ -43,7 +43,7 @@ public:
     return std::make_unique<CAdaptationSet>(parent);
   }
 
-  std::string_view GetId() const { return m_id; }
+  const std::string& GetId() const { return m_id; }
   void SetId(std::string_view id) { m_id = id; }
 
   std::string GetName() const { return m_name; }
