@@ -59,7 +59,7 @@ CClearKeyCencSingleSampleDecrypter::CClearKeyCencSingleSampleDecrypter(
       FILESYS::SaveFile(debugFilePath, postData.c_str(), true);
     }
 
-    CURL::CUrl curl{licenseUri, postData};
+    CURL::CUrl curl{std::string(licenseUri), postData};
     curl.AddHeader("Accept", "application/json");
     curl.AddHeader("Content-Type", "application/json");
     curl.AddHeaders(licenseHeaders);

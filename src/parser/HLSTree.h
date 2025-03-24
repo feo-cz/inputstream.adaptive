@@ -115,7 +115,7 @@ protected:
   /*!
    * \brief Download the key from media initialization section, overridable method for test project
    */
-  virtual bool DownloadKey(std::string_view url,
+  virtual bool DownloadKey(const std::string& url,
                            const std::map<std::string, std::string>& reqHeaders,
                            const std::vector<std::string>& respHeaders,
                            UTILS::CURL::HTTPResponse& resp);
@@ -123,7 +123,7 @@ protected:
   /*!
    * \brief Download manifest child, overridable method for test project
    */
-  virtual bool DownloadManifestChild(std::string_view url,
+  virtual bool DownloadManifestChild(const std::string& url,
                                      const std::map<std::string, std::string>& reqHeaders,
                                      const std::vector<std::string>& respHeaders,
                                      UTILS::CURL::HTTPResponse& resp);

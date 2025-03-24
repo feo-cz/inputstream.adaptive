@@ -96,7 +96,7 @@ protected:
   /*!
    * \brief Download manifest update, overridable method for test project
    */
-  virtual bool DownloadManifestUpd(std::string_view url,
+  virtual bool DownloadManifestUpd(const std::string& url,
                                    const std::map<std::string, std::string>& reqHeaders,
                                    const std::vector<std::string>& respHeaders,
                                    UTILS::CURL::HTTPResponse& resp);

@@ -1042,7 +1042,7 @@ void adaptive::CHLSTree::OnPeriodChange()
     m_aesUrlKeyCache.clear();
 }
 
-bool adaptive::CHLSTree::DownloadKey(std::string_view url,
+bool adaptive::CHLSTree::DownloadKey(const std::string& url,
                                      const std::map<std::string, std::string>& reqHeaders,
                                      const std::vector<std::string>& respHeaders,
                                      UTILS::CURL::HTTPResponse& resp)
@@ -1050,7 +1050,7 @@ bool adaptive::CHLSTree::DownloadKey(std::string_view url,
   return CURL::DownloadFile(url, reqHeaders, respHeaders, resp);
 }
 
-bool adaptive::CHLSTree::DownloadManifestChild(std::string_view url,
+bool adaptive::CHLSTree::DownloadManifestChild(const std::string& url,
                                                const std::map<std::string, std::string>& reqHeaders,
                                                const std::vector<std::string>& respHeaders,
                                                UTILS::CURL::HTTPResponse& resp)

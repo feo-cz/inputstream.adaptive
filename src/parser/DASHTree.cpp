@@ -1504,7 +1504,7 @@ void adaptive::CDashTree::MergeAdpSets()
   }
 }
 
-bool adaptive::CDashTree::DownloadManifestUpd(std::string_view url,
+bool adaptive::CDashTree::DownloadManifestUpd(const std::string& url,
                                               const std::map<std::string, std::string>& reqHeaders,
                                               const std::vector<std::string>& respHeaders,
                                               UTILS::CURL::HTTPResponse& resp)

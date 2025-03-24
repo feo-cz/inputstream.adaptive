@@ -41,14 +41,14 @@ public:
   * \brief Create CUrl.
   * \param url The url of the file to download
   */
-  CUrl(std::string_view url);
+  CUrl(const std::string& url);
 
  /*!
   * \brief Create CUrl for POST request, if the data are empty, GET will be performed.
   * \param url The request url
   * \param postData The data for the POST request
   */
-  CUrl(std::string_view url, const std::string& postData);
+  CUrl(const std::string& url, const std::string& postData);
   ~CUrl();
 
  /*!
@@ -57,7 +57,7 @@ public:
   */
   int Open();
 
-  void AddHeader(std::string_view name, std::string_view value);
+  void AddHeader(const std::string& name, const std::string& value);
   void AddHeaders(const std::map<std::string, std::string>& headers);
 
  /*!
@@ -65,11 +65,11 @@ public:
   * \param name The header name
   * \return The header value, or empty if none
   */
-  std::string GetResponseHeader(std::string_view name);
+  std::string GetResponseHeader(const std::string& name);
 
-  std::vector<std::string> GetResponseHeaders(std::string_view name);
+  std::vector<std::string> GetResponseHeaders(const std::string& name);
 
- /*!
+  /*!
   * \brief Get the last used url (after following redirects).
   * \return The url
   */
@@ -149,7 +149,7 @@ struct Cookie
   * \param resp The data from the response
   * \return True if has success, otherwise false
   */
-bool DownloadFile(std::string_view url,
+bool DownloadFile(const std::string& url,
                   const std::map<std::string, std::string>& reqHeaders,
                   const std::vector<std::string>& respHeaders,
                   HTTPResponse& resp);

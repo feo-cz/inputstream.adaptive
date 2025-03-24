@@ -111,7 +111,7 @@ public:
   std::string RunManifestUpdate(std::string manifestUpdFile);
 
 private:
-  bool DownloadManifestUpd(std::string_view url,
+  bool DownloadManifestUpd(const std::string& url,
                            const std::map<std::string, std::string>& reqHeaders,
                            const std::vector<std::string>& respHeaders,
                            UTILS::CURL::HTTPResponse& resp) override;
@@ -132,12 +132,12 @@ public:
   virtual HLSTestTree* Clone() const override { return new HLSTestTree{*this}; }
 
 private:
-  bool DownloadKey(std::string_view url,
+  bool DownloadKey(const std::string& url,
                    const std::map<std::string, std::string>& reqHeaders,
                    const std::vector<std::string>& respHeaders,
                    UTILS::CURL::HTTPResponse& resp) override;
 
-  bool DownloadManifestChild(std::string_view url,
+  bool DownloadManifestChild(const std::string& url,
                              const std::map<std::string, std::string>& reqHeaders,
                              const std::vector<std::string>& respHeaders,
                              UTILS::CURL::HTTPResponse& resp) override;
