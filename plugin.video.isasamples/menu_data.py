@@ -79,14 +79,6 @@ menu_data = {
                     'manifest_url': 'https://media.axprod.net/TestVectors/v7-Clear/Manifest_1080p.mpd',
                 }
             },
-            'TravelXP [video]': {
-                SI_FEATURE: 'ADP,CMP4,CWEBM',
-                SI_CODECS: 'vp9,hvc1,mp4a',
-                SI_INFO: 'Two adaptive videos VP9 and HEVC',
-                SI_CONFIG: {
-                    'manifest_url': 'https://travelxp.s.llnwi.net/watch1/61025c11781ce3c543f5abcd/manifest_v4.mpd'
-                }
-            },
             'Dashif testpic_2s [subtitles]': {
                 SI_FEATURE: 'SUBMP4',
                 SI_CODECS: 'avc1,mp4a,stpp',
@@ -497,6 +489,14 @@ menu_data = {
                 SI_INFO: 'Subtitle TTML MP4 container',
                 SI_CONFIG: {
                     'manifest_url': 'https://test-streams.mux.dev/tos_ismc/main.m3u8',
+                }
+            },
+            'TravelXP [multi-period][CC subtitles]': {
+                SI_FEATURE: 'ADPV,AUDI',
+                SI_CODECS: 'h264,aac',
+                SI_INFO: 'TS container',
+                SI_CONFIG: {
+                    'manifest_url': 'https://travelxp-travelxp-1-eu.xiaomi.wurl.tv/playlist.m3u8'
                 }
             },
         },
