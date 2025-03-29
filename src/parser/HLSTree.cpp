@@ -802,15 +802,18 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
         }
 
         FreeSegments(period, rep);
-        rep->Timeline().Swap(newSegments);
 
         rep->SetStartNumber(mediaSequenceNbr);
+
+        // Update MEDIA-SEQUENCE for next period
+        mediaSequenceNbr += newSegments.GetSize();
+
+        rep->Timeline().Swap(newSegments);
       }
 
       isSkipUntilDiscont = false;
       ++discontCount;
 
-      mediaSequenceNbr += rep->Timeline().GetSize();
       currentSegNumber = mediaSequenceNbr;
 
       CPeriod* newPeriod = FindDiscontinuityPeriod(m_discontSeq + discontCount);
