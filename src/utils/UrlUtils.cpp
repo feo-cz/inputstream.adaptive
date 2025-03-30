@@ -257,18 +257,20 @@ std::string UTILS::URL::GetBaseDomain(std::string url)
     if (paramsPos != std::string::npos)
       url.erase(paramsPos);
 
-    const size_t domainStartPos = url.find("://") + 3;
-    // Try remove url port number and path
-    const size_t port = url.find_first_of(':', domainStartPos);
-    if (port != std::string::npos)
-      url.erase(port);
-    else
-    {
-      // Try remove the path
-      const size_t slashPos = url.find_first_of('/', domainStartPos);
-      if (slashPos != std::string::npos)
-        url.erase(slashPos);
-    }
+    const size_t schemeEndPos = url.find("://");
+    if (schemeEndPos == std::string::npos)
+      return ""; // Not valid
+
+    const size_t domainStartPos = schemeEndPos + 3;
+    const size_t portPos = url.find_first_of(':', domainStartPos);
+    const size_t pathPos = url.find_first_of('/', domainStartPos);
+
+    size_t endPos = url.size();
+    if (portPos != std::string::npos && portPos < pathPos)
+      url.erase(portPos); // remove port number
+    else if (pathPos != std::string::npos)
+      url.erase(pathPos); // remove from slash
+
     return url;
   }
   return "";

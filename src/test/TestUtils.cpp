@@ -48,6 +48,9 @@ TEST_F(UtilsTest, DetermineBaseDomain)
 
   url = "https://www.foo.bar:1234/mpd/test.mpd?ping=pong";
   EXPECT_EQ(URL::GetBaseDomain(url), "https://www.foo.bar");
+
+  url = "https://www.foo.bar/example/smil:rtmp.smil/playlist.m3u8?ping=pong";
+  EXPECT_EQ(URL::GetBaseDomain(url), "https://www.foo.bar");
 }
 
 TEST_F(UtilsTest, JoinUrls)
