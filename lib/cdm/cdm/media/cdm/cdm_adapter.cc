@@ -258,6 +258,17 @@ void CdmAdapter::Initialize()
   }
 
   std::string version{get_cdm_verion_func()};
+
+  if (version == "4.10.2891.0")
+  {
+    // This version have unclear problems
+    // such as crashes on OnStorageId() method calls and others video decoding crashes
+    LOG::Log(LOGERROR,
+             "THE CDM VERSION \"4.10.2891.0\" IS NOT SUPPORTED DUE TO UNCLEAR LIBRARY ISSUES.\n"
+             "------------------------------> PLEASE INSTALL AN OLDER VERSION OF WIDEVINE CDM!");
+    return;
+  }
+
   LOG::LogF(LOGDEBUG, "CDM version: %s", version.c_str());
 
 #if defined(OS_WIN)
