@@ -87,13 +87,13 @@ msgstr "Experto"
 
 # empty string with id 30121
 msgctxt "#30122"
-msgid "Try avoiding the use of secure decoder"
-msgstr "Intentar evitar el uso de decodificador seguro"
+msgid "Disable secure decoder"
+msgstr ""
 
 #. Description of setting with label #30122
 msgctxt "#30123"
-msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it."
-msgstr "Es posible que algunos dispositivos Android definidos como Widevine L1 no funcionen correctamente, lo que puede provocar una pantalla negra durante la reproducción. En este caso intente activarlo."
+msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it. This setting may be overridden by the video add-on used."
+msgstr ""
 
 # empty strings from id 30124 to 30155
 #. Item list value of setting with label #30117
@@ -158,15 +158,6 @@ msgstr "Ancho de banda inicial (Kbps)"
 msgctxt "#30171"
 msgid "Defines the initial bandwidth when it cannot be automatically determined. This value can be overridden by the minimum bandwidth setting."
 msgstr "Define el ancho de banda inicial cuando no se puede determinar automáticamente. Este valor puede ser anulado por la configuración de ancho de banda mínimo."
-
-msgctxt "#30172"
-msgid "Ignore HDCP status"
-msgstr "Ignorar estado de HDCP"
-
-#. Description of setting with label #30172
-msgctxt "#30173"
-msgid "Some DRM-protected HD / UHD videos may only be played if the HDCP status is ignored."
-msgstr "Es posible que algunos vídeos HD/UHD protegidos por DRM solo se reproduzcan si se ignora el estado HDCP."
 
 #. To set the stream selection type (refer to RepresentationChooser's)
 msgctxt "#30174"
@@ -326,6 +317,33 @@ msgstr "Guardar datos de licencia"
 msgctxt "#30241"
 msgid "Saves the license data for example: initial data, challenge data and response data, in the \"cdm\" folder of the Kodi data folder."
 msgstr "Guarda los datos de la licencia, por ejemplo: datos iniciales, datos de desafío y datos de respuesta, en la carpeta \"cdm\" de la carpeta de datos de Kodi."
+
+#. Setting to enable verbose debug
+msgctxt "#30242"
+msgid "Enable verbose debug"
+msgstr ""
+
+#. Description of setting with label #30242
+msgctxt "#30243"
+msgid "Verbose debugging can be useful for debugging components, but in some cases it may expose sensitive information in the log."
+msgstr ""
+
+# empty string with id 30121
+#~ msgctxt "#30122"
+#~ msgid "Try avoiding the use of secure decoder"
+#~ msgstr "Intentar evitar el uso de decodificador seguro"
+
+#~ msgctxt "#30123"
+#~ msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it."
+#~ msgstr "Es posible que algunos dispositivos Android definidos como Widevine L1 no funcionen correctamente, lo que puede provocar una pantalla negra durante la reproducción. En este caso intente activarlo."
+
+#~ msgctxt "#30172"
+#~ msgid "Ignore HDCP status"
+#~ msgstr "Ignorar estado de HDCP"
+
+#~ msgctxt "#30173"
+#~ msgid "Some DRM-protected HD / UHD videos may only be played if the HDCP status is ignored."
+#~ msgstr "Es posible que algunos vídeos HD/UHD protegidos por DRM solo se reproduzcan si se ignora el estado HDCP."
 
 # The minimum bandwidth which should not be deceeded.
 #~ msgctxt "#30101"

@@ -5,15 +5,15 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: translations@kodi.tv\n"
-"PO-Revision-Date: 2025-01-17 02:09+0000\n"
-"Last-Translator: Christian Gade <gade@kodi.tv>\n"
+"PO-Revision-Date: 2025-04-06 18:57+0000\n"
+"Last-Translator: Marek Adamski <fevbew@wp.pl>\n"
 "Language-Team: Polish <https://kodi.weblate.cloud/projects/kodi-add-ons-videoplayer-inputstream/inputstream-adaptive/pl_pl/>\n"
 "Language: pl_pl\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Weblate 5.9.2\n"
+"X-Generator: Weblate 5.10.4\n"
 
 msgctxt "Addon Summary"
 msgid "InputStream client for adaptive streams"
@@ -87,13 +87,13 @@ msgstr "Eksperckie"
 
 # empty string with id 30121
 msgctxt "#30122"
-msgid "Try avoiding the use of secure decoder"
-msgstr "Spróbuj uniknąć używania bezpiecznego dekodera"
+msgid "Disable secure decoder"
+msgstr "Wyłącz bezpieczny dekoder"
 
 #. Description of setting with label #30122
 msgctxt "#30123"
-msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it."
-msgstr "Niektóre urządzenia z systemem Android zdefiniowanym jako Widevine L1, mogą nie działać prawidłowo, co może skutkować czarnym ekranem podczas odtwarzania. W takim przypadku spróbuj włączyć tę funkcję."
+msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it. This setting may be overridden by the video add-on used."
+msgstr "Niektóre urządzenia z systemem Android zdefiniowane jako Widevine L1 mogą nie działać prawidłowo, co może skutkować czarnym ekranem podczas odtwarzania. W takim przypadku spróbuj włączyć tę opcję. To ustawienie może zostać zastąpione przez używany dodatek wideo."
 
 # empty strings from id 30124 to 30155
 #. Item list value of setting with label #30117
@@ -158,15 +158,6 @@ msgstr "Początkowa przepustowość (Kbps)"
 msgctxt "#30171"
 msgid "Defines the initial bandwidth when it cannot be automatically determined. This value can be overridden by the minimum bandwidth setting."
 msgstr "Określa początkową przepustowość, gdy nie może być ona określona automatycznie. Ta wartość może zostać zastąpiona przez ustawienie minimalnej przepustowości."
-
-msgctxt "#30172"
-msgid "Ignore HDCP status"
-msgstr "Ignoruj status HDCP"
-
-#. Description of setting with label #30172
-msgctxt "#30173"
-msgid "Some DRM-protected HD / UHD videos may only be played if the HDCP status is ignored."
-msgstr "Niektóre filmy HD / UHD chronione przez DRM mogą być odtwarzane tylko wtedy, gdy stan HDCP jest ignorowany."
 
 #. To set the stream selection type (refer to RepresentationChooser's)
 msgctxt "#30174"
@@ -326,6 +317,33 @@ msgstr "Zapisz dane licencji"
 msgctxt "#30241"
 msgid "Saves the license data for example: initial data, challenge data and response data, in the \"cdm\" folder of the Kodi data folder."
 msgstr "Zapisuje dane licencji na przykład: dane początkowe, dane wyzwania i dane odpowiedzi, w folderze \"cdm\" folderu danych Kodi."
+
+#. Setting to enable verbose debug
+msgctxt "#30242"
+msgid "Enable verbose debug"
+msgstr "Włącz szczegółowe debugowanie"
+
+#. Description of setting with label #30242
+msgctxt "#30243"
+msgid "Verbose debugging can be useful for debugging components, but in some cases it may expose sensitive information in the log."
+msgstr "Szczegółowe debugowanie może być przydatne przy debugowaniu komponentów, ale w niektórych przypadkach może ujawnić poufne informacje w dzienniku."
+
+# empty string with id 30121
+#~ msgctxt "#30122"
+#~ msgid "Try avoiding the use of secure decoder"
+#~ msgstr "Spróbuj uniknąć używania bezpiecznego dekodera"
+
+#~ msgctxt "#30123"
+#~ msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it."
+#~ msgstr "Niektóre urządzenia z systemem Android zdefiniowanym jako Widevine L1, mogą nie działać prawidłowo, co może skutkować czarnym ekranem podczas odtwarzania. W takim przypadku spróbuj włączyć tę funkcję."
+
+#~ msgctxt "#30172"
+#~ msgid "Ignore HDCP status"
+#~ msgstr "Ignoruj status HDCP"
+
+#~ msgctxt "#30173"
+#~ msgid "Some DRM-protected HD / UHD videos may only be played if the HDCP status is ignored."
+#~ msgstr "Niektóre filmy HD / UHD chronione przez DRM mogą być odtwarzane tylko wtedy, gdy stan HDCP jest ignorowany."
 
 # The minimum bandwidth which should not be deceeded.
 #~ msgctxt "#30101"

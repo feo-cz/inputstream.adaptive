@@ -87,13 +87,13 @@ msgstr "전문가"
 
 # empty string with id 30121
 msgctxt "#30122"
-msgid "Try avoiding the use of secure decoder"
-msgstr "보안 디코더를 사용하지 않음"
+msgid "Disable secure decoder"
+msgstr ""
 
 #. Description of setting with label #30122
 msgctxt "#30123"
-msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it."
-msgstr "Widevine L1로 정의된 일부 Android 기기는 제대로 작동하지 않을 수 있으며, 이로 인해 재생 중에 검은색 화면이 나타날 수 있습니다. 이 경우 사용하십시오."
+msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it. This setting may be overridden by the video add-on used."
+msgstr ""
 
 # empty strings from id 30124 to 30155
 #. Item list value of setting with label #30117
@@ -158,15 +158,6 @@ msgstr "초기 대역폭(Kbps)"
 msgctxt "#30171"
 msgid "Defines the initial bandwidth when it cannot be automatically determined. This value can be overridden by the minimum bandwidth setting."
 msgstr "자동으로 결정할 수 없는 경우 초기 대역폭을 정의합니다. 이 값은 최소 대역폭 설정으로 바뀔 수 있습니다."
-
-msgctxt "#30172"
-msgid "Ignore HDCP status"
-msgstr "HDCP 상태 무시"
-
-#. Description of setting with label #30172
-msgctxt "#30173"
-msgid "Some DRM-protected HD / UHD videos may only be played if the HDCP status is ignored."
-msgstr "일부 DRM 보호 HD/UHD 동영상은 HDCP 상태가 무시되는 경우에만 재생될 수 있습니다."
 
 #. To set the stream selection type (refer to RepresentationChooser's)
 msgctxt "#30174"
@@ -326,6 +317,33 @@ msgstr "라이선스 데이터 저장"
 msgctxt "#30241"
 msgid "Saves the license data for example: initial data, challenge data and response data, in the \"cdm\" folder of the Kodi data folder."
 msgstr "예를 들어 초기 데이터, 챌린지 데이터 및 응답 데이터와 같은 라이선스 데이터를 Kodi 데이터 폴더의 \"cdm\" 폴더에 저장합니다."
+
+#. Setting to enable verbose debug
+msgctxt "#30242"
+msgid "Enable verbose debug"
+msgstr ""
+
+#. Description of setting with label #30242
+msgctxt "#30243"
+msgid "Verbose debugging can be useful for debugging components, but in some cases it may expose sensitive information in the log."
+msgstr ""
+
+# empty string with id 30121
+#~ msgctxt "#30122"
+#~ msgid "Try avoiding the use of secure decoder"
+#~ msgstr "보안 디코더를 사용하지 않음"
+
+#~ msgctxt "#30123"
+#~ msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it."
+#~ msgstr "Widevine L1로 정의된 일부 Android 기기는 제대로 작동하지 않을 수 있으며, 이로 인해 재생 중에 검은색 화면이 나타날 수 있습니다. 이 경우 사용하십시오."
+
+#~ msgctxt "#30172"
+#~ msgid "Ignore HDCP status"
+#~ msgstr "HDCP 상태 무시"
+
+#~ msgctxt "#30173"
+#~ msgid "Some DRM-protected HD / UHD videos may only be played if the HDCP status is ignored."
+#~ msgstr "일부 DRM 보호 HD/UHD 동영상은 HDCP 상태가 무시되는 경우에만 재생될 수 있습니다."
 
 # The minimum bandwidth which should not be deceeded.
 #~ msgctxt "#30101"
