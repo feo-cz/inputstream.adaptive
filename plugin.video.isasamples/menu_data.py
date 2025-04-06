@@ -353,7 +353,7 @@ menu_data = {
                     'drm': '{"org.w3.clearkey": {"license": {"keyids": {"feedf00deedeadbeeff0baadf00dd00d": "00112233445566778899aabbccddeeff", "1234f00deedeadbeeff0baadf00dd00d": "8899aabbccddeeff8899aabbccddeeff"}}}}',
                 }
             },
-            'Bitmovin art of motion [widevine to clear key, keys on property]': {
+            'Bitmovin art of motion [WV to CK, keys on property]': {
                 SI_ENCRYPT: 'DRMCK',
                 SI_INFO: 'Override widevine content protection to use clear key',
                 SI_CONFIG: {
@@ -585,6 +585,15 @@ menu_data = {
                     'license_key': 'https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,sl:150)',
                     'drm_legacy': 'com.microsoft.playready|https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,sl:150)',
                     'drm': '{"com.microsoft.playready": {"license": {"server_url": "https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,sl:150)"}}}'
+                }
+            },
+            'Microsoft tears of steel 4k [PR to CK, keys on property]': {
+                SI_ENCRYPT: 'DRMCK',
+                SI_INFO: 'Override PlayReady content protection to use ClearKey',
+                SI_CONFIG: {
+                    'manifest_url': 'https://test.playready.microsoft.com/media/profficialsite/tearsofsteel_4k.ism.smoothstreaming/manifest',
+                    'drm_legacy': 'org.w3.clearkey|6f651ae1dbe44434bcb4690d1564c41c:88da852ae4fa2e1e36aeb2d5c94997b1',
+                    'drm': '{"org.w3.clearkey": {"license": {"keyids": {"6f651ae1dbe44434bcb4690d1564c41c": "88da852ae4fa2e1e36aeb2d5c94997b1"}}}}',
                 }
             },
         },
