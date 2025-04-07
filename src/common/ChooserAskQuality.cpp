@@ -139,14 +139,11 @@ PLAYLIST::CAdaptationSet* CHOOSER::CRepresentationChooserAskQuality::GetPreferre
 
     if (!entries.empty())
     {
-      CAdaptationSet* selAdpSet{entriesOjb[preselIndex].first};
-      CRepresentation* selRep{entriesOjb[preselIndex].second};
+      if (selIndex == -1) // has been cancelled by the user
+        selIndex = preselIndex == -1 ? 0 : preselIndex;
 
-      if (selIndex >= 0) // If selIndex is <0 has been cancelled by the user
-      {
-        selAdpSet = entriesOjb[selIndex].first;
-        selRep = entriesOjb[selIndex].second;
-      }
+      CAdaptationSet* selAdpSet{entriesOjb[selIndex].first};
+      CRepresentation* selRep{entriesOjb[selIndex].second};
 
       m_selectedResWidth = selRep->GetWidth();
       m_selectedResHeight = selRep->GetHeight();
