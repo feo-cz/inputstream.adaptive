@@ -87,13 +87,13 @@ msgstr "Ekspert"
 
 # empty string with id 30121
 msgctxt "#30122"
-msgid "Try avoiding the use of secure decoder"
-msgstr "Püüa vältida turvalise dekoodri kasutamist"
+msgid "Disable secure decoder"
+msgstr ""
 
 #. Description of setting with label #30122
 msgctxt "#30123"
-msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it."
-msgstr "Mõned Widevine L1 määratlusega Android seadmed ei pruugi korralikult töötada, mis võib taasesituse ajal põhjustada musta ekraani. Sel juhul proovi see lubada."
+msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it. This setting may be overridden by the video add-on used."
+msgstr ""
 
 # empty strings from id 30124 to 30155
 #. Item list value of setting with label #30117
@@ -158,15 +158,6 @@ msgstr "Esialgne ribalaius (Kbps)"
 msgctxt "#30171"
 msgid "Defines the initial bandwidth when it cannot be automatically determined. This value can be overridden by the minimum bandwidth setting."
 msgstr "Määrab esialgse ribalaiuse, kui seda ei saa automaatselt määrata. Selle väärtuse saab alistada minimaalse ribalaiuse sättega."
-
-msgctxt "#30172"
-msgid "Ignore HDCP status"
-msgstr "Eira HDCP olekut"
-
-#. Description of setting with label #30172
-msgctxt "#30173"
-msgid "Some DRM-protected HD / UHD videos may only be played if the HDCP status is ignored."
-msgstr "Mõnda DRM kaitsega HD/UHD videot saab esitada ainult siis, kui HDCP olekut eiratakse."
 
 #. To set the stream selection type (refer to RepresentationChooser's)
 msgctxt "#30174"
@@ -326,3 +317,30 @@ msgstr "Salvesta litsentsiandmed"
 msgctxt "#30241"
 msgid "Saves the license data for example: initial data, challenge data and response data, in the \"cdm\" folder of the Kodi data folder."
 msgstr "Salvestab litsentsiandmed näiteks: algandmed, väljakutse ja vastuse andmed Kodi kausta data/cdm."
+
+#. Setting to enable verbose debug
+msgctxt "#30242"
+msgid "Enable verbose debug"
+msgstr ""
+
+#. Description of setting with label #30242
+msgctxt "#30243"
+msgid "Verbose debugging can be useful for debugging components, but in some cases it may expose sensitive information in the log."
+msgstr ""
+
+# empty string with id 30121
+#~ msgctxt "#30122"
+#~ msgid "Try avoiding the use of secure decoder"
+#~ msgstr "Püüa vältida turvalise dekoodri kasutamist"
+
+#~ msgctxt "#30123"
+#~ msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it."
+#~ msgstr "Mõned Widevine L1 määratlusega Android seadmed ei pruugi korralikult töötada, mis võib taasesituse ajal põhjustada musta ekraani. Sel juhul proovi see lubada."
+
+#~ msgctxt "#30172"
+#~ msgid "Ignore HDCP status"
+#~ msgstr "Eira HDCP olekut"
+
+#~ msgctxt "#30173"
+#~ msgid "Some DRM-protected HD / UHD videos may only be played if the HDCP status is ignored."
+#~ msgstr "Mõnda DRM kaitsega HD/UHD videot saab esitada ainult siis, kui HDCP olekut eiratakse."
