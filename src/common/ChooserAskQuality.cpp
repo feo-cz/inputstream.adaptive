@@ -172,6 +172,5 @@ PLAYLIST::CRepresentation* CRepresentationChooserAskQuality::GetNextRepresentati
     return selector.HighestBw(adp);
   }
 
-  CRepresentationSelector selector{m_selectedResWidth, m_selectedResHeight};
-  return selector.Highest(adp);
+  return currentRep;
 }
