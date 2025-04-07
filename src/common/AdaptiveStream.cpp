@@ -676,6 +676,12 @@ bool AdaptiveStream::start_stream(const uint64_t startPts)
       size_t segPosDelay =
           static_cast<size_t>((m_tree->m_liveDelay * current_rep_->GetTimescale()) / segDur);
 
+      //! @todo: hackish workaround, when segment duration is same of live delay, force at least 1 position delay
+      //! otherwise the current segment will be last available on the timeline,
+      //! therefore when GetNextSegment is executed will return nullptr and the below (todo) BUG condition stop the playback
+      if (segPosDelay == 0)
+        segPosDelay = 1;
+
       if (segPos > segPosDelay)
         segPos -= segPosDelay;
       else
