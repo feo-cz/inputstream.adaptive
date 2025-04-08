@@ -84,7 +84,6 @@ std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CWVDecrypterA::CreateSingleS
 
 void CWVDecrypterA::GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
                                     const std::vector<uint8_t>& keyId,
-                                    uint32_t media,
                                     DRM::DecrypterCapabilites& caps)
 {
   if (!decrypter)
@@ -96,7 +95,7 @@ void CWVDecrypterA::GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDec
   auto wvDecrypter = std::dynamic_pointer_cast<CWVCencSingleSampleDecrypterA>(decrypter);
   if (wvDecrypter)
   {
-    wvDecrypter->GetCapabilities(keyId, media, caps);
+    wvDecrypter->GetCapabilities(keyId, caps);
   }
   else
     LOG::LogF(LOGFATAL, "Cannot cast the decrypter shared pointer.");

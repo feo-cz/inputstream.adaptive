@@ -60,9 +60,7 @@ public:
       // array of <subsample_count> integers. NULL if subsample_count is 0
       const AP4_UI32* bytesOfEncryptedData) override;
 
-  void GetCapabilities(const std::vector<uint8_t>& keyId,
-                       uint32_t media,
-                       DRM::DecrypterCapabilites& caps);
+  void GetCapabilities(const std::vector<uint8_t>& keyId, DRM::DecrypterCapabilites& caps);
 
   void RequestNewKeys() { m_isKeyUpdateRequested = true; };
 

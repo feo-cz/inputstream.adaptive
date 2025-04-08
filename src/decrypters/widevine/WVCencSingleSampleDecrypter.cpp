@@ -105,7 +105,6 @@ CWVCencSingleSampleDecrypter::~CWVCencSingleSampleDecrypter()
 }
 
 void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& keyId,
-                                                   uint32_t media,
                                                    DecrypterCapabilites& caps)
 {
   caps = {0, m_hdcpVersion, m_hdcpLimit};

@@ -40,9 +40,6 @@ struct DecrypterCapabilites
   static const uint32_t SSD_SECURE_DECODER = 32;
   static const uint32_t SSD_INVALID = 64;
 
-  static const uint32_t SSD_MEDIA_VIDEO = 1;
-  static const uint32_t SSD_MEDIA_AUDIO = 2;
-
   uint16_t flags{0};
 
   /* The following 2 fields are set as followed:

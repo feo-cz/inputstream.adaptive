@@ -167,7 +167,6 @@ std::vector<uint8_t> CWVCencSingleSampleDecrypterA::GetChallengeData()
 }
 
 void CWVCencSingleSampleDecrypterA::GetCapabilities(const std::vector<uint8_t>& keyId,
-                                                    uint32_t media,
                                                     DRM::DecrypterCapabilites& caps)
 {
   caps = {DRM::DecrypterCapabilites::SSD_SECURE_PATH |
