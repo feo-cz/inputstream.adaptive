@@ -86,7 +86,7 @@ public:
    * \param manifestUpdParams Parameters to be add to manifest request url, depends on manifest implementation
    */
   virtual void Configure(CHOOSER::IRepresentationChooser* reprChooser,
-                         std::string_view manifestUpdParams);
+                         const std::string& manifestUpdParams);
 
   /*
    * \brief Get the current timestamp in ms, overridable method for test project
@@ -104,7 +104,7 @@ public:
    * \param headers Headers provided in the HTTP response
    * \param data The manifest data
    */
-  virtual bool Open(std::string_view url,
+  virtual bool Open(const std::string& url,
                     const std::map<std::string, std::string>& headers,
                     const std::string& data) = 0;
 

@@ -21,16 +21,16 @@ namespace STRING
 {
 
 // \brief Template function to check if a key exists in a container e.g. <map>
-template<typename T, typename Key>
-bool KeyExists(const T& container, const Key& key)
+template<typename T>
+bool KeyExists(const T& container, const typename T::key_type& key)
 {
   return container.find(key) != std::end(container);
 }
 
 template<typename T>
-bool KeyExists(const T& container, const std::string_view key)
+bool KeyExists(const T& container, std::string_view key)
 {
-  return container.find(key.data()) != std::end(container);
+  return container.find(typename T::key_type(key)) != std::end(container);
 }
 
 /*!
@@ -60,9 +60,9 @@ bool GetMapValue(const std::map<T, TValue>& map, const T& key, TValue& val)
  * \return True if found, otherwise false.
  */
 template<typename T, typename TValue>
-bool GetMapValue(const std::map<T, TValue>& map, const std::string_view& key, TValue& val)
+bool GetMapValue(const std::map<T, TValue>& map, std::string_view key, TValue& val)
 {
-  auto mapIt = map.find(key.data());
+  auto mapIt = map.find(T(key));
   if (mapIt != map.cend())
   {
     val = mapIt->second;

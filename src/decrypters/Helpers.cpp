@@ -35,9 +35,9 @@ void WriteBigEndianInt(std::vector<uint8_t>& data, const uint32_t value)
 
 } // unnamed namespace
 
-std::string DRM::GenerateUrlDomainHash(std::string_view url)
+std::string DRM::GenerateUrlDomainHash(const std::string& url)
 {
-  std::string baseDomain = URL::GetBaseDomain(url.data());
+  std::string baseDomain = URL::GetBaseDomain(url);
   // If we are behind a proxy we fall always in to the same domain e.g. "http://localhost/"
   // but we have to differentiate the results based on the service of the add-on hosting the proxy
   // to avoid possible collisions, so we include the first directory path after the domain name

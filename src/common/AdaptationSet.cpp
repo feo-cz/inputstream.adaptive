@@ -20,7 +20,7 @@ using namespace UTILS;
 
 void PLAYLIST::CAdaptationSet::AddCodecs(std::string_view codecs)
 {
-  std::set<std::string> list = STRING::SplitToSet(codecs.data(), ',');
+  std::set<std::string> list = STRING::SplitToSet(codecs, ',');
   m_codecs.insert(list.begin(), list.end());
 }
 
@@ -41,7 +41,7 @@ bool PLAYLIST::CAdaptationSet::ContainsCodec(std::string_view codec)
 
 void PLAYLIST::CAdaptationSet::AddSwitchingIds(std::string_view switchingIds)
 {
-  std::vector<std::string> list = STRING::SplitToVec(switchingIds.data(), ',');
+  std::vector<std::string> list = STRING::SplitToVec(switchingIds, ',');
   m_switchingIds.insert(m_switchingIds.end(), list.begin(), list.end());
 }
 

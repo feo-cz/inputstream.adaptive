@@ -74,7 +74,7 @@ private:
                      std::string_view endTime,
                      std::string_view text);
 
-  uint64_t GetTime(std::string_view timeExpr);
+  uint64_t GetTime(std::string timeExpr);
 
   struct SubtitleData
   {

@@ -14,13 +14,13 @@
 
 using namespace PLAYLIST;
 
-void PLAYLIST::CSegmentBase::SetIndexRange(std::string_view indexRange)
+void PLAYLIST::CSegmentBase::SetIndexRange(const std::string& indexRange)
 {
   if (!ParseRangeRFC(indexRange, m_indexRangeBegin, m_indexRangeEnd))
     LOG::LogF(LOGERROR, "Failed to parse \"indexrange\" attribute");
 }
 
-void PLAYLIST::CSegmentBase::SetInitRange(std::string_view range)
+void PLAYLIST::CSegmentBase::SetInitRange(const std::string& range)
 {
   if (!ParseRangeRFC(range, m_initRangeBegin, m_initRangeEnd))
     LOG::LogF(LOGERROR, "Failed to parse initialization \"range\" attribute");

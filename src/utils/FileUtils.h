@@ -69,14 +69,14 @@ bool CheckDuplicateFilePath(std::string& filePath, uint32_t filesLimit = 0);
  *                  otherwise only the specified folder will be emptied.
  * \return True is success, otherwise false.
  */
-bool RemoveDirectory(std::string_view path, bool recursive = true);
+bool RemoveDirectory(const std::string& path, bool recursive = true);
 
 /*!
  * \brief Get the file extension from a filename.
  * \param path The filename with or without a path.
  * \return The file extension if found, otherwise empty string.
  */
-std::string GetFileExtension(std::string path);
+std::string GetFileExtension(std::string_view path);
 
 } // namespace FILESYS
 } // namespace UTILS

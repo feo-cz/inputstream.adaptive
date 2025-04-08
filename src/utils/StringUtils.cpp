@@ -33,7 +33,7 @@ namespace
 template<typename T>
 T NumberFromSS(std::string_view str, T fallback) noexcept
 {
-  std::istringstream iss{str.data()};
+  std::istringstream iss{std::string(str)};
   T result{fallback};
   iss >> result;
   return result;
@@ -211,7 +211,7 @@ std::set<std::string> UTILS::STRING::SplitToSet(std::string_view input,
                                                 int maxStrings /* = 0 */)
 {
   std::set<std::string> result;
-  StringUtils::SplitTo(std::inserter(result, result.end()), input.data(), delimiter, maxStrings);
+  StringUtils::SplitTo(std::inserter(result, result.end()), std::string(input), delimiter, maxStrings);
   return result;
 }
 
@@ -220,7 +220,7 @@ std::vector<std::string> UTILS::STRING::SplitToVec(std::string_view input,
                                                    int maxStrings /* = 0 */)
 {
   std::vector<std::string> result;
-  StringUtils::SplitTo(std::back_inserter(result), input.data(), delimiter, maxStrings);
+  StringUtils::SplitTo(std::back_inserter(result), std::string(input), delimiter, maxStrings);
   return result;
 }
 

@@ -89,7 +89,7 @@ CSegment PLAYLIST::CSegmentTemplate::MakeInitSegment()
 }
 
 std::string PLAYLIST::CSegmentTemplate::FormatUrl(std::string_view url,
-                                                  const std::string id,
+                                                  const std::string& id,
                                                   const uint32_t bandwidth,
                                                   const uint64_t number,
                                                   const uint64_t time)

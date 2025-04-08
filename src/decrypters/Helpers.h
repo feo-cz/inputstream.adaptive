@@ -61,7 +61,7 @@ bool IsValidKeySystem(std::string_view keySystem);
  * \param url An URL
  * \return The hash of a base domain URL
  */
-std::string GenerateUrlDomainHash(std::string_view url);
+std::string GenerateUrlDomainHash(const std::string& url);
 
 /*!
  * \brief Convert DRM URN to System ID.

@@ -272,7 +272,9 @@ void TTML2SRT::AppendStyledText(std::string_view textPart, std::string& subText)
       strFmtEnd = "</u>" + strFmtEnd;
     }
 
-    subText += strFmt + textPart.data() + strFmtEnd;
+    subText += strFmt;
+    subText += textPart;
+    subText += strFmtEnd;
   }
 }
 
@@ -397,8 +399,8 @@ void TTML2SRT::StackSubtitle(std::string_view id,
     return;
 
   SubtitleData newSub;
-  newSub.start = GetTime(beginTime);
-  newSub.end = GetTime(endTime);
+  newSub.start = GetTime(std::string(beginTime));
+  newSub.end = GetTime(std::string(endTime));
   newSub.text = text;
 
   if (!m_subtitlesList.empty() && !newSub.text.empty())
@@ -426,7 +428,7 @@ void TTML2SRT::StackSubtitle(std::string_view id,
   m_subtitlesList.emplace_back(newSub);
 }
 
-uint64_t TTML2SRT::GetTime(std::string_view timeExpr)
+uint64_t TTML2SRT::GetTime(std::string timeExpr)
 {
   uint64_t ts{0};
   unsigned long long h{0};
@@ -439,7 +441,7 @@ uint64_t TTML2SRT::GetTime(std::string_view timeExpr)
   // Tick metric, cannot be fractional
   if (timeExpr.back() == 't')
   {
-    timeExpr.remove_suffix(1);
+    timeExpr.pop_back();
     ts = STRING::ToUint64(timeExpr) * m_timescale;
     if (m_tickRate > 0)
       ts /= m_tickRate;
@@ -447,23 +449,23 @@ uint64_t TTML2SRT::GetTime(std::string_view timeExpr)
   // Hours metric, can be fractional
   else if (timeExpr.back() == 'h')
   {
-    timeExpr.remove_suffix(1);
+    timeExpr.pop_back();
     ts = static_cast<uint64_t>(STRING::ToDouble(timeExpr) * m_timescale * 3600);
   }
   // Minutes metric, can be fractional
   else if (timeExpr.back() == 'm')
   {
-    timeExpr.remove_suffix(1);
+    timeExpr.pop_back();
     ts = static_cast<uint64_t>(STRING::ToDouble(timeExpr) * m_timescale * 60);
   }
   // Milliseconds or secods metric
   else if (timeExpr.back() == 's')
   {
-    timeExpr.remove_suffix(1);
+    timeExpr.pop_back();
     // Milliseconds metric, can be fractional but we work at 1ms
     if (timeExpr.back() == 'm')
     {
-      timeExpr.remove_suffix(1);
+      timeExpr.pop_back();
       ts = STRING::ToUint64(timeExpr);
     }
     else // Seconds metric, can be fractional
@@ -474,9 +476,9 @@ uint64_t TTML2SRT::GetTime(std::string_view timeExpr)
   // Frames metric, can be fractional
   else if (timeExpr.back() == 'f')
   {
-    timeExpr.remove_suffix(1);
+    timeExpr.pop_back();
 
-    if (sscanf(timeExpr.data(), "%llu.%llu", &f, &sf) != 2)
+    if (sscanf(timeExpr.c_str(), "%llu.%llu", &f, &sf) != 2)
     {
       f = STRING::ToUint64(timeExpr);
     }
@@ -500,11 +502,11 @@ uint64_t TTML2SRT::GetTime(std::string_view timeExpr)
       ts += (m_timescale * sf * m_frameRateDen / m_subFrameRate) / m_frameRateNum;
     }
   }
-  else if (sscanf(timeExpr.data(), "%llu:%llu:%llu.%llu", &h, &m, &s, &ms) == 4)
+  else if (sscanf(timeExpr.c_str(), "%llu:%llu:%llu.%llu", &h, &m, &s, &ms) == 4)
   {
     ts = (h * 3600 + m * 60 + s) * m_timescale + ms;
   }
-  else if (sscanf(timeExpr.data(), "%llu:%llu:%llu:%llu.%llu", &h, &m, &s, &f, &sf) == 5)
+  else if (sscanf(timeExpr.c_str(), "%llu:%llu:%llu:%llu.%llu", &h, &m, &s, &f, &sf) == 5)
   {
     ts = (h * 3600 + m * 60 + s) * m_timescale;
 
@@ -523,7 +525,7 @@ uint64_t TTML2SRT::GetTime(std::string_view timeExpr)
     ts += (m_timescale * f * m_frameRateDen) / m_frameRateNum;
     ts += (m_timescale * sf * m_frameRateDen / m_subFrameRate) / m_frameRateNum;
   }
-  else if (sscanf(timeExpr.data(), "%llu:%llu:%llu:%llu", &h, &m, &s, &f) == 4)
+  else if (sscanf(timeExpr.c_str(), "%llu:%llu:%llu:%llu", &h, &m, &s, &f) == 4)
   {
     ts = (h * 3600 + m * 60 + s) * m_timescale;
 
@@ -536,7 +538,7 @@ uint64_t TTML2SRT::GetTime(std::string_view timeExpr)
 
     ts += (m_timescale * f * m_frameRateDen) / m_frameRateNum;
   }
-  else if (sscanf(timeExpr.data(), "%llu:%llu:%llu", &h, &m, &s) == 3)
+  else if (sscanf(timeExpr.c_str(), "%llu:%llu:%llu", &h, &m, &s) == 3)
   {
     ts = (h * 3600 + m * 60 + s) * m_timescale;
   }

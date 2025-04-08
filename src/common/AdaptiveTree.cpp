@@ -48,7 +48,7 @@ namespace adaptive
   }
 
   void AdaptiveTree::Configure(CHOOSER::IRepresentationChooser* reprChooser,
-                               std::string_view manifestUpdParams)
+                               const std::string& manifestUpdParams)
   {
     m_reprChooser = reprChooser;
 

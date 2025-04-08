@@ -37,7 +37,7 @@ namespace
 //! but there is still a need to review how to implement this in the binary addons interface as well,
 //! or another solution could be add and implement the curl library dependency in to ISA itself.
 
-std::unordered_set<Cookie> ParseCookies(std::string_view url,
+std::unordered_set<Cookie> ParseCookies(const std::string& url,
                                         const std::vector<std::string>& cookies)
 {
   // Be aware that kodi::vfs::GetCookies output dont provide all cookie attributes.
@@ -85,7 +85,7 @@ std::unordered_set<Cookie> ParseCookies(std::string_view url,
     if (cookie.m_domain.empty())
     {
       // If empty retrieve the hostname from the url (www.example.com)
-      cookie.m_domain = URL::GetBaseDomain(url.data());
+      cookie.m_domain = URL::GetBaseDomain(url);
       const size_t protStartPos = cookie.m_domain.find("://");
       if (protStartPos != std::string::npos)
         cookie.m_domain.erase(0, protStartPos + 3);
@@ -94,7 +94,7 @@ std::unordered_set<Cookie> ParseCookies(std::string_view url,
     if (cookie.m_path.empty())
     {
       // When empty fallback to current url path
-      cookie.m_path = URL::GetPath(url.data(), true);
+      cookie.m_path = URL::GetPath(url, true);
     }
 
     cookieList.emplace(cookie);
@@ -102,13 +102,13 @@ std::unordered_set<Cookie> ParseCookies(std::string_view url,
   return cookieList;
 }
 
-std::string GetCookies(std::string_view url)
+std::string GetCookies(const std::string& url)
 {
   auto& srvResources = CSrvBroker::GetResources();
   std::lock_guard<std::mutex> lock(srvResources.GetCookiesMutex());
 
   // Get hostname (www.example.com)
-  std::string hostname = URL::GetBaseDomain(url.data());
+  std::string hostname = URL::GetBaseDomain(url);
   const size_t protStartPos = hostname.find("://");
   if (protStartPos != std::string::npos)
     hostname.erase(0, protStartPos + 3);
@@ -119,7 +119,7 @@ std::string GetCookies(std::string_view url)
   if (dotPos != std::string::npos)
     domain.erase(0, dotPos);
 
-  std::string urlPath = URL::GetPath(url.data(), true);
+  std::string urlPath = URL::GetPath(url, true);
 
   std::string cookiesStr;
   std::unordered_set<Cookie>& cookies = srvResources.Cookies();
@@ -151,7 +151,7 @@ std::string GetCookies(std::string_view url)
   return cookiesStr;
 }
 
-void StoreCookies(std::string_view url, const std::vector<std::string>& cookiesStr)
+void StoreCookies(const std::string& url, const std::vector<std::string>& cookiesStr)
 {
   auto& srvResources = CSrvBroker::GetResources();
   std::lock_guard<std::mutex> lock(srvResources.GetCookiesMutex());
@@ -181,9 +181,9 @@ void StoreCookies(std::string_view url, const std::vector<std::string>& cookiesS
 }
 } // unnamed namespace
 
-UTILS::CURL::CUrl::CUrl(std::string_view url)
+UTILS::CURL::CUrl::CUrl(const std::string& url)
 {
-  if (m_file.CURLCreate(url.data()))
+  if (m_file.CURLCreate(url))
   {
     auto& kodiProps = CSrvBroker::GetKodiProps();
 
@@ -204,7 +204,7 @@ UTILS::CURL::CUrl::CUrl(std::string_view url)
   }
 }
 
-UTILS::CURL::CUrl::CUrl(std::string_view url, const std::string& postData) : CUrl::CUrl(url)
+UTILS::CURL::CUrl::CUrl(const std::string& url, const std::string& postData) : CUrl::CUrl(url)
 {
   if (m_file.IsOpen() && !postData.empty())
   {
@@ -236,9 +236,9 @@ int UTILS::CURL::CUrl::Open()
   return -1;
 }
 
-void UTILS::CURL::CUrl::AddHeader(std::string_view name, std::string_view value)
+void UTILS::CURL::CUrl::AddHeader(const std::string& name, const std::string& value)
 {
-  m_file.CURLAddOption(ADDON_CURL_OPTION_HEADER, name.data(), value.data());
+  m_file.CURLAddOption(ADDON_CURL_OPTION_HEADER, name, value);
 }
 
 void UTILS::CURL::CUrl::AddHeaders(const std::map<std::string, std::string>& headers)
@@ -249,14 +249,14 @@ void UTILS::CURL::CUrl::AddHeaders(const std::map<std::string, std::string>& hea
   }
 }
 
-std::string UTILS::CURL::CUrl::GetResponseHeader(std::string_view name)
+std::string UTILS::CURL::CUrl::GetResponseHeader(const std::string& name)
 {
-  return m_file.GetPropertyValue(ADDON_FILE_PROPERTY_RESPONSE_HEADER, name.data());
+  return m_file.GetPropertyValue(ADDON_FILE_PROPERTY_RESPONSE_HEADER, name);
 }
 
-std::vector<std::string> UTILS::CURL::CUrl::GetResponseHeaders(std::string_view name)
+std::vector<std::string> UTILS::CURL::CUrl::GetResponseHeaders(const std::string& name)
 {
-  return m_file.GetPropertyValues(ADDON_FILE_PROPERTY_RESPONSE_HEADER, name.data());
+  return m_file.GetPropertyValues(ADDON_FILE_PROPERTY_RESPONSE_HEADER, name);
 }
 
 std::string UTILS::CURL::CUrl::GetEffectiveUrl()
@@ -315,7 +315,7 @@ bool UTILS::CURL::CUrl::IsEOF()
   return m_file.AtEnd();
 }
 
-bool UTILS::CURL::DownloadFile(std::string_view url,
+bool UTILS::CURL::DownloadFile(const std::string& url,
                                const std::map<std::string, std::string>& reqHeaders,
                                const std::vector<std::string>& respHeaders,
                                HTTPResponse& resp)
@@ -334,7 +334,7 @@ bool UTILS::CURL::DownloadFile(std::string_view url,
 
     if (statusCode == -1)
     {
-      LOG::Log(LOGERROR, "Download failed, internal error: %s", url.data());
+      LOG::Log(LOGERROR, "Download failed, internal error: %s", url.c_str());
       break;
     }
     else if (statusCode >= 500)
@@ -343,7 +343,7 @@ bool UTILS::CURL::DownloadFile(std::string_view url,
     }
     else if (statusCode >= 400)
     {
-      LOG::Log(LOGERROR, "Download failed, HTTP error %d: %s", statusCode, url.data());
+      LOG::Log(LOGERROR, "Download failed, HTTP error %d: %s", statusCode, url.c_str());
       break;
     }
     else // Start the download
@@ -352,27 +352,27 @@ bool UTILS::CURL::DownloadFile(std::string_view url,
 
       if (curl.Read(resp.data) != CURL::ReadStatus::IS_EOF)
       {
-        LOG::Log(LOGERROR, "Download failed: %s", statusCode, url.data());
+        LOG::Log(LOGERROR, "Download failed: %s", statusCode, url.c_str());
         break;
       }
 
       if (resp.data.empty())
       {
-        LOG::Log(LOGERROR, "Download failed, no data: %s", url.data());
+        LOG::Log(LOGERROR, "Download failed, no data: %s", url.c_str());
         break;
       }
 
       resp.headers["content-type"] = curl.GetResponseHeader("content-type");
-      for (std::string_view name : respHeaders)
+      for (const std::string& name : respHeaders)
       {
-        resp.headers[name.data()] = curl.GetResponseHeader(name);
+        resp.headers[name.c_str()] = curl.GetResponseHeader(name);
       }
 
       resp.downloadSpeed = curl.GetDownloadSpeed();
       resp.dataSize = curl.GetTotalByteRead();
 
       LOG::Log(LOGDEBUG, "Download finished: %s (downloaded %zu byte, speed %0.2lf byte/s)",
-               url.data(), curl.GetTotalByteRead(), resp.downloadSpeed);
+               url.c_str(), curl.GetTotalByteRead(), resp.downloadSpeed);
       return true;
     }
   }

@@ -35,11 +35,11 @@ public:
   CDashTree(const CDashTree& left);
 
   void Configure(CHOOSER::IRepresentationChooser* reprChooser,
-                 std::string_view manifestUpdParams) override;
+                 const std::string& manifestUpdParams) override;
 
   virtual TreeType GetTreeType() const override { return TreeType::DASH; }
 
-  virtual bool Open(std::string_view url,
+  virtual bool Open(const std::string& url,
                     const std::map<std::string, std::string>& headers,
                     const std::string& data) override;
 
@@ -60,7 +60,7 @@ protected:
   virtual bool ParseManifest(const std::string& data);
 
   void ParseTagMPDAttribs(pugi::xml_node NodeMPD);
-  void ParseTagPeriod(pugi::xml_node nodePeriod, std::string_view mpdUrl);
+  void ParseTagPeriod(pugi::xml_node nodePeriod, const std::string& mpdUrl);
   void ParseTagAdaptationSet(pugi::xml_node nodeAdp, PLAYLIST::CPeriod* period);
   void ParseTagRepresentation(pugi::xml_node nodeRepr,
                               PLAYLIST::CAdaptationSet* adpSet,
@@ -96,7 +96,7 @@ protected:
   /*!
    * \brief Download manifest update, overridable method for test project
    */
-  virtual bool DownloadManifestUpd(std::string_view url,
+  virtual bool DownloadManifestUpd(const std::string& url,
                                    const std::map<std::string, std::string>& reqHeaders,
                                    const std::vector<std::string>& respHeaders,
                                    UTILS::CURL::HTTPResponse& resp);

@@ -162,20 +162,20 @@ adaptive::CHLSTree::CHLSTree(const CHLSTree& left) : AdaptiveTree(left)
 }
 
 void adaptive::CHLSTree::Configure(CHOOSER::IRepresentationChooser* reprChooser,
-                                   std::string_view manifestUpdateParam)
+                                   const std::string& manifestUpdateParam)
 {
   AdaptiveTree::Configure(reprChooser, manifestUpdateParam);
   m_decrypter = std::make_unique<AESDecrypter>();
 }
 
-bool adaptive::CHLSTree::Open(std::string_view url,
+bool adaptive::CHLSTree::Open(const std::string& url,
                               const std::map<std::string, std::string>& headers,
                               const std::string& data)
 {
   SaveManifest(nullptr, data, url);
 
   manifest_url_ = url;
-  base_url_ = URL::GetUrlPath(url.data());
+  base_url_ = URL::GetUrlPath(url);
 
   if (!ParseManifest(data))
   {
@@ -216,7 +216,7 @@ bool adaptive::CHLSTree::DownloadChildManifest(PLAYLIST::CAdaptationSet* adp,
   if (rep->GetSourceUrl().empty())
   {
     LOG::LogF(LOGERROR, "Cannot download child manifest, no source url on representation id \"%s\"",
-              rep->GetId().data());
+              rep->GetId().c_str());
     return false;
   }
 
@@ -257,7 +257,7 @@ void adaptive::CHLSTree::FixMediaSequence(std::stringstream& streamData,
 
     if (tagName == "#EXT-X-PROGRAM-DATE-TIME")
     {
-      dateTime = static_cast<uint64_t>(XML::ParseDate(tagValue, 0) * 1000);
+      dateTime = static_cast<uint64_t>(XML::ParseDate(tagValue.c_str(), 0) * 1000);
     }
     else if (tagName == "#EXTINF")
     {
@@ -314,7 +314,7 @@ void adaptive::CHLSTree::FixDiscSequence(std::stringstream& streamData, uint32_t
 
     if (tagName == "#EXT-X-PROGRAM-DATE-TIME")
     {
-      dateTime = static_cast<uint64_t>(XML::ParseDate(tagValue, 0) * 1000);
+      dateTime = static_cast<uint64_t>(XML::ParseDate(tagValue.c_str(), 0) * 1000);
     }
     else if (tagName == "#EXTINF")
     {
@@ -565,7 +565,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
     }
     else if (tagName == "#EXT-X-PROGRAM-DATE-TIME" && !isSkipUntilDiscont)
     {
-      programDateTime = static_cast<uint64_t>(XML::ParseDate(tagValue, 0) * 1000);
+      programDateTime = static_cast<uint64_t>(XML::ParseDate(tagValue.c_str(), 0) * 1000);
       // Set or update the period start, only from the first program date time value
       if (period->GetStart() == 0 || period->GetStart() == NO_VALUE)
         period->SetStart(programDateTime);
@@ -922,7 +922,7 @@ void adaptive::CHLSTree::PrepareSegments(PLAYLIST::CPeriod* period,
   if (rep->IsWaitForSegment() &&
       (rep->GetNextSegment() || m_currentPeriod != m_periods.back().get()))
   {
-    LOG::LogF(LOGDEBUG, "End WaitForSegment stream id \"%s\"", rep->GetId().data());
+    LOG::LogF(LOGDEBUG, "End WaitForSegment stream id \"%s\"", rep->GetId().c_str());
     rep->SetIsWaitForSegment(false);
   }
 }
@@ -1042,7 +1042,7 @@ void adaptive::CHLSTree::OnPeriodChange()
     m_aesUrlKeyCache.clear();
 }
 
-bool adaptive::CHLSTree::DownloadKey(std::string_view url,
+bool adaptive::CHLSTree::DownloadKey(const std::string& url,
                                      const std::map<std::string, std::string>& reqHeaders,
                                      const std::vector<std::string>& respHeaders,
                                      UTILS::CURL::HTTPResponse& resp)
@@ -1050,7 +1050,7 @@ bool adaptive::CHLSTree::DownloadKey(std::string_view url,
   return CURL::DownloadFile(url, reqHeaders, respHeaders, resp);
 }
 
-bool adaptive::CHLSTree::DownloadManifestChild(std::string_view url,
+bool adaptive::CHLSTree::DownloadManifestChild(const std::string& url,
                                                const std::map<std::string, std::string>& reqHeaders,
                                                const std::vector<std::string>& respHeaders,
                                                UTILS::CURL::HTTPResponse& resp)

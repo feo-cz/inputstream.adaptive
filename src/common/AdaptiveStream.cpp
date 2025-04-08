@@ -64,7 +64,7 @@ AdaptiveStream::AdaptiveStream(AdaptiveTree* tree,
   clsId = globalClsId++;
   LOG::Log(LOGDEBUG,
            "Created AdaptiveStream [AS-%u] with adaptation set ID: \"%s\", stream type: %s", clsId,
-           adp->GetId().data(), StreamTypeToString(adp->GetStreamType()).data());
+           adp->GetId().c_str(), StreamTypeToString(adp->GetStreamType()).c_str());
 }
 
 AdaptiveStream::~AdaptiveStream()
@@ -249,12 +249,12 @@ bool AdaptiveStream::PrepareDownload(const PLAYLIST::CRepresentation* rep,
 
     if (seg.IsInitialization()) // Templated initialization segment
     {
-      streamUrl = segTpl->FormatUrl(segTpl->GetInitialization(), rep->GetId().data(),
+      streamUrl = segTpl->FormatUrl(segTpl->GetInitialization(), rep->GetId(),
                                     rep->GetBandwidth(), rep->GetStartNumber(), 0);
     }
     else // Templated media segment
     {
-      streamUrl = segTpl->FormatUrl(segTpl->GetMedia(), rep->GetId().data(), rep->GetBandwidth(),
+      streamUrl = segTpl->FormatUrl(segTpl->GetMedia(), rep->GetId(), rep->GetBandwidth(),
                                     seg.m_number, seg.m_time);
     }
   }
@@ -760,8 +760,8 @@ bool AdaptiveStream::start_stream(const uint64_t startPts)
 
   if (!current_rep_->Timeline().Get(0))
   {
-    LOG::LogF(LOGERROR, "[AS-%u] Segment at position 0 not found from representation id: %s",
-              clsId, current_rep_->GetId().data());
+    LOG::LogF(LOGERROR, "[AS-%u] Segment at position 0 not found from representation id: %s", clsId,
+              current_rep_->GetId().c_str());
     return false;
   }
 
@@ -840,7 +840,7 @@ bool AdaptiveStream::ensureSegment()
     if (valid_segment_buffers_ == 0 && available_segment_buffers_ > 0)
     {
       LOG::LogF(LOGDEBUG, "[AS-%u] Download not started yet (rep. id \"%s\" period id \"%s\")",
-                clsId, current_rep_->GetId().data(), current_period_->GetId().data());
+                clsId, current_rep_->GetId().c_str(), current_period_->GetId().c_str());
       return false;
     }
 
@@ -873,7 +873,7 @@ bool AdaptiveStream::ensureSegment()
         {
           current_rep_->SetIsWaitForSegment(true);
           LOG::LogF(LOGDEBUG, "[AS-%u] Begin WaitForSegment stream rep. id \"%s\" period id \"%s\"",
-                    clsId, current_rep_->GetId().data(), current_period_->GetId().data());
+                    clsId, current_rep_->GetId().c_str(), current_period_->GetId().c_str());
           return false;
         }
       }
@@ -1203,7 +1203,7 @@ bool AdaptiveStream::seek_time(double seek_seconds, bool preceeding, bool& needR
     if (!current_rep_->Timeline().Get(0))
     {
       LOG::LogF(LOGERROR, "[AS-%u] Segment at position 0 not found from representation id: %s",
-                clsId, current_rep_->GetId().data());
+                clsId, current_rep_->GetId().c_str());
       return false;
     }
 
@@ -1289,7 +1289,7 @@ bool AdaptiveStream::GenerateSidxSegments(PLAYLIST::CRepresentation* rep)
   {
     LOG::LogF(LOGERROR,
               "[AS-%u] Cannot generate segments from SIDX on repr id \"%s\" with container \"%i\"",
-              clsId, rep->GetId().data(), static_cast<int>(containerType));
+              clsId, rep->GetId().c_str(), static_cast<int>(containerType));
     return false;
   }
 

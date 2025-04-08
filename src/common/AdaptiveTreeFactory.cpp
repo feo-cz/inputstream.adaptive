@@ -68,7 +68,7 @@ adaptive::TreeType PLAYLIST_FACTORY::InferManifestType(std::string_view url,
     return TreeType::SMOOTH_STREAMING;
 
   // Try detect manifest type by checking file extension
-  std::string ext = STRING::ToLower(FILESYS::GetFileExtension(url.data()));
+  std::string ext = STRING::ToLower(FILESYS::GetFileExtension(url));
   if (ext == "mpd")
     return TreeType::DASH;
   else if (ext == "m3u8")

@@ -31,7 +31,7 @@ public:
 
   virtual TreeType GetTreeType() const override { return TreeType::SMOOTH_STREAMING; }
 
-  virtual bool Open(std::string_view url,
+  virtual bool Open(const std::string& url,
                     const std::map<std::string, std::string>& headers,
                     const std::string& data) override;
 
