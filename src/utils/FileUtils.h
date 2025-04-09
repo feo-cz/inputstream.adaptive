@@ -78,5 +78,14 @@ bool RemoveDirectory(const std::string& path, bool recursive = true);
  */
 std::string GetFileExtension(std::string_view path);
 
+/*!
+ * \brief Find the first filename found in a path.
+ * \param path The path where search the file.
+ * \param filename The filename to search for.
+ * \param filePath[OUT] The full path of the file when found.
+ * \return True if the file has been found, otherwise false.
+ */
+bool FindFilePath(const std::string& path, const std::string& filename, std::string& filePath);
+
 } // namespace FILESYS
 } // namespace UTILS
