@@ -160,6 +160,8 @@ public:
 
   std::deque<CSegment>::const_iterator begin() const { return m_segments.begin(); }
   std::deque<CSegment>::const_iterator end() const { return m_segments.end(); }
+  std::deque<CSegment>::const_reverse_iterator rbegin() const { return m_segments.rbegin(); }
+  std::deque<CSegment>::const_reverse_iterator rend() const { return m_segments.rend(); }
 
 private:
   // Has been used std::deque because there are uses of pointer references
