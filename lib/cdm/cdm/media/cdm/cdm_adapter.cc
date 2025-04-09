@@ -8,11 +8,13 @@
 
 #include "cdm_adapter.h"
 
-//! @todo: provide an appropriate interface for log output
-#include "../../src/utils/log.h"
+#include "../../debug.h"
+#include "../base/limits.h"
 
 #include <chrono>
+#include <cstring>
 #include <thread>
+
 #include <sys/stat.h>
 
 #ifdef _WIN32
@@ -20,8 +22,6 @@
 #endif
 
 #define DCHECK(condition) assert(condition)
-
-#include "../base/limits.h"
 
 #ifdef __APPLE__
 #include <sys/time.h>
@@ -38,6 +38,8 @@ int clock_gettime(int clk_id, struct timespec* t) {
 #define CLOCK_REALTIME 1
 #endif
 #endif
+
+using namespace CDM_DBG;
 
 namespace media {
 
@@ -240,8 +242,7 @@ void CdmAdapter::Initialize()
 
   if (!library_)
   {
-    LOG::LogF(LOGERROR, "%s: Failed to load library: %s", __FUNCTION__,
-             error.ToString().c_str());
+    LogF(LogLevel::ERROR, "Failed to load library: %s", error.ToString().c_str());
     return;
   }
 
@@ -263,13 +264,13 @@ void CdmAdapter::Initialize()
   {
     // This version have unclear problems
     // such as crashes on OnStorageId() method calls and others video decoding crashes
-    LOG::Log(LOGERROR,
-             "THE CDM VERSION \"4.10.2891.0\" IS NOT SUPPORTED DUE TO UNCLEAR LIBRARY ISSUES.\n"
-             "------------------------------> PLEASE INSTALL AN OLDER VERSION OF WIDEVINE CDM!");
+    Log(LogLevel::ERROR,
+        "THE CDM VERSION \"4.10.2891.0\" IS NOT SUPPORTED DUE TO UNCLEAR LIBRARY ISSUES.\n"
+        "------------------------------> PLEASE INSTALL AN OLDER VERSION OF WIDEVINE CDM!");
     return;
   }
 
-  LOG::LogF(LOGDEBUG, "CDM version: %s", version.c_str());
+  Log(LogLevel::DEBUG, "CDM version: %s", version.c_str());
 
 #if defined(OS_WIN)
   // Load DXVA before sandbox lockdown to give CDM access to Output Protection
@@ -635,8 +636,8 @@ void CdmAdapter::OnSessionKeysChange(const char* session_id,
     char* bufferPtr{buffer};
     for (uint32_t j{0}; j < keys_info[i].key_id_size; ++j)
       bufferPtr += std::snprintf(bufferPtr, 3, "%02X", (int)keys_info[i].key_id[j]);
-    LOG::Log(LOGDEBUG, "%s: Sessionkey %s status: %d syscode: %u", __func__, buffer,
-                 keys_info[i].status, keys_info[i].system_code);
+    Log(LogLevel::DEBUG, "OnSessionKeysChange: KID %s, Status: %d, System code: %u", buffer,
+        keys_info[i].status, keys_info[i].system_code);
 
     SendClientMessage(session_id, session_id_size, CdmAdapterClient::kSessionKeysChange,
       keys_info[i].key_id, keys_info[i].key_id_size, keys_info[i].status);
@@ -711,7 +712,7 @@ void CdmAdapter::RequestStorageId(uint32_t version)
 
 void CdmAdapter::OnInitialized(bool success)
 {
-  LOG::LogF(LOGDEBUG, "CDM is initialized: %s", success ? "true" : "false");
+  Log(LogLevel::DEBUG, "CDM is initialized: %s", success ? "true" : "false");
 }
 
 
@@ -769,7 +770,7 @@ void CdmFileIoImpl::Write(const uint8_t* data, uint32_t data_size)
 {
   if (!ExistsDir(base_path_.c_str()) && !CreateDirs(base_path_.c_str()))
   {
-    LOG::LogF(LOGERROR, "Cannot create directory: %s", base_path_.c_str());
+    LogF(LogLevel::ERROR, "Cannot create directory: %s", base_path_.c_str());
     client_->OnWriteComplete(cdm::FileIOClient::Status::kError);
     return;
   }
