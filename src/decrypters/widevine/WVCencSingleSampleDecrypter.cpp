@@ -105,7 +105,6 @@ CWVCencSingleSampleDecrypter::~CWVCencSingleSampleDecrypter()
 }
 
 void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& keyId,
-                                                   uint32_t media,
                                                    DecrypterCapabilites& caps)
 {
   caps = {0, m_hdcpVersion, m_hdcpLimit};
@@ -129,27 +128,6 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
   if (!caps.hdcpLimit)
     caps.hdcpLimit = m_resolutionLimit;
 
-  /*if (media == DecrypterCapabilites::SSD_MEDIA_VIDEO)
-    caps.flags |= (DecrypterCapabilites::SSD_SECURE_PATH | DecrypterCapabilites::SSD_ANNEXB_REQUIRED);
-  caps.flags |= DecrypterCapabilites::SSD_SINGLE_DECRYPT;
-  return;*/
-
-  //caps.flags |= (DecrypterCapabilites::SSD_SECURE_PATH | DecrypterCapabilites::SSD_ANNEXB_REQUIRED);
-  //return;
-
-  /*for (auto k : m_keys)
-    if (!key || memcmp(k.m_keyId.data(), key, 16) == 0)
-    {
-      if (k.status != 0)
-      {
-        if (media == DecrypterCapabilites::SSD_MEDIA_VIDEO)
-          caps.flags |= (DecrypterCapabilites::SSD_SECURE_PATH | DecrypterCapabilites::SSD_ANNEXB_REQUIRED);
-        else
-          caps.flags = DecrypterCapabilites::SSD_INVALID;
-      }
-      break;
-    }
-    */
   if ((caps.flags & DecrypterCapabilites::SSD_SUPPORTS_DECODING) != 0)
   {
     AP4_UI32 poolId(AddPool());

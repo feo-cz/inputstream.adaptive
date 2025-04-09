@@ -102,12 +102,8 @@ bool GetCapabilities(const std::optional<bool> isForceSecureDecoder,
                      const std::vector<uint8_t>& defaultKid,
                      DRMSession& session)
 {
-  const uint32_t dMedia = session.mediaType == DRM::DRMMediaType::VIDEO
-                              ? DecrypterCapabilites::SSD_MEDIA_VIDEO
-                              : DecrypterCapabilites::SSD_MEDIA_AUDIO;
-
   auto& caps = session.capabilities;
-  session.drm->GetCapabilities(session.decrypter, defaultKid, dMedia, caps);
+  session.drm->GetCapabilities(session.decrypter, defaultKid, caps);
 
   if (caps.flags & DRM::DecrypterCapabilites::SSD_INVALID)
   {

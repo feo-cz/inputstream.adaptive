@@ -55,7 +55,6 @@ public:
 
   virtual void GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
                                const std::vector<uint8_t>& keyId,
-                               uint32_t media,
                                DRM::DecrypterCapabilites& caps) override;
 
   virtual std::string GetChallengeB64Data(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter) override;

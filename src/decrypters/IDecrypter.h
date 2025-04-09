@@ -63,12 +63,10 @@ public:
    * \brief Determine the capabilities of the decrypter against the supplied media type and KeyID
    * \param decrypter The single sample decrypter to use for this check
    * \param keyid The KeyID that will be used for this check
-   * \param media The type of media being decrypted (audio/video)
    * \param caps The capabilities object to be populated
    */
   virtual void GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
                                const std::vector<uint8_t>& keyId,
-                               uint32_t media,
                                DecrypterCapabilites& caps) = 0;
 
   /*

@@ -36,9 +36,7 @@ public:
                                CryptoMode cryptoMode);
   virtual ~CWVCencSingleSampleDecrypter();
 
-  void GetCapabilities(const std::vector<uint8_t>& keyId,
-                       uint32_t media,
-                       DecrypterCapabilites& caps);
+  void GetCapabilities(const std::vector<uint8_t>& keyId, DecrypterCapabilites& caps);
   virtual std::string GetSessionId() override;
   void CloseSessionId();
   AP4_DataBuffer GetChallengeData();

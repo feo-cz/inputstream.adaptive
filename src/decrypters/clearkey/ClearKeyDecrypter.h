@@ -26,7 +26,6 @@ public:
 
   virtual void GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
                                const std::vector<uint8_t>& keyid,
-                               uint32_t media,
                                DRM::DecrypterCapabilites& caps) override
   {
   }
