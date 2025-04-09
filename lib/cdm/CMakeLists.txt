@@ -10,6 +10,7 @@ else()
 endif()
 
 add_library(cdm_library STATIC
+  cdm/debug.cpp
   cdm/base/native_library.cc
   cdm/base/native_library_${CDMTYPE}
   cdm/media/cdm/cdm_adapter.cc
