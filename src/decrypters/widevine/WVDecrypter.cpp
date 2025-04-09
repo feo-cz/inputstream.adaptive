@@ -16,15 +16,12 @@
 #include "utils/StringUtils.h"
 #include "utils/log.h"
 
-#include <kodi/Filesystem.h> //! @todo: cleanup! remove me to use FileUtils.h
-
 #if defined(__linux__) && (defined(__aarch64__) || defined(__arm64__))
 #include <dlfcn.h>
 #endif
 
 using namespace DRM;
 using namespace UTILS;
-using namespace kodi::tools;
 
 CWVDecrypter::~CWVDecrypter()
 {
@@ -45,21 +42,9 @@ bool CWVDecrypter::Initialize()
   // Kodi kodi::tools::CDllHelper LoadDll() cannot be used because use RTLD_LOCAL,
   // and we need the RTLD_GLOBAL flag.
   std::string binaryPath;
-  std::vector<kodi::vfs::CDirEntry> items;
-  if (kodi::vfs::GetDirectory(FILESYS::GetAddonPath(), "", items))
+  if (!FILESYS::FindFilePath(FILESYS::GetAddonPath(), "cdm_aarch64_loader.so", binaryPath))
   {
-    for (auto item : items)
-    {
-      if (!STRING::Contains(item.Label(), "cdm_aarch64_loader"))
-        continue;
-
-      binaryPath = item.Path();
-      break;
-    }
-  }
-  if (binaryPath.empty())
-  {
-    LOG::Log(LOGERROR, "Cannot find the cdm_aarch64_loader file");
+    LOG::Log(LOGERROR, "Cannot find the cdm_aarch64_loader.so file");
     return false;
   }
 
