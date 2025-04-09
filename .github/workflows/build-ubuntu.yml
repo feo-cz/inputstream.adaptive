@@ -22,6 +22,12 @@ jobs:
           CXX: g++
           GCC14_BUILD: false
           ZIP_NAME_SUFFIX: linux_x64
+        - name: "Ubuntu ARM64 package test"
+          os: ubuntu-24.04-arm
+          CC: gcc
+          CXX: g++
+          GCC14_BUILD: false
+          ZIP_NAME_SUFFIX: linux_ARM64
     steps:
     - name: Install GCC-14
       if: ${{ matrix.GCC14_BUILD == true }}
