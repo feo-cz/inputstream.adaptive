@@ -669,30 +669,29 @@ bool AdaptiveStream::start_stream(const uint64_t startPts)
         !m_tree->IsChangingPeriod() && !CSrvBroker::GetKodiProps().IsPlayTimeshift() &&
         !current_rep_->Timeline().IsEmpty())
     {
-      size_t segPos = current_rep_->Timeline().GetSize() - 1;
-      //! @todo: segment duration is not fixed for each segment, this can calculate a wrong delay
-      const CSegment* lastSeg = current_rep_->Timeline().GetBack();
-      uint64_t segDur = lastSeg->m_endPts - lastSeg->startPTS_;
+      uint64_t totalDurSecs{0};
+      const uint64_t liveDelaySecs = m_tree->m_liveDelay;
+      const uint32_t timescale = current_rep_->GetTimescale();
 
-      size_t segPosDelay =
-          static_cast<size_t>((m_tree->m_liveDelay * current_rep_->GetTimescale()) / segDur);
-
-      //! @todo: hackish workaround, when segment duration is same of live delay, force at least 1 position delay
-      //! otherwise the current segment will be last available on the timeline,
-      //! therefore when GetNextSegment is executed will return nullptr and the below (todo) BUG condition stop the playback
-      if (segPosDelay == 0)
-        segPosDelay = 1;
-
-      if (segPos > segPosDelay)
-        segPos -= segPosDelay;
-      else
+      //! @todo: This code does not consider that the live delay could cause the startup segment to be selected
+      //! in the previous period when the current period has too few segments
+      //! more likely live delay management should be moved just after manifest parsing and before period init
+      for (auto itSeg = current_rep_->Timeline().rbegin(); itSeg != current_rep_->Timeline().rend();
+           ++itSeg)
       {
-        //! @todo: Unhandled! should fall on previous period (when exists)
-        //! since is needed change period all this code should be moved just after manifest parsing and before period init
-        segPos = 0;
-      }
+        // Implicit rounding down because managing PTS milliseconds negatively affects segment selection
+        totalDurSecs += (itSeg->m_endPts - itSeg->startPTS_) / timescale;
+        // Dont use >= since if live delay is equal to the segment duration
+        // we may fall too close to the live edge to get new segments from manifest update
+        if (totalDurSecs > liveDelaySecs)
+        {
+          // current_segment_ expects the previous segment as a reference to find the next segment (this one)
+          if (itSeg != current_rep_->Timeline().rend())
+            current_rep_->current_segment_ = &*(++itSeg);
 
-      current_rep_->current_segment_ = current_rep_->Timeline().Get(segPos);
+          break;
+        }
+      }
     }
     else if (m_startEvent == EVENT_TYPE::REP_CHANGE) // switching streams, align new stream segment no.
     {
