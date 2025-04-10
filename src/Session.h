@@ -57,12 +57,12 @@ public:
   /*! \brief Create and push back a new Stream object
    *  \param adp The AdaptationSet of the stream
    *  \param repr The Representation of the stream
-   *  \param isDefaultRepr Whether this Representation is the default
+   *  \param isDefaultVideoRepr Whether this video Representation is the default
    *  \param uniqueId A unique identifier for the Representation
    */
   void AddStream(PLAYLIST::CAdaptationSet* adp,
                  PLAYLIST::CRepresentation* repr,
-                 bool isDefaultRepr,
+                 bool isDefaultVideoRepr,
                  uint32_t uniqueId,
                  std::string_view audioLanguageOrig);
 

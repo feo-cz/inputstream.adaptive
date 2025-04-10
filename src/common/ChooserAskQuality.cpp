@@ -147,6 +147,7 @@ PLAYLIST::CAdaptationSet* CHOOSER::CRepresentationChooserAskQuality::GetPreferre
 
       m_selectedResWidth = selRep->GetWidth();
       m_selectedResHeight = selRep->GetHeight();
+      m_selectedBandwidth = selRep->GetBandwidth();
       // Convert codec to description, as the codec string may be slightly different
       // when using ISO BMFF format, and the comparison may fail
       m_selectedVideoCodecDesc = CODEC::GetVideoDesc(selAdpSet->GetCodecs());
@@ -166,11 +167,12 @@ PLAYLIST::CRepresentation* CRepresentationChooserAskQuality::GetNextRepresentati
   if (currentRep)
     return currentRep;
 
+  CRepresentationSelector selector{m_selectedResWidth, m_selectedResHeight};
+
   if (adp->GetStreamType() != StreamType::VIDEO)
   {
-    CRepresentationSelector selector{m_screenCurrentWidth, m_screenCurrentHeight};
     return selector.HighestBw(adp);
   }
 
-  return currentRep;
+  return selector.NearestBw(adp, m_selectedBandwidth);
 }

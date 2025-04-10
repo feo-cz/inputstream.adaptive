@@ -121,12 +121,17 @@ public:
       PLAYLIST::CAdaptationSet* adp,
       PLAYLIST::CRepresentation* currentRep) = 0;
 
+  /*!
+   * \brief Prints details of the specified representation in the log
+   */
+  void LogDetails(const PLAYLIST::CRepresentation* rep);
+
 protected:
   /*!
    * \brief Prints details of the selected or changed representation in the log
    */
-  void LogDetails(PLAYLIST::CRepresentation* currentRep,
-                  PLAYLIST::CRepresentation* nextRep);
+  void LogDetails(const PLAYLIST::CRepresentation* currentRep,
+                  const PLAYLIST::CRepresentation* nextRep);
 
   bool m_isSecureSession{false};
 

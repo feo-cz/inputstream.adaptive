@@ -114,8 +114,13 @@ void CHOOSER::IRepresentationChooser::OnUpdateScreenRes()
   }
 }
 
-void CHOOSER::IRepresentationChooser::LogDetails(PLAYLIST::CRepresentation* currentRep,
-                                                 PLAYLIST::CRepresentation* nextRep)
+void CHOOSER::IRepresentationChooser::LogDetails(const PLAYLIST::CRepresentation* rep)
+{
+  LogDetails(nullptr, rep);
+}
+
+void CHOOSER::IRepresentationChooser::LogDetails(const PLAYLIST::CRepresentation* currentRep,
+                                                 const PLAYLIST::CRepresentation* nextRep)
 {
   if (!nextRep)
     return;

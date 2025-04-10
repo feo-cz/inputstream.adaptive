@@ -304,8 +304,12 @@ void SESSION::CSession::InitializePeriod()
     else
       isManualStreamSelection = streamSelectionMode == CHOOSER::StreamSelection::MANUAL;
 
+    const bool isDefaultAdpSet{adp == defVideoAdpSet};
+
     // Get the default initial stream repr. based on "adaptive repr. chooser"
     CRepresentation* defaultRepr{m_reprChooser->GetRepresentation(adp)};
+    if (isDefaultAdpSet)
+      m_reprChooser->LogDetails(defaultRepr);
 
     if (isManualStreamSelection)
     {
@@ -320,9 +324,9 @@ void SESSION::CSession::InitializePeriod()
         if (!currentRepr->isPlayable)
           continue;
 
-        const bool isDefaultRepr{adp == defVideoAdpSet && currentRepr == defaultRepr}; // meant for video only
+        const bool isDefaultVideoRepr{isDefaultAdpSet && currentRepr == defaultRepr};
 
-        AddStream(adp, currentRepr, isDefaultRepr, uniqueId, audioLanguageOrig);
+        AddStream(adp, currentRepr, isDefaultVideoRepr, uniqueId, audioLanguageOrig);
       }
     }
     else
@@ -335,16 +339,14 @@ void SESSION::CSession::InitializePeriod()
       uint32_t uniqueId{adpIndex};
       uniqueId |= reprIndex << 16;
 
-      const bool isDefaultRepr{adp == defVideoAdpSet}; // meant for video only
-
-      AddStream(adp, defaultRepr, isDefaultRepr, uniqueId, audioLanguageOrig);
+      AddStream(adp, defaultRepr, isDefaultAdpSet, uniqueId, audioLanguageOrig);
     }
   }
 }
 
 void SESSION::CSession::AddStream(PLAYLIST::CAdaptationSet* adp,
                                   PLAYLIST::CRepresentation* initialRepr,
-                                  bool isDefaultRepr,
+                                  bool isDefaultVideoRepr,
                                   uint32_t uniqueId,
                                   std::string_view audioLanguageOrig)
 {
@@ -360,7 +362,7 @@ void SESSION::CSession::AddStream(PLAYLIST::CAdaptationSet* adp,
     case StreamType::VIDEO:
     {
       stream.m_info.SetStreamType(INPUTSTREAM_TYPE_VIDEO);
-      if (isDefaultRepr)
+      if (isDefaultVideoRepr)
         flags |= INPUTSTREAM_FLAG_DEFAULT;
       break;
     }
