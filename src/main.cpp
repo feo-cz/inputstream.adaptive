@@ -508,8 +508,8 @@ CVideoCodecAdaptive::~CVideoCodecAdaptive()
   // When the addon is about to be terminated
   // CVideoCodecAdaptive instance will be destroyed before of CInputStreamAdaptive::Close() call
   LOG::Log(LOGDEBUG, "CVideoCodecAdaptive::~CVideoCodecAdaptive");
-  m_drm->Dispose();
-  m_drm = nullptr;
+  m_drmDecoder->DisposeDecoder();
+  m_drmDecoder = nullptr;
 }
 
 bool CVideoCodecAdaptive::Open(const kodi::addon::VideoCodecInitdata& initData)
@@ -557,8 +557,8 @@ bool CVideoCodecAdaptive::Open(const kodi::addon::VideoCodecInitdata& initData)
     return false;
   }
 
-  m_drm = drmSession->drm;
-  return m_drm->OpenVideoDecoder(drmSession->decrypter, initData.GetCStructure());
+  m_drmDecoder = drmSession->drm;
+  return m_drmDecoder->OpenVideoDecoder(drmSession->decrypter, initData.GetCStructure());
 }
 
 bool CVideoCodecAdaptive::Reconfigure(const kodi::addon::VideoCodecInitdata& initData)
@@ -568,32 +568,32 @@ bool CVideoCodecAdaptive::Reconfigure(const kodi::addon::VideoCodecInitdata& ini
 
 bool CVideoCodecAdaptive::AddData(const DEMUX_PACKET& packet)
 {
-  if (!m_drm)
+  if (!m_drmDecoder)
     return false;
 
-  return m_drm->DecryptAndDecodeVideo(dynamic_cast<kodi::addon::CInstanceVideoCodec*>(this),
+  return m_drmDecoder->DecryptAndDecodeVideo(dynamic_cast<kodi::addon::CInstanceVideoCodec*>(this),
                                       &packet) != VC_ERROR;
 }
 
 VIDEOCODEC_RETVAL CVideoCodecAdaptive::GetPicture(VIDEOCODEC_PICTURE& picture)
 {
-  if (!m_drm)
+  if (!m_drmDecoder)
     return VIDEOCODEC_RETVAL::VC_ERROR;
 
   static VIDEOCODEC_RETVAL vrvm[] = {VIDEOCODEC_RETVAL::VC_NONE, VIDEOCODEC_RETVAL::VC_ERROR,
                                      VIDEOCODEC_RETVAL::VC_BUFFER, VIDEOCODEC_RETVAL::VC_PICTURE,
                                      VIDEOCODEC_RETVAL::VC_EOF};
 
-  return vrvm[m_drm->VideoFrameDataToPicture(dynamic_cast<kodi::addon::CInstanceVideoCodec*>(this),
+  return vrvm[m_drmDecoder->VideoFrameDataToPicture(dynamic_cast<kodi::addon::CInstanceVideoCodec*>(this),
                                              &picture)];
 }
 
 void CVideoCodecAdaptive::Reset()
 {
-  if (!m_drm)
+  if (!m_drmDecoder)
     return;
 
-  m_drm->ResetVideo();
+  m_drmDecoder->ResetVideo();
 }
 
 /*****************************************************************************************************/
