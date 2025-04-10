@@ -81,7 +81,7 @@ PLAYLIST::CRepresentation* CRepresentationSelector::Higher(PLAYLIST::CAdaptation
   auto reps = adaptSet->GetRepresentationsPtr();
   auto repIt = std::find_if(
       reps.begin(), reps.end(), [currRep](const auto& rep)
-      { return rep->isPlayable && CRepresentation::CompareBandwidthPtr(rep, currRep); });
+      { return rep->isPlayable && CRepresentation::CompareBandwidthPtr(currRep, rep); });
 
   if (repIt == reps.end())
     return currRep;
