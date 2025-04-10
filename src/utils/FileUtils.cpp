@@ -123,3 +123,22 @@ std::string UTILS::FILESYS::GetFileExtension(std::string_view path)
 
   return {};
 }
+
+bool UTILS::FILESYS::FindFilePath(const std::string& path,
+                              const std::string& filename,
+                              std::string& filePath)
+{
+  std::vector<kodi::vfs::CDirEntry> items;
+  if (kodi::vfs::GetDirectory(path, "", items))
+  {
+    for (auto& item : items)
+    {
+      if (item.Label() != filename)
+        continue;
+
+      filePath = item.Path();
+      return true;
+    }
+  }
+  return false;
+}
