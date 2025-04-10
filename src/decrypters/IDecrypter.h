@@ -71,22 +71,22 @@ class IDecrypter : public IDecrypterDecoder
 public:
   static const uint8_t CONFIG_PERSISTENTSTORAGE = 1;
 
-  virtual ~IDecrypter(){};
+  virtual ~IDecrypter() {}
 
-  /**
+  /*
    * \brief Initialize the decrypter library
    * \return True if has success, otherwise false
    */
   virtual bool Initialize() { return true; }
 
-  /**
+  /*
    * \brief Initialise the DRM system
    * \param config The DRM configuration
    * \return true on success 
    */
   virtual bool OpenDRMSystem(const DRM::Config& config) = 0;
   
-  /**
+  /*
    * \brief Creates a Single Sample Decrypter for decrypting content 
    * \param initData The data for initialising the decrypter (e.g. PSSH)
    * \param defaultkeyid The default KeyID to initialise with
@@ -102,7 +102,7 @@ public:
       bool skipSessionMessage,
       CryptoMode cryptoMode) = 0;
 
-  /**
+  /*
    * \brief Determine the capabilities of the decrypter against the supplied media type and KeyID
    * \param decrypter The single sample decrypter to use for this check
    * \param keyid The KeyID that will be used for this check
@@ -126,26 +126,26 @@ public:
     return std::nullopt;
   }
 
-  /**
+  /*
    * \brief Check if the decrypter has been initialised (OpenDRMSystem called)
    * \return True if decrypter has been initialised otherwise false
    */
   virtual bool IsInitialised() = 0;
 
-  /**
+  /*
    * \brief Retrieve license challenge data
    * \param decrypter The single sample decrypter to use for license challenge
    * \return The license data in Base64 format
    */
   virtual std::string GetChallengeB64Data(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter) = 0;
 
-  /**
+  /*
    * \brief Set the auxillary library path
    * \param libraryPath Filesystem path for the decrypter to locate any needed files such as CDMs
    */
   virtual void SetLibraryPath(std::string_view libraryPath) = 0;
 
-  /**
+  /*
    * \brief Get the auxillary library path
    * \return The auxillary library path
    */
