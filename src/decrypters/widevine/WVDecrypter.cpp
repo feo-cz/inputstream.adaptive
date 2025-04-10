@@ -180,7 +180,7 @@ void CWVDecrypter::ResetVideo()
     m_decodingDecrypter->ResetVideo();
 }
 
-void CWVDecrypter::Dispose()
+void CWVDecrypter::DisposeDecoder()
 {
   m_decodingDecrypter = nullptr;
 }

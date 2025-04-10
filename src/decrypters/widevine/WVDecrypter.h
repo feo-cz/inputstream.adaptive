@@ -42,7 +42,7 @@ public:
   virtual VIDEOCODEC_RETVAL VideoFrameDataToPicture(kodi::addon::CInstanceVideoCodec* codecInstance,
                                                     VIDEOCODEC_PICTURE* picture) override;
   virtual void ResetVideo() override;
-  virtual void Dispose() override;
+  virtual void DisposeDecoder() override;
   virtual void SetLibraryPath(std::string_view libraryPath) override;
   virtual bool GetBuffer(void* instance, VIDEOCODEC_PICTURE& picture);
   virtual void ReleaseBuffer(void* instance, void* buffer);

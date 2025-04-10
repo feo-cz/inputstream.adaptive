@@ -23,7 +23,50 @@ enum class CryptoMode;
 
 namespace DRM
 {
-class IDecrypter
+// \brief DRM decoder
+class IDecrypterDecoder
+{
+public:
+  /*
+   * \brief Open VideoCodec for decoding video in a secure pathway to Kodi
+   * \param decrypter The single sample decrypter to use
+   * \param initData The data for initialising the codec
+   * \return True if the decoder was opened successfully otherwise false
+   */
+  virtual bool OpenVideoDecoder(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
+                                const VIDEOCODEC_INITDATA* initData) = 0;
+
+  /*
+   * \brief Decrypt and decode the video packet with the supplied VideoCodec instance
+   * \param codecInstance The instance of VideoCodec to use
+   * \param sample The video sample/packet to decrypt and decode
+   * \return Return status of the decrypt/decode action
+   */
+  virtual VIDEOCODEC_RETVAL DecryptAndDecodeVideo(kodi::addon::CInstanceVideoCodec* codecInstance,
+                                                  const DEMUX_PACKET* sample) = 0;
+
+  /*
+   * \brief Convert CDM video frame data to Kodi picture format
+   * \param codecInstance The instance of VideoCodec to use
+   * \param picture The picture object to populate
+   * \return status of the conversion
+   */
+  virtual VIDEOCODEC_RETVAL VideoFrameDataToPicture(kodi::addon::CInstanceVideoCodec* codecInstance,
+                                                    VIDEOCODEC_PICTURE* picture) = 0;
+
+  /*
+   * \brief Reset the decoder
+   */
+  virtual void ResetVideo() = 0;
+
+  /*
+   * \brief Unload decoder resources.
+   */
+  virtual void DisposeDecoder() {}
+};
+
+// \brief DRM System
+class IDecrypter : public IDecrypterDecoder
 {
 public:
   static const uint8_t CONFIG_PERSISTENTSTORAGE = 1;
@@ -97,38 +140,6 @@ public:
   virtual std::string GetChallengeB64Data(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter) = 0;
 
   /**
-   * \brief Open VideoCodec for decoding video in a secure pathway to Kodi
-   * \param decrypter The single sample decrypter to use
-   * \param initData The data for initialising the codec
-   * \return True if the decoder was opened successfully otherwise false
-   */
-  virtual bool OpenVideoDecoder(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
-                                const VIDEOCODEC_INITDATA* initData) = 0;
-
-  /**
-   * \brief Decrypt and decode the video packet with the supplied VideoCodec instance
-   * \param codecInstance The instance of VideoCodec to use
-   * \param sample The video sample/packet to decrypt and decode
-   * \return Return status of the decrypt/decode action
-   */
-  virtual VIDEOCODEC_RETVAL DecryptAndDecodeVideo(kodi::addon::CInstanceVideoCodec* codecInstance,
-                                                  const DEMUX_PACKET* sample) = 0;
-
-  /**
-   * \brief Convert CDM video frame data to Kodi picture format
-   * \param codecInstance The instance of VideoCodec to use
-   * \param picture The picture object to populate
-   * \return status of the conversion
-   */
-  virtual VIDEOCODEC_RETVAL VideoFrameDataToPicture(kodi::addon::CInstanceVideoCodec* codecInstance,
-                                                    VIDEOCODEC_PICTURE* picture) = 0;
-
-  /**
-   * \brief Reset the decoder
-   */
-  virtual void ResetVideo() = 0;
-
-  /**
    * \brief Set the auxillary library path
    * \param libraryPath Filesystem path for the decrypter to locate any needed files such as CDMs
    */
@@ -139,11 +150,6 @@ public:
    * \return The auxillary library path
    */
   virtual std::string_view GetLibraryPath() const = 0;
-
-  /*
-   * \brief Unload resources.
-   */
-  virtual void Dispose() {}
 
   /*
    * \brief Workaround to missing secure decoder implementation.
