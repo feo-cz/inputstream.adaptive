@@ -55,6 +55,32 @@ public:
   PLAYLIST::CRepresentation* Higher(PLAYLIST::CAdaptationSet* adaptSet,
                                     PLAYLIST::CRepresentation* currRep) const;
 
+  /*!
+   * \brief Select the representation with the nearest resolution (and higher bandwidth).
+   * \param adaptSet The adaptation set where search for
+   * \param currRep The representation where get the bandwidth value
+   * \return The representation, otherwise nullptr if no available
+   */
+  PLAYLIST::CRepresentation* Nearest(PLAYLIST::CAdaptationSet* adaptSet) const;
+
+  /*!
+   * \brief Select the representation with the nearest bandwidth and resolution.
+   * \param adaptSet The adaptation set where search for
+   * \param currRep The representation where get the bandwidth value
+   * \return The representation, otherwise nullptr if no available
+   */
+  PLAYLIST::CRepresentation* NearestBw(PLAYLIST::CAdaptationSet* adaptSet,
+                                       const PLAYLIST::CRepresentation* currRep) const;
+
+  /*!
+   * \brief Select the representation with the nearest bandwidth and resolution.
+   * \param adaptSet The adaptation set where search for
+   * \param bandwidth The bandwidth value
+   * \return The representation, otherwise nullptr if no available
+   */
+  PLAYLIST::CRepresentation* NearestBw(PLAYLIST::CAdaptationSet* adaptSet,
+                                       const uint32_t bandwidth) const;
+
 private:
   int m_screenWidth{0};
   int m_screenHeight{0};
