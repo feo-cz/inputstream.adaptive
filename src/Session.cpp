@@ -1180,6 +1180,8 @@ PLAYLIST::CAdaptationSet* SESSION::CSession::DetermineDefaultAdpSet()
       CODEC::FOURCC_HEVC, CODEC::FOURCC_AV01, CODEC::NAME_AV1,    CODEC::FOURCC_VP09,
       CODEC::NAME_VP9,    CODEC::FOURCC_AVC_, CODEC::FOURCC_H264};
 
+  CAdaptationSet* defaultAdp{nullptr}; // Default determined by codec order
+
   for (auto& codecCC : videoCodecOrder)
   {
     CAdaptationSet* currAdp{nullptr};
@@ -1189,10 +1191,16 @@ PLAYLIST::CAdaptationSet* SESSION::CSession::DetermineDefaultAdpSet()
       if (currAdp->GetRepresentations().empty() || currAdp->GetStreamType() != StreamType::VIDEO)
         continue;
 
-      if (CODEC::Contains(currAdp->GetCodecs(), codecCC))
+      if (currAdp->IsDefault()) // Override by manifest custom parameter
+      {
         return currAdp;
+      }
+      else if (CODEC::Contains(currAdp->GetCodecs(), codecCC) && !defaultAdp)
+      {
+        defaultAdp = currAdp;
+      }
     }
   }
 
-  return nullptr;
+  return defaultAdp;
 }
