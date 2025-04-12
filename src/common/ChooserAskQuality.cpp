@@ -9,6 +9,7 @@
 #include "ChooserAskQuality.h"
 
 #include "AdaptationSet.h"
+#include "CompSettings.h"
 #include "CompKodiProps.h"
 #include "ReprSelector.h"
 #include "Representation.h"
@@ -44,6 +45,27 @@ std::string CovertFpsToString(float value)
 
   return str;
 }
+
+std::string CreateStreamName(const CRepresentation* repr)
+{
+  std::string streamName{kodi::addon::GetLocalizedString(30232)};
+  STRING::ReplaceFirst(streamName, "{codec}", CODEC::GetVideoDesc(repr->GetCodecs()));
+
+  float fps{static_cast<float>(repr->GetFrameRate())};
+  if (fps > 0 && repr->GetFrameRateScale() > 0)
+    fps /= repr->GetFrameRateScale();
+
+  std::string quality = "(";
+  if (repr->GetWidth() > 0 && repr->GetHeight() > 0)
+    quality += StringUtils::Format("%ix%i, ", repr->GetWidth(), repr->GetHeight());
+  if (fps > 0)
+    quality += StringUtils::Format("%s fps, ", CovertFpsToString(fps).c_str());
+
+  quality += StringUtils::Format("%u Kbps)", repr->GetBandwidth() / 1000);
+  STRING::ReplaceFirst(streamName, "{quality}", quality);
+
+  return streamName;
+}
 } // unnamed namespace
 
 CRepresentationChooserAskQuality::CRepresentationChooserAskQuality()
@@ -53,6 +75,13 @@ CRepresentationChooserAskQuality::CRepresentationChooserAskQuality()
 
 void CRepresentationChooserAskQuality::Initialize(const ADP::KODI_PROPS::ChooserProps& props)
 {
+  auto& settings = CSrvBroker::GetSettings();
+  m_resRangeLimit = settings.GetResRangeLimit();
+
+  LOG::Log(LOGDEBUG,
+           "[Repr. chooser] Configuration\n"
+           "Resolution range limit: %ix%i",
+           m_resRangeLimit.first, m_resRangeLimit.second);
 }
 
 void CRepresentationChooserAskQuality::PostInit()
@@ -94,40 +123,41 @@ PLAYLIST::CAdaptationSet* CHOOSER::CRepresentationChooserAskQuality::GetPreferre
       if (adpSet->GetStreamType() != StreamType::VIDEO || adpSet->GetRepresentations().size() == 0)
         continue;
 
-      CRepresentation* bestRep{nullptr};
-
-      // preferred adaptation set, in order to have a preferred codec for multi-codec manifests
-      if (adpSetPreferred == adpSet.get())
+      if (m_resRangeLimit.first != 0) // Show only the nearest resolution to the preference
       {
-        bestRep = selector.Highest(adpSetPreferred);
+        CRepresentationSelector selector{m_resRangeLimit.first, m_resRangeLimit.second};
+        CRepresentation* nearestRep = selector.Nearest(adpSet.get());
+
+        if (nearestRep)
+        {
+          entries.emplace_back(CreateStreamName(nearestRep));
+          entriesOjb.emplace_back(adpSet.get(), nearestRep);
+
+          if (adpSet.get() == adpSetPreferred)
+            preselIndex = static_cast<int>(entries.size()) - 1;
+        }
       }
-
-      for (auto& repr : adpSet->GetRepresentations())
+      else // Show all resolutions
       {
-        if (!repr->isPlayable)
-          continue;
+        CRepresentation* bestRep{nullptr};
 
-        std::string entryName{kodi::addon::GetLocalizedString(30232)};
-        STRING::ReplaceFirst(entryName, "{codec}", CODEC::GetVideoDesc(repr->GetCodecs()));
+        // preferred adaptation set, in order to have a preferred codec for multi-codec manifests
+        if (adpSetPreferred == adpSet.get())
+        {
+          bestRep = selector.Highest(adpSetPreferred);
+        }
 
-        float fps{static_cast<float>(repr->GetFrameRate())};
-        if (fps > 0 && repr->GetFrameRateScale() > 0)
-          fps /= repr->GetFrameRateScale();
+        for (auto& repr : adpSet->GetRepresentations())
+        {
+          if (!repr->isPlayable)
+            continue;
 
-        std::string quality = "(";
-        if (repr->GetWidth() > 0 && repr->GetHeight() > 0)
-          quality += StringUtils::Format("%ix%i, ", repr->GetWidth(), repr->GetHeight());
-        if (fps > 0)
-          quality += StringUtils::Format("%s fps, ", CovertFpsToString(fps).c_str());
-
-        quality += StringUtils::Format("%u Kbps)", repr->GetBandwidth() / 1000);
-        STRING::ReplaceFirst(entryName, "{quality}", quality);
-
-        entries.emplace_back(entryName);
+        entries.emplace_back(CreateStreamName(repr.get()));
         entriesOjb.emplace_back(adpSet.get(), repr.get());
 
         if (repr.get() == bestRep)
           preselIndex = static_cast<int>(entries.size()) - 1;
+        }
       }
     }
 

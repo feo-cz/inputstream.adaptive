@@ -55,6 +55,16 @@ std::pair<int, int> ADP::SETTINGS::CCompSettings::GetResSecureMax() const
   return val;
 }
 
+std::pair<int, int> ADP::SETTINGS::CCompSettings::GetResRangeLimit() const
+{
+  std::pair<int, int> val;
+  if (!STRING::GetMapValue(RES_CONV_LIST,
+                           kodi::addon::GetSettingString("adaptivestream.res.rangelimit"), val))
+    LOG::Log(LOGERROR, "Unknown value for \"adaptivestream.res.rangelimit\" setting");
+
+  return val;
+}
+
 bool ADP::SETTINGS::CCompSettings::IsBandwidthInitAuto() const
 {
   return kodi::addon::GetSettingBoolean("adaptivestream.bandwidth.init.auto");
