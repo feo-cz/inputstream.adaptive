@@ -99,7 +99,7 @@ PLAYLIST::CRepresentation* CRepresentationChooserTest::GetNextRepresentation(
     }
   }
 
-  if (adp->GetStreamType() == StreamType::VIDEO)
+  if (adp->GetStreamType() == StreamType::VIDEO && currentRep)
     LogDetails(currentRep, nextRep);
 
   return nextRep;

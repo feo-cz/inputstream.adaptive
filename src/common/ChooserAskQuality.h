@@ -33,8 +33,10 @@ public:
 
 private:
   bool m_isDialogShown{false};
+  std::pair<int, int> m_resRangeLimit;
   int m_selectedResWidth{0};
   int m_selectedResHeight{0};
+  uint32_t m_selectedBandwidth{0};
   std::string m_selectedVideoCodecDesc;
 };
 

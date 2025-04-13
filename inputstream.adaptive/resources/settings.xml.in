@@ -69,6 +69,30 @@
           </dependencies>
           <control type="spinner" format="string" />
         </setting>
+        <setting parent="adaptivestream.type" id="adaptivestream.res.rangelimit" type="string" label="30172" help="30173">
+          <level>0</level>
+          <default>disabled</default>
+          <constraints>
+            <options>
+              <option label="30209">disabled</option>
+              <option label="30211">480p</option>
+              <option label="30212">640p</option>
+              <option label="30213">720p</option>
+              <option label="30214">1080p</option>
+              <option label="30215">2K</option>
+              <option label="30216">1440p</option>
+              <option label="30217">4K</option>
+            </options>
+          </constraints>
+          <dependencies>
+            <dependency type="visible">
+              <or>
+                <condition setting="adaptivestream.type">ask-quality</condition>
+              </or>
+            </dependency>
+          </dependencies>
+          <control type="spinner" format="string" />
+        </setting>
         <setting parent="adaptivestream.type" id="adaptivestream.bandwidth.init.auto" type="boolean" label="30168" help="30169">
           <level>0</level>
           <default>true</default>

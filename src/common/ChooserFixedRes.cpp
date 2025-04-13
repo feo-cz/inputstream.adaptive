@@ -76,9 +76,7 @@ PLAYLIST::CRepresentation* CRepresentationChooserFixedRes::GetNextRepresentation
 
   if (adp->GetStreamType() == StreamType::VIDEO)
   {
-    CRepresentation* selRep{selector.Highest(adp)};
-    LogDetails(nullptr, selRep);
-    return selRep;
+    return selector.Highest(adp);
   }
   else
   {

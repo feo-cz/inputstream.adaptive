@@ -81,10 +81,78 @@ PLAYLIST::CRepresentation* CRepresentationSelector::Higher(PLAYLIST::CAdaptation
   auto reps = adaptSet->GetRepresentationsPtr();
   auto repIt = std::find_if(
       reps.begin(), reps.end(), [currRep](const auto& rep)
-      { return rep->isPlayable && CRepresentation::CompareBandwidthPtr(rep, currRep); });
+      { return rep->isPlayable && CRepresentation::CompareBandwidthPtr(currRep, rep); });
 
   if (repIt == reps.end())
     return currRep;
 
   return *repIt;
+}
+
+PLAYLIST::CRepresentation* CHOOSER::CRepresentationSelector::Nearest(
+    PLAYLIST::CAdaptationSet* adaptSet) const
+{
+  PLAYLIST::CRepresentation* nearestRep{nullptr};
+  uint32_t smallestDiff = std::numeric_limits<uint32_t>::max();
+
+  for (auto& rep : adaptSet->GetRepresentations())
+  {
+    if (!rep->isPlayable)
+      continue;
+
+    const uint32_t resolutionDiff =
+        (rep->GetWidth() > m_screenWidth ? rep->GetWidth() - m_screenWidth
+                                         : m_screenWidth - rep->GetWidth()) +
+        (rep->GetHeight() > m_screenHeight ? rep->GetHeight() - m_screenHeight
+                                           : m_screenHeight - rep->GetHeight());
+
+    if (resolutionDiff < smallestDiff ||
+        (resolutionDiff == smallestDiff &&
+         (!nearestRep || rep->GetBandwidth() > nearestRep->GetBandwidth())))
+    {
+      smallestDiff = resolutionDiff;
+      nearestRep = rep.get();
+    }
+  }
+
+  return nearestRep;
+}
+
+PLAYLIST::CRepresentation* CHOOSER::CRepresentationSelector::NearestBw(
+    PLAYLIST::CAdaptationSet* adaptSet, const PLAYLIST::CRepresentation* currRep) const
+{
+  return NearestBw(adaptSet, currRep->GetBandwidth());
+}
+
+PLAYLIST::CRepresentation* CHOOSER::CRepresentationSelector::NearestBw(
+    PLAYLIST::CAdaptationSet* adaptSet, const uint32_t bandwidth) const
+{
+  PLAYLIST::CRepresentation* nearestRep{nullptr};
+  uint32_t smallestDiff = std::numeric_limits<uint32_t>::max();
+
+  for (auto& rep : adaptSet->GetRepresentations())
+  {
+    if (!rep->isPlayable)
+      continue;
+
+    const uint32_t bandwidthDiff = (rep->GetBandwidth() > bandwidth)
+                                       ? (rep->GetBandwidth() - bandwidth)
+                                       : (bandwidth - rep->GetBandwidth());
+
+    const uint32_t resolutionDiff =
+        (rep->GetWidth() > m_screenWidth ? rep->GetWidth() - m_screenWidth
+                                         : m_screenWidth - rep->GetWidth()) +
+        (rep->GetHeight() > m_screenHeight ? rep->GetHeight() - m_screenHeight
+                                           : m_screenHeight - rep->GetHeight());
+
+    const uint32_t combinedDiff = bandwidthDiff + resolutionDiff;
+
+    if (combinedDiff < smallestDiff)
+    {
+      smallestDiff = combinedDiff;
+      nearestRep = rep.get();
+    }
+  }
+
+  return nearestRep;
 }

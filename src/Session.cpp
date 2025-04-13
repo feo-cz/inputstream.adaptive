@@ -304,8 +304,12 @@ void SESSION::CSession::InitializePeriod()
     else
       isManualStreamSelection = streamSelectionMode == CHOOSER::StreamSelection::MANUAL;
 
+    const bool isDefaultAdpSet{adp == defVideoAdpSet};
+
     // Get the default initial stream repr. based on "adaptive repr. chooser"
     CRepresentation* defaultRepr{m_reprChooser->GetRepresentation(adp)};
+    if (isDefaultAdpSet)
+      m_reprChooser->LogDetails(defaultRepr);
 
     if (isManualStreamSelection)
     {
@@ -320,9 +324,9 @@ void SESSION::CSession::InitializePeriod()
         if (!currentRepr->isPlayable)
           continue;
 
-        const bool isDefaultRepr{adp == defVideoAdpSet && currentRepr == defaultRepr}; // meant for video only
+        const bool isDefaultVideoRepr{isDefaultAdpSet && currentRepr == defaultRepr};
 
-        AddStream(adp, currentRepr, isDefaultRepr, uniqueId, audioLanguageOrig);
+        AddStream(adp, currentRepr, isDefaultVideoRepr, uniqueId, audioLanguageOrig);
       }
     }
     else
@@ -335,16 +339,14 @@ void SESSION::CSession::InitializePeriod()
       uint32_t uniqueId{adpIndex};
       uniqueId |= reprIndex << 16;
 
-      const bool isDefaultRepr{adp == defVideoAdpSet}; // meant for video only
-
-      AddStream(adp, defaultRepr, isDefaultRepr, uniqueId, audioLanguageOrig);
+      AddStream(adp, defaultRepr, isDefaultAdpSet, uniqueId, audioLanguageOrig);
     }
   }
 }
 
 void SESSION::CSession::AddStream(PLAYLIST::CAdaptationSet* adp,
                                   PLAYLIST::CRepresentation* initialRepr,
-                                  bool isDefaultRepr,
+                                  bool isDefaultVideoRepr,
                                   uint32_t uniqueId,
                                   std::string_view audioLanguageOrig)
 {
@@ -360,7 +362,7 @@ void SESSION::CSession::AddStream(PLAYLIST::CAdaptationSet* adp,
     case StreamType::VIDEO:
     {
       stream.m_info.SetStreamType(INPUTSTREAM_TYPE_VIDEO);
-      if (isDefaultRepr)
+      if (isDefaultVideoRepr)
         flags |= INPUTSTREAM_FLAG_DEFAULT;
       break;
     }
@@ -1180,6 +1182,8 @@ PLAYLIST::CAdaptationSet* SESSION::CSession::DetermineDefaultAdpSet()
       CODEC::FOURCC_HEVC, CODEC::FOURCC_AV01, CODEC::NAME_AV1,    CODEC::FOURCC_VP09,
       CODEC::NAME_VP9,    CODEC::FOURCC_AVC_, CODEC::FOURCC_H264};
 
+  CAdaptationSet* defaultAdp{nullptr}; // Default determined by codec order
+
   for (auto& codecCC : videoCodecOrder)
   {
     CAdaptationSet* currAdp{nullptr};
@@ -1189,10 +1193,16 @@ PLAYLIST::CAdaptationSet* SESSION::CSession::DetermineDefaultAdpSet()
       if (currAdp->GetRepresentations().empty() || currAdp->GetStreamType() != StreamType::VIDEO)
         continue;
 
-      if (CODEC::Contains(currAdp->GetCodecs(), codecCC))
+      if (currAdp->IsDefault()) // Override by manifest custom parameter
+      {
         return currAdp;
+      }
+      else if (CODEC::Contains(currAdp->GetCodecs(), codecCC) && !defaultAdp)
+      {
+        defaultAdp = currAdp;
+      }
     }
   }
 
-  return nullptr;
+  return defaultAdp;
 }

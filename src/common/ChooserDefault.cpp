@@ -225,7 +225,7 @@ PLAYLIST::CRepresentation* CRepresentationChooserDefault::GetNextRepresentation(
   if (!nextRep)
     nextRep = selector.Lowest(adp);
 
-  if (isVideoStreamType) // Only video, to avoid fill too much the log
+  if (isVideoStreamType && currentRep) // Only video, to avoid fill too much the log
   {
     LOG::Log(LOGDEBUG, "[Repr. chooser] Current average bandwidth: %u bit/s (filtered to %u bit/s)",
              m_bandwidthCurrent, bandwidth);
