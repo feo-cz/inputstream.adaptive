@@ -42,9 +42,9 @@ bool CWVDecrypter::Initialize()
   // Kodi kodi::tools::CDllHelper LoadDll() cannot be used because use RTLD_LOCAL,
   // and we need the RTLD_GLOBAL flag.
   std::string binaryPath;
-  if (!FILESYS::FindFilePath(FILESYS::GetAddonPath(), "cdm_aarch64_loader.so", binaryPath))
+  if (!FILESYS::FindFilePath(FILESYS::GetAddonPath(), "libcdm_aarch64_loader.so", binaryPath))
   {
-    LOG::Log(LOGERROR, "Cannot find the cdm_aarch64_loader.so file");
+    LOG::Log(LOGERROR, "Cannot find the libcdm_aarch64_loader.so file");
     return false;
   }
 
