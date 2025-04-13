@@ -135,6 +135,16 @@ public:
                                      std::string codec);
 
   /*!
+   * \brief Find an adaptation set by codec string and TRC.
+   * \param adpSets The adaptation set list where to search
+   * \param codec The codec string
+   * \return The adaptation set if found, otherwise nullptr
+   */
+  static CAdaptationSet* FindByCodec(std::vector<std::unique_ptr<CAdaptationSet>>& adpSets,
+                                     std::string codec,
+                                     const ColorTRC trc);
+
+  /*!
    * \brief Find a mergeable adaptation set by comparing properties.
    * \param adpSets The adaptation set list where to search
    * \param adpSet The adaptation set to be compared

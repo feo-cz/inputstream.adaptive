@@ -101,6 +101,7 @@ protected:
     float m_frameRate{0};
     std::string m_groupIdAudio;
     std::string m_groupIdSubtitles;
+    std::string m_videoRange;
     std::string m_uri;
     bool m_isUriDuplicate{false}; // Another variant have same uri
   };

@@ -1446,6 +1446,7 @@ bool adaptive::CHLSTree::ParseMultivariantPlaylist(const std::string& data)
       }
       var.m_groupIdAudio = attribs["AUDIO"];
       var.m_groupIdSubtitles = attribs["SUBTITLES"];
+      var.m_videoRange = attribs["VIDEO-RANGE"];
       var.m_uri = uri;
 
       // Check if this uri has been already added
@@ -1639,15 +1640,24 @@ bool adaptive::CHLSTree::ParseMultivariantPlaylist(const std::string& data)
         AddIncludedAudioStream(period, codecAudio);
       }
 
-      // We group all video representations by codec fourcc, similar to the DASH specs
+      // We group all video representations by codec fourcc (and TRC) similar to the DASH specs
       std::string codecFourcc = codecVideo.substr(0, codecVideo.find('.'));
+
+      // Determinate the TRC
+      ColorTRC colorTRC = ColorTRC::NONE;
+      if (var.m_videoRange == "PQ")
+        colorTRC = ColorTRC::SMPTE2084;
+      else if (var.m_videoRange == "HLG")
+        colorTRC = ColorTRC::ARIB_STD_B67;
+
       // Find existing adaptation set with same codec fourcc ...
-      CAdaptationSet* adpSet = CAdaptationSet::FindByCodec(period->GetAdaptationSets(), codecFourcc);
+      CAdaptationSet* adpSet = CAdaptationSet::FindByCodec(period->GetAdaptationSets(), codecFourcc, colorTRC);
       if (!adpSet) // ... or create a new one
       {
         auto newAdpSet = CAdaptationSet::MakeUniquePtr(period.get());
         newAdpSet->SetStreamType(streamType);
         newAdpSet->AddCodecs(codecFourcc);
+        newAdpSet->SetColorTRC(colorTRC);
         adpSet = newAdpSet.get();
         period->AddAdaptationSet(newAdpSet);
       }

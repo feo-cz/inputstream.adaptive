@@ -367,3 +367,45 @@ int UTILS::STRING::GetNumbers(std::string_view str)
 
   return ToInt32(extractedNbr);
 }
+
+std::vector<std::string> UTILS::STRING::ExtractPlaceholders(const std::string& text,
+                                                            const char openChar,
+                                                            const char closeChar)
+{
+  std::vector<std::string> placeholders;
+  std::string currentPlaceholder;
+  int braceCount{0};
+
+  for (char ch : text)
+  {
+    if (ch == openChar)
+    {
+      // Start a new placeholder
+      if (braceCount == 0)
+      {
+        currentPlaceholder.clear();
+      }
+      braceCount++;
+      currentPlaceholder += ch;
+    }
+    else if (ch == closeChar)
+    {
+      // Close a placeholder
+      if (braceCount > 0)
+      {
+        currentPlaceholder += ch;
+        braceCount--;
+        if (braceCount == 0)
+        {
+          placeholders.push_back(currentPlaceholder);
+        }
+      }
+    }
+    else if (braceCount > 0)
+    {
+      currentPlaceholder += ch;
+    }
+  }
+
+  return placeholders;
+}

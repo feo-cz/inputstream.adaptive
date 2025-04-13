@@ -291,10 +291,11 @@ msgid "Select video stream"
 msgstr ""
 
 #. Description of each list item in #30231 dialog window
-#. Do not translate placeholders: {codec} {quality}
+#. Do not translate placeholders: {codec} {quality} {hdr-type}
+#. Use of double graphes e.g. {whatyouwant{hdr-type}whatyouwant} allows you to add additional text printed only when a value is present
 #: src/common/RepresentationChooserAskQuality.cpp
 msgctxt "#30232"
-msgid "Video stream {codec} {quality}"
+msgid "Video stream {codec}{ [{hdr-type}]} {quality}"
 msgstr ""
 
 #. Enum setting to set the test mode

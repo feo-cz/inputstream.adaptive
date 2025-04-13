@@ -569,6 +569,13 @@ void adaptive::CDashTree::ParseTagAdaptationSet(pugi::xml_node nodeAdp, PLAYLIST
       adpSet->AddSwitchingIds(value);
     else if (schemeIdUri == "http://dashif.org/guidelines/last-segment-number")
       adpSet->SetSegmentEndNr(STRING::ToUint64(value));
+    else if (schemeIdUri == "urn:mpeg:mpegB:cicp:TransferCharacteristics")
+    {
+      if (value == "16")
+        adpSet->SetColorTRC(ColorTRC::SMPTE2084);
+      else if (value == "18")
+        adpSet->SetColorTRC(ColorTRC::ARIB_STD_B67);
+    }
   }
 
   // Parse <BaseURL> tag (just first, multi BaseURL not supported yet)
