@@ -537,7 +537,20 @@ void SESSION::CSession::UpdateStream(CStream& stream)
 
     if (CODEC::Contains(codecs, CODEC::FOURCC_MP4A, codecStr) ||
         CODEC::Contains(codecs, CODEC::FOURCC_AAC_, codecStr))
+    {
       stream.m_info.SetCodecName(CODEC::NAME_AAC);
+
+      if (STRING::Contains(codecStr, "mp4a.40.29"))
+          stream.m_info.SetCodecProfile(STREAMCODEC_PROFILE::AACCodecProfileHEV2);
+      else if (STRING::Contains(codecStr, "mp4a.40.2") || STRING::Contains(codecStr, "mp4a.40.17"))
+        stream.m_info.SetCodecProfile(STREAMCODEC_PROFILE::AACCodecProfileLOW); // AAC-LC
+      else if (STRING::Contains(codecStr, "mp4a.40.3"))
+        stream.m_info.SetCodecProfile(STREAMCODEC_PROFILE::AACCodecProfileSSR);
+      else if (STRING::Contains(codecStr, "mp4a.40.4") || STRING::Contains(codecStr, "mp4a.40.19"))
+        stream.m_info.SetCodecProfile(STREAMCODEC_PROFILE::AACCodecProfileLTP);
+      else if (STRING::Contains(codecStr, "mp4a.40.5"))
+        stream.m_info.SetCodecProfile(STREAMCODEC_PROFILE::AACCodecProfileHE);
+    }
     else if (CODEC::Contains(codecs, CODEC::FOURCC_DTS_, codecStr))
       stream.m_info.SetCodecName(CODEC::NAME_DTS);
     else if (CODEC::Contains(codecs, CODEC::FOURCC_AC_3, codecStr))
