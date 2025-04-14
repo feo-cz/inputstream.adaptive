@@ -96,6 +96,7 @@ public:
 
   void AddRepresentation(std::unique_ptr<CRepresentation>& representation);
   std::vector<std::unique_ptr<CRepresentation>>& GetRepresentations() { return m_representations; }
+  const std::vector<std::unique_ptr<CRepresentation>>& GetRepresentations() const { return m_representations; }
   std::vector<CRepresentation*> GetRepresentationsPtr();
 
   bool IsImpaired() const { return m_isImpaired; }

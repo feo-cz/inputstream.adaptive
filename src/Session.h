@@ -38,7 +38,7 @@ public:
    */
   bool Initialize(std::string manifestUrl);
 
-  bool CheckPlayableStreams();
+  bool CheckPlayableStreams(PLAYLIST::CPeriod* period);
 
   /*!
    * \brief Initialize adaptive tree period
@@ -273,9 +273,10 @@ protected:
   /*!
    * \brief Determine the AdaptationSet that should be the default to be played,
    *        the behavior is mainly based on codec types
+   * \param period The period where get adaptation sets
    * \return The AdaptationSet, or nullptr if unhandled
    */
-  PLAYLIST::CAdaptationSet* DetermineDefaultAdpSet();
+  PLAYLIST::CAdaptationSet* DetermineDefaultAdpSet(PLAYLIST::CPeriod* period);
 
 private:
   DRM::CDRMEngine m_drmEngine;
