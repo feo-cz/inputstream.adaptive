@@ -46,24 +46,74 @@ std::string CovertFpsToString(float value)
   return str;
 }
 
+void ReplacePhValue(std::string& text,
+                    const std::string& phTextPart,
+                    const std::string& phName,
+                    const std::string& value)
+{
+  std::string result;
+  if (!value.empty())
+  {
+    result = phTextPart;
+    STRING::ReplaceFirst(result, phName, value);
+    // Placeholder contained within other parentheses e.g.: {some text {ph} some text}
+    if (result.front() == '{')
+      result.erase(0, 1);
+    if (result.back() == '}')
+      result.pop_back();
+  }
+  STRING::ReplaceFirst(text, phTextPart, result);
+}
+
 std::string CreateStreamName(const CRepresentation* repr)
 {
   std::string streamName{kodi::addon::GetLocalizedString(30232)};
-  STRING::ReplaceFirst(streamName, "{codec}", CODEC::GetVideoDesc(repr->GetCodecs()));
+  const std::vector<std::string> phs = STRING::ExtractPlaceholders(streamName, '{', '}');
 
-  float fps{static_cast<float>(repr->GetFrameRate())};
-  if (fps > 0 && repr->GetFrameRateScale() > 0)
-    fps /= repr->GetFrameRateScale();
+  for (const std::string& ph : phs)
+  {
+    if (STRING::Contains(ph, "{codec}", true))
+    {
+      ReplacePhValue(streamName, ph, "{codec}", CODEC::GetVideoDesc(repr->GetCodecs()));
+    }
+    else if (STRING::Contains(ph, "{hdr-type}", true))
+    {
+      std::string hdrType;
+      const ColorTRC colorTrc = repr->GetColorTRC();
+      if (colorTrc == ColorTRC::SMPTE2084)
+      {
+        if (CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVH1) ||
+            CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVHE))
+        {
+          hdrType = "DV";
+        }
+        else
+        {
+          hdrType = "HDR10";
+        }
+      }
+      if (colorTrc == ColorTRC::ARIB_STD_B67)
+        hdrType = "HLG";
 
-  std::string quality = "(";
-  if (repr->GetWidth() > 0 && repr->GetHeight() > 0)
-    quality += StringUtils::Format("%ix%i, ", repr->GetWidth(), repr->GetHeight());
-  if (fps > 0)
-    quality += StringUtils::Format("%s fps, ", CovertFpsToString(fps).c_str());
+      ReplacePhValue(streamName, ph, "{hdr-type}", hdrType);
+    }
+    else if (STRING::Contains(ph, "{quality}", true))
+    {
+      float fps{static_cast<float>(repr->GetFrameRate())};
+      if (fps > 0 && repr->GetFrameRateScale() > 0)
+        fps /= repr->GetFrameRateScale();
 
-  quality += StringUtils::Format("%u Kbps)", repr->GetBandwidth() / 1000);
-  STRING::ReplaceFirst(streamName, "{quality}", quality);
+      std::string quality = "(";
+      if (repr->GetWidth() > 0 && repr->GetHeight() > 0)
+        quality += StringUtils::Format("%ix%i, ", repr->GetWidth(), repr->GetHeight());
+      if (fps > 0)
+        quality += StringUtils::Format("%s fps, ", CovertFpsToString(fps).c_str());
 
+      quality += StringUtils::Format("%u Kbps)", repr->GetBandwidth() / 1000);
+
+      ReplacePhValue(streamName, ph, "{quality}", quality);
+    }
+  }
   return streamName;
 }
 } // unnamed namespace

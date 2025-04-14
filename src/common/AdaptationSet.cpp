@@ -202,6 +202,18 @@ PLAYLIST::CAdaptationSet* PLAYLIST::CAdaptationSet::FindByCodec(
   return nullptr;
 }
 
+CAdaptationSet* PLAYLIST::CAdaptationSet::FindByCodec(
+    std::vector<std::unique_ptr<CAdaptationSet>>& adpSets, std::string codec, const ColorTRC trc)
+{
+  auto itAdpSet = std::find_if(
+      adpSets.cbegin(), adpSets.cend(), [&codec, &trc](const std::unique_ptr<CAdaptationSet>& item)
+      { return CODEC::Contains(item->GetCodecs(), codec) && item->GetColorTRC() == trc; });
+  if (itAdpSet != adpSets.cend())
+    return (*itAdpSet).get();
+
+  return nullptr;
+}
+
 CAdaptationSet* PLAYLIST::CAdaptationSet::FindMergeable(
     std::vector<std::unique_ptr<CAdaptationSet>>& adpSets, CAdaptationSet* adpSet)
 {

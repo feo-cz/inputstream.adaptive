@@ -460,7 +460,14 @@ void SESSION::CSession::UpdateStream(CStream& stream)
     stream.m_info.SetColorSpace(INPUTSTREAM_COLORSPACE_UNSPECIFIED);
     stream.m_info.SetColorRange(INPUTSTREAM_COLORRANGE_UNKNOWN);
     stream.m_info.SetColorPrimaries(INPUTSTREAM_COLORPRIMARY_UNSPECIFIED);
-    stream.m_info.SetColorTransferCharacteristic(INPUTSTREAM_COLORTRC_UNSPECIFIED);
+
+    ColorTRC colorTRC = rep->GetColorTRC();
+    if (colorTRC == ColorTRC::SMPTE2084)
+      stream.m_info.SetColorTransferCharacteristic(INPUTSTREAM_COLORTRC_SMPTE2084);
+    else if (colorTRC == ColorTRC::ARIB_STD_B67)
+      stream.m_info.SetColorTransferCharacteristic(INPUTSTREAM_COLORTRC_ARIB_STD_B67);
+    else
+      stream.m_info.SetColorTransferCharacteristic(INPUTSTREAM_COLORTRC_UNSPECIFIED);
 
     if (CODEC::Contains(codecs, CODEC::FOURCC_AVC_, codecStr) ||
         CODEC::Contains(codecs, CODEC::FOURCC_H264, codecStr))

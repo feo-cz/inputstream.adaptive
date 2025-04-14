@@ -82,3 +82,10 @@ uint32_t PLAYLIST::CCommonAttribs::GetAudioChannels() const
     return m_audioChannels;
   return m_parentCommonAttributes->GetAudioChannels();
 }
+
+const ColorTRC PLAYLIST::CCommonAttribs::GetColorTRC() const
+{
+  if (m_colorTRC != ColorTRC::NONE || !m_parentCommonAttributes)
+    return m_colorTRC;
+  return m_parentCommonAttributes->GetColorTRC();
+}

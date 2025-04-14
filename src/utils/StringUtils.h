@@ -297,5 +297,16 @@ std::vector<uint8_t> HexToBytes(const std::string& hex);
  */
 int GetNumbers(std::string_view str);
 
+/*!
+ * \brief Extract placeholders from a string
+ * \param text The string to be parsed
+ * \param openChar The opening char used to enclose the placeholder
+ * \param closeChar The closing char used to enclose the placeholder
+ * \return The placeholders
+ */
+std::vector<std::string> ExtractPlaceholders(const std::string& text,
+                                             const char openChar,
+                                             const char closeChar);
+
 } // namespace STRING
 } // namespace UTILS

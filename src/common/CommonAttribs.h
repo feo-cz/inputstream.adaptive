@@ -34,6 +34,18 @@ struct ProtectionScheme
   std::string licenseUrl;
 };
 
+/*!
+ * \brief Color Transfer Characteristics (TRC)
+ *        references from InputStream API interface and
+ *        https://en.wikipedia.org/wiki/Coding-independent_code_points
+ */
+enum class ColorTRC
+{
+  NONE,
+  SMPTE2084 = 16,
+  ARIB_STD_B67 = 18,
+};
+
 // CCommonAttribs class provide attribute data
 // of class itself or when not set of the parent class (if any).
 class ATTR_DLL_LOCAL CCommonAttribs
@@ -72,6 +84,9 @@ public:
   bool HasProtectionSchemes() const { return !m_protSchemes.empty(); }
   std::vector<ProtectionScheme>& ProtectionSchemes() { return m_protSchemes; }
 
+  void SetColorTRC(ColorTRC trc) { m_colorTRC = trc; }
+  const ColorTRC GetColorTRC() const;
+
 protected:
   CCommonAttribs* m_parentCommonAttributes{nullptr};
   std::string m_mimeType;
@@ -84,6 +99,7 @@ protected:
   uint32_t m_sampleRate{0};
   uint32_t m_audioChannels{0};
   std::vector<ProtectionScheme> m_protSchemes;
+  ColorTRC m_colorTRC{ColorTRC::NONE};
 };
 
 } // namespace PLAYLIST
