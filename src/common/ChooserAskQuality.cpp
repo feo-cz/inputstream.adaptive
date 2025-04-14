@@ -16,13 +16,10 @@
 #include "SrvBroker.h"
 #include "Period.h"
 #include "kodi/tools/StringUtils.h"
+#include "utils/GUIUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/Utils.h"
 #include "utils/log.h"
-
-#ifndef INPUTSTREAM_TEST_BUILD
-#include <kodi/gui/dialogs/Select.h>
-#endif
 
 #include <vector>
 
@@ -165,7 +162,7 @@ PLAYLIST::CAdaptationSet* CHOOSER::CRepresentationChooserAskQuality::GetPreferre
     CRepresentationSelector selector{m_screenCurrentWidth, m_screenCurrentHeight};
     std::vector<std::string> entries;
     std::vector<std::pair<CAdaptationSet*, CRepresentation*>> entriesOjb;
-    int preselIndex{-1}; // Preselected list item
+    int preselIndex{GUI::DIALOG_NO_VALUE}; // Preselected list item
     int selIndex{0};
 
     for (auto& adpSet : period->GetAdaptationSets())
@@ -213,14 +210,13 @@ PLAYLIST::CAdaptationSet* CHOOSER::CRepresentationChooserAskQuality::GetPreferre
 
     if (entries.size() > 1)
     {
-      selIndex = kodi::gui::dialogs::Select::Show(kodi::addon::GetLocalizedString(30231), entries,
-                                                  preselIndex, 10000);
+      selIndex = GUI::SelectDialog(GUI::GetLocalizedString(30231), entries, preselIndex, 10000);
     }
 
     if (!entries.empty())
     {
-      if (selIndex == -1) // has been cancelled by the user
-        selIndex = preselIndex == -1 ? 0 : preselIndex;
+      if (selIndex == GUI::DIALOG_NO_VALUE) // has been cancelled by the user
+        selIndex = preselIndex == GUI::DIALOG_NO_VALUE ? 0 : preselIndex;
 
       CAdaptationSet* selAdpSet{entriesOjb[selIndex].first};
       CRepresentation* selRep{entriesOjb[selIndex].second};
