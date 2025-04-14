@@ -159,6 +159,15 @@ msgctxt "#30171"
 msgid "Defines the initial bandwidth when it cannot be automatically determined. This value can be overridden by the minimum bandwidth setting."
 msgstr ""
 
+msgctxt "#30172"
+msgid "Resolution limit"
+msgstr ""
+
+#. Description of setting with label #30172
+msgctxt "#30173"
+msgid "If set, based on the capabilities of the video stream an attempt will be made to limit the range of resolutions to the one chosen."
+msgstr ""
+
 #. To set the stream selection type (refer to RepresentationChooser's)
 msgctxt "#30174"
 msgid "Stream selection type"
@@ -220,43 +229,49 @@ msgctxt "#30204"
 msgid "Decrypter path"
 msgstr ""
 
+# empty strings from id 30205 to 30208
+#. Item list value of setting with label #30172
+msgctxt "#30209"
+msgid "Disabled"
+msgstr ""
+
 # empty strings from id 30205 to 30209
 #. Item list value of setting with label #30110, #30113
 msgctxt "#30210"
 msgid "Auto"
 msgstr ""
 
-#. Item list value of setting with label #30110, #30113
+#. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30211"
 msgid "480p"
 msgstr ""
 
-#. Item list value of setting with label #30110, #30113
+#. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30212"
 msgid "640p"
 msgstr ""
 
-#. Item list value of setting with label #30110, #30113
+#. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30213"
 msgid "720p"
 msgstr ""
 
-#. Item list value of setting with label #30110, #30113
+#. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30214"
 msgid "1080p"
 msgstr ""
 
-#. Item list value of setting with label #30110, #30113
+#. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30215"
 msgid "2K"
 msgstr ""
 
-#. Item list value of setting with label #30110, #30113
+#. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30216"
 msgid "1440p"
 msgstr ""
 
-#. Item list value of setting with label #30110, #30113
+#. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30217"
 msgid "4K"
 msgstr ""
@@ -268,9 +283,10 @@ msgid "Select video stream"
 msgstr ""
 
 #. Description of each list item in #30231 dialog window
-#. Do not translate placeholders: {codec} {quality}
+#. Do not translate placeholders: {codec} {quality} {hdr-type}
+#. Use of double graphes e.g. {whatyouwant{hdr-type}whatyouwant} allows you to add additional text printed only when a value is present
 msgctxt "#30232"
-msgid "Video stream {codec} {quality}"
+msgid "Video stream {codec}{ [{hdr-type}]} {quality}"
 msgstr ""
 
 #. Enum setting to set the test mode
