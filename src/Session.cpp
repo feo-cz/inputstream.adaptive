@@ -135,7 +135,7 @@ bool SESSION::CSession::Initialize(std::string manifestUrl)
   return true;
 }
 
-bool SESSION::CSession::CheckPlayableStreams()
+bool SESSION::CSession::CheckPlayableStreams(PLAYLIST::CPeriod* period)
 {
   auto& kodiPropCfg = CSrvBroker::GetKodiProps().GetConfig();
 
@@ -147,10 +147,8 @@ bool SESSION::CSession::CheckPlayableStreams()
     return;
   }
   */
-  uint32_t adpIndex{0};
-  CAdaptationSet* adp{nullptr};
 
-  while ((adp = m_adaptiveTree->GetAdaptationSet(adpIndex++)))
+  for (auto& adp : period->GetAdaptationSets())
   {
     for (auto& repr : adp->GetRepresentations())
     {
@@ -169,8 +167,8 @@ bool SESSION::CSession::CheckPlayableStreams()
           DRM::DRMInfo initDrmInfo;
 
           if (m_drmEngine.InitializeSession(repr->DrmInfos(), DRM::DRMMediaType::VIDEO,
-                                            m_adaptiveTree->m_currentPeriod->IsSecureDecodeNeeded(),
-                                            isInfo, repr.get(), adp, false, initDrmInfo))
+                                            period->IsSecureDecodeNeeded(), isInfo, repr.get(),
+                                            adp.get(), false, initDrmInfo))
           {
             if (!isInfo.GetCryptoSession().GetSessionId().empty())
             {
@@ -261,17 +259,21 @@ void SESSION::CSession::InitializePeriod()
     m_adaptiveTree->OnPeriodChange();
   }
 
-  m_chapterStartTime = GetChapterStartTime();
-
   // Clean to create new SESSION::STREAM objects. One for each AdaptationSet/Representation
   m_streams.clear();
 
-  // Note: this could initialize DRM on all streams right here, instead of CInputStreamAdaptive::OpenStream
-  if (!CheckPlayableStreams())
+  CPeriod* currPeriod = m_adaptiveTree->m_currentPeriod;
+  if (!currPeriod)
+  {
+    LOG::LogF(LOGFATAL, "No period found on AdaptiveTree class");
     return;
+  }
 
-  uint32_t adpIndex{0};
-  CAdaptationSet* adp{nullptr};
+  m_chapterStartTime = GetChapterStartTime();
+
+  // Note: this could initialize DRM on all streams right here, instead of CInputStreamAdaptive::OpenStream
+  if (!CheckPlayableStreams(currPeriod))
+    return;
 
   CHOOSER::StreamSelection streamSelectionMode = m_reprChooser->GetStreamSelectionMode();
   //! @todo: GetAudioLangOrig property should be reworked to allow override or set
@@ -283,11 +285,14 @@ void SESSION::CSession::InitializePeriod()
 
   // For multi-codec manifests, determine which codec to use by default,
   // then choose the appropriate AdaptationSet. It may also depend on the Chooser behavior.
-  CAdaptationSet* defVideoAdpSet = m_reprChooser->GetPreferredVideoAdpSet(
-      m_adaptiveTree->m_currentPeriod, DetermineDefaultAdpSet());
+  const CAdaptationSet* defVideoAdpSet =
+      m_reprChooser->GetPreferredVideoAdpSet(currPeriod, DetermineDefaultAdpSet(currPeriod));
 
-  while ((adp = m_adaptiveTree->GetAdaptationSet(adpIndex++)))
+  uint32_t adpIndex{0};
+  for (auto& adp : currPeriod->GetAdaptationSets())
   {
+    adpIndex++;
+
     if (adp->GetRepresentations().empty())
       continue;
 
@@ -304,10 +309,10 @@ void SESSION::CSession::InitializePeriod()
     else
       isManualStreamSelection = streamSelectionMode == CHOOSER::StreamSelection::MANUAL;
 
-    const bool isDefaultAdpSet{adp == defVideoAdpSet};
+    const bool isDefaultAdpSet{adp.get() == defVideoAdpSet};
 
     // Get the default initial stream repr. based on "adaptive repr. chooser"
-    CRepresentation* defaultRepr{m_reprChooser->GetRepresentation(adp)};
+    CRepresentation* defaultRepr{m_reprChooser->GetRepresentation(adp.get())};
     if (isDefaultAdpSet)
       m_reprChooser->LogDetails(defaultRepr);
 
@@ -326,7 +331,7 @@ void SESSION::CSession::InitializePeriod()
 
         const bool isDefaultVideoRepr{isDefaultAdpSet && currentRepr == defaultRepr};
 
-        AddStream(adp, currentRepr, isDefaultVideoRepr, uniqueId, audioLanguageOrig);
+        AddStream(adp.get(), currentRepr, isDefaultVideoRepr, uniqueId, audioLanguageOrig);
       }
     }
     else
@@ -339,7 +344,7 @@ void SESSION::CSession::InitializePeriod()
       uint32_t uniqueId{adpIndex};
       uniqueId |= reprIndex << 16;
 
-      AddStream(adp, defaultRepr, isDefaultAdpSet, uniqueId, audioLanguageOrig);
+      AddStream(adp.get(), defaultRepr, isDefaultAdpSet, uniqueId, audioLanguageOrig);
     }
   }
 }
@@ -1181,7 +1186,7 @@ bool SESSION::CSession::SeekChapter(int ch)
   return false;
 }
 
-PLAYLIST::CAdaptationSet* SESSION::CSession::DetermineDefaultAdpSet()
+PLAYLIST::CAdaptationSet* SESSION::CSession::DetermineDefaultAdpSet(PLAYLIST::CPeriod* period)
 {
   //! @todo: this is a rough first implementation that have a fixed codec priority order,
   //! and only for video streams. In the future it should be improved
@@ -1199,20 +1204,18 @@ PLAYLIST::CAdaptationSet* SESSION::CSession::DetermineDefaultAdpSet()
 
   for (auto& codecCC : videoCodecOrder)
   {
-    CAdaptationSet* currAdp{nullptr};
-    uint32_t adpIndex{0};
-    while ((currAdp = m_adaptiveTree->GetAdaptationSet(adpIndex++)))
+    for (auto& adp : period->GetAdaptationSets())
     {
-      if (currAdp->GetRepresentations().empty() || currAdp->GetStreamType() != StreamType::VIDEO)
+      if (adp->GetRepresentations().empty() || adp->GetStreamType() != StreamType::VIDEO)
         continue;
 
-      if (currAdp->IsDefault()) // Override by manifest custom parameter
+      if (adp->IsDefault()) // Override by manifest custom parameter
       {
-        return currAdp;
+        return adp.get();
       }
-      else if (CODEC::Contains(currAdp->GetCodecs(), codecCC) && !defaultAdp)
+      else if (CODEC::Contains(adp->GetCodecs(), codecCC) && !defaultAdp)
       {
-        defaultAdp = currAdp;
+        defaultAdp = adp.get();
       }
     }
   }

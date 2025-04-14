@@ -209,13 +209,6 @@ public:
     return false;
   }
 
-  PLAYLIST::CAdaptationSet* GetAdaptationSet(size_t pos) const
-  {
-    return m_currentPeriod && pos < m_currentPeriod->GetAdaptationSets().size()
-               ? m_currentPeriod->GetAdaptationSets()[pos].get()
-               : nullptr;
-  }
-
   /*!
    * \brief Checks if a period change is in progress (m_nextPeriod is set).
    * \return True the period will be changed, otherwise false.
