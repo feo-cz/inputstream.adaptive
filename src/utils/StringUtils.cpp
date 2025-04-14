@@ -409,3 +409,13 @@ std::vector<std::string> UTILS::STRING::ExtractPlaceholders(const std::string& t
 
   return placeholders;
 }
+
+std::string UTILS::STRING::Format(const char* fmt, ...)
+{
+  va_list args;
+  va_start(args, fmt);
+  std::string str = StringUtils::FormatV(fmt, args);
+  va_end(args);
+
+  return str;
+}

@@ -15,7 +15,6 @@
 #include "Representation.h"
 #include "SrvBroker.h"
 #include "Period.h"
-#include "kodi/tools/StringUtils.h"
 #include "utils/GUIUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/Utils.h"
@@ -23,7 +22,6 @@
 
 #include <vector>
 
-using namespace kodi::tools;
 using namespace CHOOSER;
 using namespace PLAYLIST;
 using namespace UTILS;
@@ -32,7 +30,7 @@ namespace
 {
 std::string CovertFpsToString(float value)
 {
-  std::string str{StringUtils::Format("%.3f", value)};
+  std::string str{STRING::Format("%.3f", value)};
   std::size_t found = str.find_last_not_of("0");
   if (found != std::string::npos)
     str.erase(found + 1);
@@ -102,11 +100,11 @@ std::string CreateStreamName(const CRepresentation* repr)
 
       std::string quality = "(";
       if (repr->GetWidth() > 0 && repr->GetHeight() > 0)
-        quality += StringUtils::Format("%ix%i, ", repr->GetWidth(), repr->GetHeight());
+        quality += STRING::Format("%ix%i, ", repr->GetWidth(), repr->GetHeight());
       if (fps > 0)
-        quality += StringUtils::Format("%s fps, ", CovertFpsToString(fps).c_str());
+        quality += STRING::Format("%s fps, ", CovertFpsToString(fps).c_str());
 
-      quality += StringUtils::Format("%u Kbps)", repr->GetBandwidth() / 1000);
+      quality += STRING::Format("%u Kbps)", repr->GetBandwidth() / 1000);
 
       ReplacePhValue(streamName, ph, "{quality}", quality);
     }

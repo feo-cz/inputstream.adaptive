@@ -308,5 +308,13 @@ std::vector<std::string> ExtractPlaceholders(const std::string& text,
                                              const char openChar,
                                              const char closeChar);
 
+/*!
+ * \brief Formatting functions used to output the given values in newly formatted text using functions.
+ * \param fmt The string to be formatted
+ * \param ... Additional arguments
+ * \return Formatted string
+ */
+std::string Format(const char* fmt, ...);
+
 } // namespace STRING
 } // namespace UTILS
