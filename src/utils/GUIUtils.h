@@ -40,5 +40,12 @@ int SelectDialog(const std::string& windowTitle,
  */
 std::string GetLocalizedString(uint32_t labelId);
 
+/*!
+ * \brief Show a message dialog window
+ * \param windowTitle The title of the window.
+ * \param msg The text message.
+ */
+void MessageDialog(const std::string& windowTitle, const std::string& msg);
+
 } // namespace GUI
 } // namespace UTILS

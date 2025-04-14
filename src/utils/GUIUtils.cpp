@@ -34,3 +34,8 @@ std::string UTILS::GUI::GetLocalizedString(uint32_t labelId)
 {
   return kodi::addon::GetLocalizedString(labelId);
 }
+
+void UTILS::GUI::MessageDialog(const std::string& windowTitle, const std::string& msg)
+{
+  kodi::gui::dialogs::OK::ShowAndGetInput(windowTitle, msg);
+}
