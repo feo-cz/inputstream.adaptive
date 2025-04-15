@@ -1,3 +1,6 @@
+v21.5.11 (2025-04-15)
+- Fix live delay that was causing broken playback in some cases
+
 v21.5.10 (2025-04-06)
 - INFO: Widevine CDM 4.10.2891.0 cannot be used to play videos, if you installed it reinstall an old version
 - [ClearKey] Fix playback with streams that have mixed unencrypted/encrypted segments
