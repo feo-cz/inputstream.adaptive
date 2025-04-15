@@ -1,3 +1,16 @@
+v22.2.1 (2025-04-15)
+- Add new setting «Resolution limit» to Stream selection «Ask Quality»
+- Implemented Color Transfer Characteristic to detect HDR types (if manifest provides it)
+- TRC implementation should solve GUI/Subtitles brightness problem with HDR/DV videos
+- «Ask quality» dialog can now show info about HDR types (if manifest provides it)
+- Fix regression double video quality change with «Ask quality»
+- Fix regression on adaptive quality that dont change while in playback
+- Fix regression on DASH AdaptationSet «default» override parameter for video stream
+- Fix and improved live delay, that worst cases was causing buffering or broken playback
+- Fix missing profiles on AAC codec name due to recent changes on Kodi GUI
+- [HLS] Fix video streams groupings (HDR types) due to unmanaged VIDEO-RANGE tag (TRC)
+- Updated translations
+
 v22.2.0 (2025-04-06)
 - IMPORTANT CHANGE, FROM THIS VERSION FOLLOWING OLD DRM PROPERTIES ARE DEPRECATED:
 inputstream.adaptive.license_type
