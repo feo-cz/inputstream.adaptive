@@ -8,12 +8,16 @@
 
 #include "GUIUtils.h"
 
+#include "StringUtils.h"
+
 #ifdef INPUTSTREAM_TEST_BUILD
 #include "test/KodiStubs.h"
 #else
 #include <kodi/gui/dialogs/OK.h>
 #include <kodi/gui/dialogs/Select.h>
 #endif
+
+using namespace UTILS;
 
 int UTILS::GUI::SelectDialog(const std::string& windowTitle,
                              const std::vector<std::string>& entries,
@@ -38,4 +42,12 @@ std::string UTILS::GUI::GetLocalizedString(uint32_t labelId)
 void UTILS::GUI::MessageDialog(const std::string& windowTitle, const std::string& msg)
 {
   kodi::gui::dialogs::OK::ShowAndGetInput(windowTitle, msg);
+}
+
+void UTILS::GUI::ErrorDialog(const std::string& errorMsg /* = "" */)
+{
+  const std::string msg = STRING::ReplacePlaceholders(GetLocalizedString(30301),
+                                                      {{"error-details", errorMsg}}, '{', '}');
+
+  kodi::gui::dialogs::OK::ShowAndGetInput(GetLocalizedString(30300), msg);
 }

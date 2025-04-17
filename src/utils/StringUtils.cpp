@@ -368,46 +368,65 @@ int UTILS::STRING::GetNumbers(std::string_view str)
   return ToInt32(extractedNbr);
 }
 
-std::vector<std::string> UTILS::STRING::ExtractPlaceholders(const std::string& text,
-                                                            const char openChar,
-                                                            const char closeChar)
+std::string UTILS::STRING::ReplacePlaceholders(
+    const std::string& text,
+    const std::unordered_map<std::string, std::string>& phValues,
+    const char openChar,
+    const char closeChar,
+    const bool noValueReturnEmpty /* = false */)
 {
-  std::vector<std::string> placeholders;
-  std::string currentPlaceholder;
   int braceCount{0};
+  std::string::const_iterator itPosStart;
+  std::string::const_iterator itPosEnd;
+  std::string result;
+  result.reserve(text.size());
 
-  for (char ch : text)
+  for (auto it = text.cbegin(); it != text.cend(); ++it)
   {
-    if (ch == openChar)
+    if (*it == openChar)
     {
-      // Start a new placeholder
       if (braceCount == 0)
-      {
-        currentPlaceholder.clear();
-      }
+        itPosStart = it + 1;
+
       braceCount++;
-      currentPlaceholder += ch;
     }
-    else if (ch == closeChar)
+    else if (*it == closeChar)
     {
-      // Close a placeholder
-      if (braceCount > 0)
+      braceCount--;
+      if (braceCount < 0)
       {
-        currentPlaceholder += ch;
-        braceCount--;
-        if (braceCount == 0)
+        break; // Missing opening braces
+      }
+      else if (braceCount == 0)
+      {
+        itPosEnd = it;
+        std::string phPart(itPosStart, itPosEnd);
+
+        if (STRING::KeyExists(phValues, phPart))
         {
-          placeholders.push_back(currentPlaceholder);
+          const std::string& value = phValues.at(phPart);
+
+          if (noValueReturnEmpty && value.empty())
+            return "";
+
+          result += value;
+        }
+        else // Expected nested braces
+        {
+          // Placeholder nested in outer braces can have optional text to be shown only
+          // when there is a value assigned to the related placeholder
+          result += ReplacePlaceholders(phPart, phValues, openChar, closeChar, true);
         }
       }
     }
-    else if (braceCount > 0)
-    {
-      currentPlaceholder += ch;
-    }
+    else if (braceCount == 0)
+      result += *it;
   }
 
-  return placeholders;
+  if (braceCount != 0)
+    LOG::LogF(LOGERROR, "Missing braces on placeholders of the string: \"%s\"", text.c_str());
+
+  return result;
 }
 
 std::string UTILS::STRING::Format(const char* fmt, ...)
@@ -419,3 +438,4 @@ std::string UTILS::STRING::Format(const char* fmt, ...)
 
   return str;
 }
+

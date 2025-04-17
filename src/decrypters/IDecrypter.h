@@ -10,6 +10,8 @@
 
 #include "DrmEngineDefines.h"
 
+#include "utils/ResultType.h"
+
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -84,7 +86,7 @@ public:
    * \param config The DRM configuration
    * \return true on success 
    */
-  virtual bool OpenDRMSystem(const DRM::Config& config) = 0;
+  virtual SResult OpenDRMSystem(const DRM::Config& config) = 0;
   
   /*
    * \brief Creates a Single Sample Decrypter for decrypting content 

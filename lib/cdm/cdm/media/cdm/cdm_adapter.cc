@@ -193,88 +193,60 @@ CdmAdapter::CdmAdapter(
   const std::string& base_path,
   const CdmConfig& cdm_config,
   CdmAdapterClient *client)
-: library_(0)
-, cdm_path_(cdm_path)
+: cdm_path_(cdm_path)
 , cdm_base_path_(base_path)
 , client_(client)
 , key_system_(key_system)
 , cdm_config_(cdm_config)
-, active_buffer_(0)
-, cdm9_(0), cdm10_(0), cdm11_(0)
 {
   //DCHECK(!key_system_.empty());
-  Initialize();
 }
 
 CdmAdapter::~CdmAdapter()
 {
-  if (cdm9_)
-    cdm9_->Destroy(), cdm9_ = nullptr;
-  else if (cdm10_)
-    cdm10_->Destroy(), cdm10_ = nullptr;
-  else if (cdm11_)
-    cdm11_->Destroy(), cdm11_ = nullptr;
-  else
-    return;
-
-  deinit_cdm_func();
-
-  base::UnloadNativeLibrary(library_);
+  UnloadCDM();
 }
 
-void CdmAdapter::Initialize()
+bool CdmAdapter::LoadCDM()
 {
-  m_isClosingSession = false;
-  if (cdm9_ || cdm10_ || cdm11_)
-  {
-    if (cdm9_)
-      cdm9_->Destroy(), cdm9_ = nullptr;
-    else if (cdm10_)
-      cdm10_->Destroy(), cdm10_ = nullptr;
-    else if (cdm11_)
-      cdm11_->Destroy(), cdm11_ = nullptr;
-    base::UnloadNativeLibrary(library_);
-    library_ = 0;
-  }
+  UnloadCDM();
 
   base::NativeLibraryLoadError error;
   library_ = base::LoadNativeLibrary(cdm_path_, &error);
 
   if (!library_)
   {
-    LogF(LogLevel::ERROR, "Failed to load library: %s", error.ToString().c_str());
-    return;
+    Log(LogLevel::ERROR, "Failed to load library: %s", error.ToString().c_str());
+    return false;
   }
 
-  init_cdm_func = reinterpret_cast<InitializeCdmModuleFunc>(base::GetFunctionPointerFromNativeLibrary(library_, MAKE_STRING(INITIALIZE_CDM_MODULE)));
-  deinit_cdm_func = reinterpret_cast<DeinitializeCdmModuleFunc>(base::GetFunctionPointerFromNativeLibrary(library_, "DeinitializeCdmModule"));
-  create_cdm_func = reinterpret_cast<CreateCdmFunc>(base::GetFunctionPointerFromNativeLibrary(library_, "CreateCdmInstance"));
-  get_cdm_verion_func = reinterpret_cast<GetCdmVersionFunc>(base::GetFunctionPointerFromNativeLibrary(library_, "GetCdmVersion"));
+  init_cdm_func = reinterpret_cast<InitializeCdmModuleFunc>(
+      base::GetFunctionPointerFromNativeLibrary(library_, MAKE_STRING(INITIALIZE_CDM_MODULE)));
+  deinit_cdm_func = reinterpret_cast<DeinitializeCdmModuleFunc>(
+      base::GetFunctionPointerFromNativeLibrary(library_, "DeinitializeCdmModule"));
+  create_cdm_func = reinterpret_cast<CreateCdmFunc>(
+      base::GetFunctionPointerFromNativeLibrary(library_, "CreateCdmInstance"));
+  get_cdm_verion_func = reinterpret_cast<GetCdmVersionFunc>(
+      base::GetFunctionPointerFromNativeLibrary(library_, "GetCdmVersion"));
 
   if (!init_cdm_func || !create_cdm_func || !get_cdm_verion_func || !deinit_cdm_func)
   {
-    base::UnloadNativeLibrary(library_);
-    library_ = 0;
-    return;
+    Log(LogLevel::ERROR, "Failed to binding CDM library functions");
+    return false;
   }
+  return true;
+}
 
-  std::string version{get_cdm_verion_func()};
+bool CdmAdapter::Initialize()
+{
+  m_isClosingSession = false;
 
-  if (version == "4.10.2891.0")
-  {
-    // This version have unclear problems
-    // such as crashes on OnStorageId() method calls and others video decoding crashes
-    Log(LogLevel::ERROR,
-        "THE CDM VERSION \"4.10.2891.0\" IS NOT SUPPORTED DUE TO UNCLEAR LIBRARY ISSUES.\n"
-        "------------------------------> PLEASE INSTALL AN OLDER VERSION OF WIDEVINE CDM!");
-    return;
-  }
-
-  Log(LogLevel::DEBUG, "CDM version: %s", version.c_str());
+  Log(LogLevel::DEBUG, "CDM version: %s", GetVersion().c_str());
 
 #if defined(OS_WIN)
   // Load DXVA before sandbox lockdown to give CDM access to Output Protection
   // Manager (OPM).
+  base::NativeLibraryLoadError error;
   base::LoadNativeLibrary("dxva2.dll", &error);
 #endif  // defined(OS_WIN)
 
@@ -301,11 +273,45 @@ void CdmAdapter::Initialize()
     else if (cdm11_)
       cdm11_->Initialize(cdm_config_.allow_distinctive_identifier,
         cdm_config_.allow_persistent_state, false);
+
+    return true;
   }
-  else
+
+  Log(LogLevel::ERROR, "Cannot get the ContentDecryptionModule interface");
+  return false;
+}
+
+std::string CdmAdapter::GetVersion() const
+{
+  if (get_cdm_verion_func)
+    return get_cdm_verion_func();
+
+  return "";
+}
+
+void CdmAdapter::UnloadCDM()
+{
+  if (cdm9_)
+    cdm9_->Destroy(), cdm9_ = nullptr;
+  else if (cdm10_)
+    cdm10_->Destroy(), cdm10_ = nullptr;
+  else if (cdm11_)
+    cdm11_->Destroy(), cdm11_ = nullptr;
+
+  init_cdm_func = nullptr;
+  create_cdm_func = nullptr;
+  get_cdm_verion_func = nullptr;
+
+  if (deinit_cdm_func)
+  {
+    deinit_cdm_func();
+    deinit_cdm_func = nullptr;
+  }
+
+  if (library_)
   {
     base::UnloadNativeLibrary(library_);
-    library_ = 0;
+    library_ = nullptr;
   }
 }
 
@@ -770,7 +776,7 @@ void CdmFileIoImpl::Write(const uint8_t* data, uint32_t data_size)
 {
   if (!ExistsDir(base_path_.c_str()) && !CreateDirs(base_path_.c_str()))
   {
-    LogF(LogLevel::ERROR, "Cannot create directory: %s", base_path_.c_str());
+    Log(LogLevel::ERROR, "Cannot create directory: %s", base_path_.c_str());
     client_->OnWriteComplete(cdm::FileIOClient::Status::kError);
     return;
   }

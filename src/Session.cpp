@@ -21,6 +21,7 @@
 #include "samplereader/SampleReaderFactory.h"
 #include "utils/Base64Utils.h"
 #include "utils/CurlUtils.h"
+#include "utils/GUIUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/UrlUtils.h"
 #include "utils/Utils.h"
@@ -59,7 +60,7 @@ void SESSION::CSession::DeleteStreams()
 |   initialize
 +---------------------------------------------------------------------*/
 
-bool SESSION::CSession::Initialize(std::string manifestUrl)
+SResult SESSION::CSession::Initialize(std::string manifestUrl)
 {
   m_reprChooser = CHOOSER::CreateRepresentationChooser();
 
@@ -100,7 +101,7 @@ bool SESSION::CSession::Initialize(std::string manifestUrl)
 
   CURL::HTTPResponse manifestResp;
   if (!CURL::DownloadFile(manifestUrl, manifestHeaders, {"etag", "last-modified"}, manifestResp))
-    return false;
+    return SResult::Error("Cannot download the manifest file.");
 
   // The download speed with small file sizes is not accurate, we should download at least 512Kb
   // to have a sufficient acceptable value to calculate the bandwidth,
@@ -115,15 +116,12 @@ bool SESSION::CSession::Initialize(std::string manifestUrl)
 
   m_adaptiveTree = PLAYLIST_FACTORY::CreateAdaptiveTree(manifestResp);
   if (!m_adaptiveTree)
-    return false;
+    return SResult::Error("Unable to determine type of manifest file.");
 
   m_adaptiveTree->Configure(m_reprChooser, kodiProps.GetManifestUpdParams());
 
   if (!m_adaptiveTree->Open(manifestResp.effectiveUrl, manifestResp.headers, manifestResp.data))
-  {
-    LOG::Log(LOGERROR, "Cannot parse the manifest (%s)", manifestUrl.c_str());
-    return false;
-  }
+    return SResult::Error("Cannot parse the manifest file.");
 
   m_adaptiveTree->PostOpen();
   m_reprChooser->PostInit();
@@ -132,7 +130,7 @@ bool SESSION::CSession::Initialize(std::string manifestUrl)
 
   InitializePeriod();
 
-  return true;
+  return SResultCode::OK;
 }
 
 bool SESSION::CSession::CheckPlayableStreams(PLAYLIST::CPeriod* period)
@@ -346,6 +344,13 @@ void SESSION::CSession::InitializePeriod()
 
       AddStream(adp.get(), defaultRepr, isDefaultAdpSet, uniqueId, audioLanguageOrig);
     }
+  }
+
+  if (m_streams.empty())
+  {
+    LOG::LogF(LOGERROR,
+              "No stream can be played, common causes: resolution limits or HDCP problem");
+    GUI::ErrorDialog("No stream can be played");
   }
 }
 

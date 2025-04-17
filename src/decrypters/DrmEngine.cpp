@@ -19,6 +19,7 @@
 #include "common/AdaptiveDecrypter.h"
 #include "common/Representation.h"
 #include "utils/Base64Utils.h"
+#include "utils/GUIUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/UrlUtils.h"
 #include "utils/log.h"
@@ -46,35 +47,30 @@ STREAM_CRYPTO_KEY_SYSTEM KSToCryptoKeySystem(std::string_view keySystem)
     return STREAM_CRYPTO_KEY_SYSTEM_NONE;
 }
 
-std::shared_ptr<DRM::IDecrypter> CreateDRM(std::string_view keySystem)
+SResult CreateDRM(std::string_view keySystem, std::shared_ptr<DRM::IDecrypter>& drm)
 {
   std::string decrypterPath = CSrvBroker::GetSettings().GetDecrypterPath();
   if (decrypterPath.empty())
   {
-    LOG::Log(LOGWARNING,
-             "Cannot create the decrypter, the decrypter path is not set in the add-on settings");
-    return nullptr;
+    return SResult::Error("Decrypter path not set in the add-on settings.");
   }
-
-  std::shared_ptr<DRM::IDecrypter> drm;
 
   drm = DRM::FACTORY::GetDecrypter(KSToCryptoKeySystem(keySystem));
 
   if (!drm)
   {
-    LOG::LogF(LOGERROR, "Unable to create the DRM decrypter");
-    return nullptr;
+    return SResult::Error("Unable to create the DRM decrypter.");
   }
 
   drm->SetLibraryPath(decrypterPath);
 
   if (!drm->Initialize())
   {
-    LOG::Log(LOGERROR, "The DRM decrypter cannot be initialized");
-    return nullptr;
+    drm = nullptr;
+    return SResult::Error("Unable to initialize the DRM decrypter.");
   }
 
-  return drm;
+  return SResultCode::OK;
 }
 
 /*!
@@ -203,19 +199,24 @@ bool DRM::CDRMEngine::PreInitializeDRM(DRMSession& session)
 
   m_keySystem = KS_WIDEVINE;
 
-  auto drm = CreateDRM(m_keySystem);
-  if (!drm)
+  std::shared_ptr<DRM::IDecrypter> drm;
+  SResult ret = CreateDRM(m_keySystem, drm);
+  if (ret.IsFailed())
   {
     m_status = EngineStatus::DRM_ERROR;
+    LOG::LogF(LOGERROR, "%s", ret.Message().c_str());
+    GUI::ErrorDialog(ret.Message());
     return false;
   }
 
   DRM::Config drmCfg = CreateDRMConfig(m_keySystem, kodiProps.GetDrmConfig(m_keySystem));
 
-  if (!drm->OpenDRMSystem(drmCfg))
+  ret = drm->OpenDRMSystem(drmCfg);
+  if (ret.IsFailed())
   {
     LOG::LogF(LOGERROR, "Failed to open the DRM");
     m_status = EngineStatus::DRM_ERROR;
+    GUI::ErrorDialog(ret.Message());
     return false;
   }
 
@@ -280,7 +281,8 @@ bool DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> drmInfos,
 
   if (!SelectDRM(drmInfos))
   {
-    LOG::LogF(LOGERROR, "The stream is encrypted with a DRM not supported by this system");
+    LOG::LogF(LOGERROR, "The stream requires an unsupported DRM.");
+    GUI::ErrorDialog("The stream requires an unsupported DRM.");
     m_status = EngineStatus::DRM_ERROR;
     return false;
   }
@@ -347,10 +349,13 @@ bool DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> drmInfos,
     //! @todo: to test a way to preinitialize DRM when manifest is downloaded/parsed
     //! in the hoping to have a more smoother playback transition
     //! this can be tested with multiperiods video where first period is unencrypted and second one DRM crypted
-    auto drm = CreateDRM(m_keySystem);
-    if (!drm)
+    std::shared_ptr<DRM::IDecrypter> drm;
+    SResult ret = CreateDRM(m_keySystem, drm);
+    if (ret.IsFailed())
     {
       m_status = EngineStatus::DRM_ERROR;
+      LOG::LogF(LOGERROR, "%s", ret.Message().c_str());
+      GUI::ErrorDialog(ret.Message());
       return false;
     }
     m_drms.emplace(m_keySystem, drm);
@@ -412,10 +417,12 @@ bool DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> drmInfos,
     if (!newSes.drm->IsInitialised())
     {
       DRM::Config drmCfg = DRM::CreateDRMConfig(m_keySystem, drmPropCfg);
-      if (!newSes.drm->OpenDRMSystem(drmCfg))
+      const SResult ret = newSes.drm->OpenDRMSystem(drmCfg);
+      if (ret.IsFailed())
       {
         LOG::LogF(LOGERROR, "Failed to open the DRM");
         m_status = EngineStatus::DRM_ERROR;
+        GUI::ErrorDialog(ret.Message());
         return false;
       }
     }

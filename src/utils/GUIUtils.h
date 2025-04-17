@@ -47,5 +47,12 @@ std::string GetLocalizedString(uint32_t labelId);
  */
 void MessageDialog(const std::string& windowTitle, const std::string& msg);
 
+/*!
+ * \brief Show an error message dialog window that show a message with
+ *        "Unable to play the stream" followed by the specified error message details.
+ * \param errorMsg[OPT] The error details, can be empty.
+ */
+void ErrorDialog(const std::string& errorMsg = "");
+
 } // namespace GUI
 } // namespace UTILS

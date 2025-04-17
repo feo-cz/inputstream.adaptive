@@ -52,17 +52,20 @@ void JNIThread(JavaVM* vm)
 }
 #endif
 
-bool CWVDecrypterA::OpenDRMSystem(const DRM::Config& config)
+SResult CWVDecrypterA::OpenDRMSystem(const DRM::Config& config)
 {
   if (config.license.serverUri.empty())
   {
     LOG::LogF(LOGERROR, "The DRM license server url has not been specified");
-    return false;
+    return SResult::Error("Missing DRM license server URL.");
   }
 
   m_WVCdmAdapter = std::make_shared<CWVCdmAdapterA>(config.keySystem, config, m_classLoader, this);
 
-  return m_WVCdmAdapter->GetCDM() != nullptr;
+  if (!m_WVCdmAdapter->GetCDM())
+    return SResultCode::ERROR;
+
+  return SResultCode::OK;
 }
 
 std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CWVDecrypterA::CreateSingleSampleDecrypter(

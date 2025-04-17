@@ -13,6 +13,7 @@
 #include "common/AdaptiveTree.h"
 #include "decrypters/DrmEngine.h"
 #include "decrypters/IDecrypter.h"
+#include "utils/ResultType.h"
 
 #if defined(ANDROID)
 #include <kodi/platform/android/System.h>
@@ -36,7 +37,7 @@ public:
    *  \param manifestUrl The manifest URL
    *  \return True if has success, false otherwise
    */
-  bool Initialize(std::string manifestUrl);
+  SResult Initialize(std::string manifestUrl);
 
   bool CheckPlayableStreams(PLAYLIST::CPeriod* period);
 

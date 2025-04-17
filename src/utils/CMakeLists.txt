@@ -23,6 +23,7 @@ set(HEADERS
   GUIUtils.h
   JsonUtils.h
   log.h
+  ResultType.h
   StringUtils.h
   ThreadPool.h
   UrlUtils.h

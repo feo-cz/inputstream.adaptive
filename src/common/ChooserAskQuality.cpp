@@ -62,54 +62,42 @@ void ReplacePhValue(std::string& text,
 
 std::string CreateStreamName(const CRepresentation* repr)
 {
-  std::string streamName{kodi::addon::GetLocalizedString(30232)};
-  const std::vector<std::string> phs = STRING::ExtractPlaceholders(streamName, '{', '}');
-
-  for (const std::string& ph : phs)
+  std::string hdrType;
+  const ColorTRC colorTrc = repr->GetColorTRC();
+  if (colorTrc == ColorTRC::SMPTE2084)
   {
-    if (STRING::Contains(ph, "{codec}", true))
+    if (CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVH1) ||
+        CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVHE))
     {
-      ReplacePhValue(streamName, ph, "{codec}", CODEC::GetVideoDesc(repr->GetCodecs()));
+      hdrType = "DV";
     }
-    else if (STRING::Contains(ph, "{hdr-type}", true))
+    else
     {
-      std::string hdrType;
-      const ColorTRC colorTrc = repr->GetColorTRC();
-      if (colorTrc == ColorTRC::SMPTE2084)
-      {
-        if (CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVH1) ||
-            CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVHE))
-        {
-          hdrType = "DV";
-        }
-        else
-        {
-          hdrType = "HDR10";
-        }
-      }
-      if (colorTrc == ColorTRC::ARIB_STD_B67)
-        hdrType = "HLG";
-
-      ReplacePhValue(streamName, ph, "{hdr-type}", hdrType);
-    }
-    else if (STRING::Contains(ph, "{quality}", true))
-    {
-      float fps{static_cast<float>(repr->GetFrameRate())};
-      if (fps > 0 && repr->GetFrameRateScale() > 0)
-        fps /= repr->GetFrameRateScale();
-
-      std::string quality = "(";
-      if (repr->GetWidth() > 0 && repr->GetHeight() > 0)
-        quality += STRING::Format("%ix%i, ", repr->GetWidth(), repr->GetHeight());
-      if (fps > 0)
-        quality += STRING::Format("%s fps, ", CovertFpsToString(fps).c_str());
-
-      quality += STRING::Format("%u Kbps)", repr->GetBandwidth() / 1000);
-
-      ReplacePhValue(streamName, ph, "{quality}", quality);
+      hdrType = "HDR10";
     }
   }
-  return streamName;
+  if (colorTrc == ColorTRC::ARIB_STD_B67)
+    hdrType = "HLG";
+
+
+  float fps{static_cast<float>(repr->GetFrameRate())};
+  if (fps > 0 && repr->GetFrameRateScale() > 0)
+    fps /= repr->GetFrameRateScale();
+
+  std::string quality = "(";
+  if (repr->GetWidth() > 0 && repr->GetHeight() > 0)
+    quality += STRING::Format("%ix%i, ", repr->GetWidth(), repr->GetHeight());
+  if (fps > 0)
+    quality += STRING::Format("%s fps, ", CovertFpsToString(fps).c_str());
+
+  quality += STRING::Format("%u Kbps)", repr->GetBandwidth() / 1000);
+
+  const std::unordered_map<std::string, std::string> phValues = {
+      {"codec", CODEC::GetVideoDesc(repr->GetCodecs())},
+      {"hdr-type", hdrType},
+      {"quality", quality}};
+
+  return STRING::ReplacePlaceholders(GUI::GetLocalizedString(30232), phValues, '{', '}');
 }
 } // unnamed namespace
 

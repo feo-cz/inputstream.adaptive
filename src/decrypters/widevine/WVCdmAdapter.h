@@ -26,8 +26,10 @@ class ATTR_DLL_LOCAL CWVCdmAdapter : public media::CdmAdapterClient,
                                      public IWVCdmAdapter<media::CdmAdapter>
 {
 public:
-  CWVCdmAdapter(const DRM::Config& config, CWVDecrypter* host);
+  CWVCdmAdapter();
   virtual ~CWVCdmAdapter();
+
+  SResult Initialize(const DRM::Config& config, CWVDecrypter* host);
 
   // media::CdmAdapterClient interface methods
 
@@ -58,7 +60,7 @@ private:
   DRM::Config m_config;
   std::shared_ptr<media::CdmAdapter> m_cdmAdapter;
   kodi::addon::CInstanceVideoCodec* m_codecInstance{nullptr};
-  CWVDecrypter* m_host;
+  CWVDecrypter* m_host{nullptr};
   std::list<IWVObserver*> m_observers;
   std::mutex m_observer_mutex;
 };

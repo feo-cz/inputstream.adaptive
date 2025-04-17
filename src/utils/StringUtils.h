@@ -13,6 +13,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace UTILS
@@ -298,15 +299,23 @@ std::vector<uint8_t> HexToBytes(const std::string& hex);
 int GetNumbers(std::string_view str);
 
 /*!
- * \brief Extract placeholders from a string
+ * \brief Replace placeholders in a string, e.g. "{ph-name}", nested braces are allowed
+ *        to shown conditionally a text only when a value is not empty.
+ *        For example: "The sun{ is {ph-color}}."
+ *        result with placeholder value "yellow": "The sun is yellow."
+ *        result with placeholder value empty: "The sun."
  * \param text The string to be parsed
+ * \param phValues The placeholders and relative values
  * \param openChar The opening char used to enclose the placeholder
  * \param closeChar The closing char used to enclose the placeholder
- * \return The placeholders
+ * \param noValueReturnEmpty When a placeholder dont have a value will return empty string
+ * \return The string with placeholders replaced.
  */
-std::vector<std::string> ExtractPlaceholders(const std::string& text,
-                                             const char openChar,
-                                             const char closeChar);
+std::string ReplacePlaceholders(const std::string& text,
+                                const std::unordered_map<std::string, std::string>& phValues,
+                                const char openChar,
+                                const char closeChar,
+                                const bool noValueReturnEmpty = false);
 
 /*!
  * \brief Formatting functions used to output the given values in newly formatted text using functions.

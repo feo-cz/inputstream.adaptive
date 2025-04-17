@@ -44,7 +44,7 @@ public:
   }
 #endif
 
-  virtual bool OpenDRMSystem(const DRM::Config& config) override;
+  virtual SResult OpenDRMSystem(const DRM::Config& config) override;
 
   virtual std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CreateSingleSampleDecrypter(
       const std::vector<uint8_t>& initData,

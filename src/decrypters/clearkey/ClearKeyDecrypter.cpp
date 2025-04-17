@@ -12,11 +12,11 @@
 #include "decrypters/Helpers.h"
 #include "utils/log.h"
 
-bool CClearKeyDecrypter::OpenDRMSystem(const DRM::Config& config)
+SResult CClearKeyDecrypter::OpenDRMSystem(const DRM::Config& config)
 {
   m_config = config;
   m_isInitialized = true;
-  return true;
+  return SResultCode::OK;
 }
 
 std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CClearKeyDecrypter::CreateSingleSampleDecrypter(
