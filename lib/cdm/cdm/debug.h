@@ -20,7 +20,6 @@ enum class LogLevel
 };
 
 void Log(const LogLevel level, const char* format, ...);
-#define LogF(level, format, ...) Log((level), ("%s: " format), __FUNCTION__, ##__VA_ARGS__)
 
 void SetDBGMsgCallback(void (*msgcb)(const LogLevel level, const char* msg));
 

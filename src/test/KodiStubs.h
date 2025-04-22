@@ -308,6 +308,15 @@ inline int Show(const std::string& heading,
 
 } // namespace Select
 
+namespace OK
+{
+
+inline void ShowAndGetInput(const std::string& heading, const std::string& text)
+{
+}
+
+} // namespace OK
+
 } // namespace dialogs
 
 } // namespace gui

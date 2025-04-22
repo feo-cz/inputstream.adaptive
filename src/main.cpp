@@ -12,6 +12,7 @@
 #include "CompKodiProps.h"
 #include "SrvBroker.h"
 #include "Stream.h"
+#include "utils/GUIUtils.h"
 #include "utils/ThreadPool.h"
 #include "utils/log.h"
 
@@ -43,8 +44,11 @@ bool CInputStreamAdaptive::Open(const kodi::addon::InputstreamProperty& props)
 
   m_session = std::make_shared<CSession>();
 
-  if (!m_session->Initialize(props.GetURL()))
+  SResult ret = m_session->Initialize(props.GetURL());
+  if (ret.IsFailed())
   {
+    LOG::Log(LOGERROR, ret.Message().c_str());
+    UTILS::GUI::ErrorDialog(ret.Message());
     m_session = nullptr;
     return false;
   }

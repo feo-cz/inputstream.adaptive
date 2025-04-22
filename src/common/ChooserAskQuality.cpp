@@ -15,18 +15,13 @@
 #include "Representation.h"
 #include "SrvBroker.h"
 #include "Period.h"
-#include "kodi/tools/StringUtils.h"
+#include "utils/GUIUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/Utils.h"
 #include "utils/log.h"
 
-#ifndef INPUTSTREAM_TEST_BUILD
-#include <kodi/gui/dialogs/Select.h>
-#endif
-
 #include <vector>
 
-using namespace kodi::tools;
 using namespace CHOOSER;
 using namespace PLAYLIST;
 using namespace UTILS;
@@ -35,7 +30,7 @@ namespace
 {
 std::string CovertFpsToString(float value)
 {
-  std::string str{StringUtils::Format("%.3f", value)};
+  std::string str{STRING::Format("%.3f", value)};
   std::size_t found = str.find_last_not_of("0");
   if (found != std::string::npos)
     str.erase(found + 1);
@@ -67,54 +62,42 @@ void ReplacePhValue(std::string& text,
 
 std::string CreateStreamName(const CRepresentation* repr)
 {
-  std::string streamName{kodi::addon::GetLocalizedString(30232)};
-  const std::vector<std::string> phs = STRING::ExtractPlaceholders(streamName, '{', '}');
-
-  for (const std::string& ph : phs)
+  std::string hdrType;
+  const ColorTRC colorTrc = repr->GetColorTRC();
+  if (colorTrc == ColorTRC::SMPTE2084)
   {
-    if (STRING::Contains(ph, "{codec}", true))
+    if (CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVH1) ||
+        CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVHE))
     {
-      ReplacePhValue(streamName, ph, "{codec}", CODEC::GetVideoDesc(repr->GetCodecs()));
+      hdrType = "DV";
     }
-    else if (STRING::Contains(ph, "{hdr-type}", true))
+    else
     {
-      std::string hdrType;
-      const ColorTRC colorTrc = repr->GetColorTRC();
-      if (colorTrc == ColorTRC::SMPTE2084)
-      {
-        if (CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVH1) ||
-            CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVHE))
-        {
-          hdrType = "DV";
-        }
-        else
-        {
-          hdrType = "HDR10";
-        }
-      }
-      if (colorTrc == ColorTRC::ARIB_STD_B67)
-        hdrType = "HLG";
-
-      ReplacePhValue(streamName, ph, "{hdr-type}", hdrType);
-    }
-    else if (STRING::Contains(ph, "{quality}", true))
-    {
-      float fps{static_cast<float>(repr->GetFrameRate())};
-      if (fps > 0 && repr->GetFrameRateScale() > 0)
-        fps /= repr->GetFrameRateScale();
-
-      std::string quality = "(";
-      if (repr->GetWidth() > 0 && repr->GetHeight() > 0)
-        quality += StringUtils::Format("%ix%i, ", repr->GetWidth(), repr->GetHeight());
-      if (fps > 0)
-        quality += StringUtils::Format("%s fps, ", CovertFpsToString(fps).c_str());
-
-      quality += StringUtils::Format("%u Kbps)", repr->GetBandwidth() / 1000);
-
-      ReplacePhValue(streamName, ph, "{quality}", quality);
+      hdrType = "HDR10";
     }
   }
-  return streamName;
+  if (colorTrc == ColorTRC::ARIB_STD_B67)
+    hdrType = "HLG";
+
+
+  float fps{static_cast<float>(repr->GetFrameRate())};
+  if (fps > 0 && repr->GetFrameRateScale() > 0)
+    fps /= repr->GetFrameRateScale();
+
+  std::string quality = "(";
+  if (repr->GetWidth() > 0 && repr->GetHeight() > 0)
+    quality += STRING::Format("%ix%i, ", repr->GetWidth(), repr->GetHeight());
+  if (fps > 0)
+    quality += STRING::Format("%s fps, ", CovertFpsToString(fps).c_str());
+
+  quality += STRING::Format("%u Kbps)", repr->GetBandwidth() / 1000);
+
+  const std::unordered_map<std::string, std::string> phValues = {
+      {"codec", CODEC::GetVideoDesc(repr->GetCodecs())},
+      {"hdr-type", hdrType},
+      {"quality", quality}};
+
+  return STRING::ReplacePlaceholders(GUI::GetLocalizedString(30232), phValues, '{', '}');
 }
 } // unnamed namespace
 
@@ -165,7 +148,7 @@ PLAYLIST::CAdaptationSet* CHOOSER::CRepresentationChooserAskQuality::GetPreferre
     CRepresentationSelector selector{m_screenCurrentWidth, m_screenCurrentHeight};
     std::vector<std::string> entries;
     std::vector<std::pair<CAdaptationSet*, CRepresentation*>> entriesOjb;
-    int preselIndex{-1}; // Preselected list item
+    int preselIndex{GUI::DIALOG_NO_VALUE}; // Preselected list item
     int selIndex{0};
 
     for (auto& adpSet : period->GetAdaptationSets())
@@ -213,14 +196,13 @@ PLAYLIST::CAdaptationSet* CHOOSER::CRepresentationChooserAskQuality::GetPreferre
 
     if (entries.size() > 1)
     {
-      selIndex = kodi::gui::dialogs::Select::Show(kodi::addon::GetLocalizedString(30231), entries,
-                                                  preselIndex, 10000);
+      selIndex = GUI::SelectDialog(GUI::GetLocalizedString(30231), entries, preselIndex, 10000);
     }
 
     if (!entries.empty())
     {
-      if (selIndex == -1) // has been cancelled by the user
-        selIndex = preselIndex == -1 ? 0 : preselIndex;
+      if (selIndex == GUI::DIALOG_NO_VALUE) // has been cancelled by the user
+        selIndex = preselIndex == GUI::DIALOG_NO_VALUE ? 0 : preselIndex;
 
       CAdaptationSet* selAdpSet{entriesOjb[selIndex].first};
       CRepresentation* selRep{entriesOjb[selIndex].second};

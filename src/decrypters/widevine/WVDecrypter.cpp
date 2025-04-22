@@ -59,16 +59,23 @@ bool CWVDecrypter::Initialize()
   return true;
 }
 
-bool CWVDecrypter::OpenDRMSystem(const DRM::Config& config)
+SResult CWVDecrypter::OpenDRMSystem(const DRM::Config& config)
 {
   if (config.license.serverUri.empty())
   {
     LOG::LogF(LOGERROR, "The DRM license server url has not been specified");
-    return false;
+    return SResult::Error("Missing DRM license server URL.");
   }
-  m_WVCdmAdapter = std::make_shared<CWVCdmAdapter>(config, this);
 
-  return m_WVCdmAdapter->GetCDM() != nullptr;
+  auto cdmAdapter = std::make_shared<CWVCdmAdapter>();
+  const SResult ret = cdmAdapter->Initialize(config, this);
+
+  if (ret.IsFailed())
+    m_WVCdmAdapter = nullptr;
+  else
+    m_WVCdmAdapter = cdmAdapter;
+
+  return ret;
 }
 
 std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CWVDecrypter::CreateSingleSampleDecrypter(
@@ -78,6 +85,12 @@ std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CWVDecrypter::CreateSingleSa
     bool skipSessionMessage,
     CryptoMode cryptoMode)
 {
+  if (!m_WVCdmAdapter)
+  {
+    LOG::LogF(LOGERROR, "Cannot create decrypter, adapter not initialized");
+    return nullptr;
+  }
+
   auto decrypter = std::make_shared<CWVCencSingleSampleDecrypter>(
       m_WVCdmAdapter.get(), initData, defaultKeyId, skipSessionMessage, cryptoMode);
   if (decrypter->GetSessionId().empty())

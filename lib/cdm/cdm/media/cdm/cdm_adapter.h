@@ -210,10 +210,14 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
   void OnInitialized(bool success) override;
 
 
-public: //Misc
-	~CdmAdapter();
-	bool valid(){ return library_ != 0; };
+  //Misc
+  ~CdmAdapter();
+  bool LoadCDM();
+  bool Initialize();
+  std::string GetVersion() const;
+
 private:
+  void UnloadCDM();
   using InitializeCdmModuleFunc = void(*)();
   using DeinitializeCdmModuleFunc = void(*)();
   using GetCdmVersionFunc = char* (*)();
@@ -223,20 +227,19 @@ private:
     GetCdmHostFunc get_cdm_host_func,
     void* user_data);
 
-  InitializeCdmModuleFunc init_cdm_func;
-  CreateCdmFunc create_cdm_func;
-  GetCdmVersionFunc get_cdm_verion_func;
-  DeinitializeCdmModuleFunc deinit_cdm_func;
+  InitializeCdmModuleFunc init_cdm_func{nullptr};
+  CreateCdmFunc create_cdm_func{nullptr};
+  GetCdmVersionFunc get_cdm_verion_func{nullptr};
+  DeinitializeCdmModuleFunc deinit_cdm_func{nullptr};
 
-  void Initialize();
   void SendClientMessage(const char* session, uint32_t session_size, CdmAdapterClient::CDMADPMSG msg, const uint8_t *data, size_t data_size, uint32_t status);
 
   // Keep a reference to the CDM.
-  base::NativeLibrary library_;
+  base::NativeLibrary library_{nullptr};
 
   std::string cdm_path_;
   std::string cdm_base_path_;
-  CdmAdapterClient *client_;
+  CdmAdapterClient* client_{nullptr};
   std::mutex client_mutex_;
   std::mutex decrypt_mutex_;
   std::mutex m_closeSessionMutex;
@@ -247,12 +250,11 @@ private:
   std::string key_system_;
   CdmConfig cdm_config_;
 
-  cdm::MessageType message_type_;
-  cdm::Buffer *active_buffer_;
+  cdm::Buffer* active_buffer_{nullptr};
 
-  cdm::ContentDecryptionModule_9 *cdm9_;
-  cdm::ContentDecryptionModule_10 *cdm10_;
-  cdm::ContentDecryptionModule_11 *cdm11_;
+  cdm::ContentDecryptionModule_9* cdm9_{nullptr};
+  cdm::ContentDecryptionModule_10* cdm10_{nullptr};
+  cdm::ContentDecryptionModule_11* cdm11_{nullptr};
 
   DISALLOW_COPY_AND_ASSIGN(CdmAdapter);
 };
