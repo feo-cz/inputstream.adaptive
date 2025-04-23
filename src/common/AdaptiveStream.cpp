@@ -676,7 +676,9 @@ bool AdaptiveStream::start_stream(const uint64_t startPts)
       //! @todo: This code does not consider that the live delay could cause the startup segment to be selected
       //! in the previous period when the current period has too few segments
       //! more likely live delay management should be moved just after manifest parsing and before period init
-      for (auto itSeg = current_rep_->Timeline().rbegin(); itSeg != current_rep_->Timeline().rend();
+      auto timelineItRend = current_rep_->Timeline().rend();
+
+      for (auto itSeg = current_rep_->Timeline().rbegin(); itSeg != timelineItRend;
            ++itSeg)
       {
         // Implicit rounding down because managing PTS milliseconds negatively affects segment selection
@@ -685,10 +687,13 @@ bool AdaptiveStream::start_stream(const uint64_t startPts)
         // we may fall too close to the live edge to get new segments from manifest update
         if (totalDurSecs > liveDelaySecs)
         {
-          // current_segment_ expects the previous segment as a reference to find the next segment (this one)
-          if (itSeg != current_rep_->Timeline().rend())
-            current_rep_->current_segment_ = &*(++itSeg);
-
+          if (itSeg != timelineItRend)
+          {
+            // GetNextSegment used below requires the previous one, then advance
+            ++itSeg;
+            if (itSeg != timelineItRend)
+              current_rep_->current_segment_ = &(*itSeg);
+          }
           break;
         }
       }
