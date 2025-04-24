@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: translations@kodi.tv\n"
-"PO-Revision-Date: 2025-04-14 15:37+0000\n"
+"PO-Revision-Date: 2025-04-23 09:49+0000\n"
 "Last-Translator: Alfonso Cachero <alfonso.cachero@gmail.com>\n"
 "Language-Team: Spanish (Spain) <https://kodi.weblate.cloud/projects/kodi-add-ons-videoplayer-inputstream/inputstream-adaptive/es_es/>\n"
 "Language: es_es\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.10.4\n"
+"X-Generator: Weblate 5.11\n"
 
 msgctxt "Addon Summary"
 msgid "InputStream client for adaptive streams"
@@ -287,7 +287,7 @@ msgstr "Seleccionar transmisión de vídeo"
 #. Use of double graphes e.g. {whatyouwant{hdr-type}whatyouwant} allows you to add additional text printed only when a value is present
 msgctxt "#30232"
 msgid "Video stream {codec}{ [{hdr-type}]} {quality}"
-msgstr ""
+msgstr "Flujo de vídeo {codec}{ [{hdr-type}]} {quality}"
 
 #. Enum setting to set the test mode
 msgctxt "#30233"
@@ -343,6 +343,19 @@ msgstr "Activar registro detallado"
 msgctxt "#30243"
 msgid "Verbose debugging can be useful for debugging components, but in some cases it may expose sensitive information in the log."
 msgstr "El registro detallado puede ser útil para analizar fallos de componentes, pero en algunos casos expone información sensible en el registro."
+
+# empty strings reserved for settings from id 30244 to 30299
+#. A GUI window title, "InputStream Adaptive" its the add-on name, not to be translated
+msgctxt "#30300"
+msgid "InputStream Adaptive error"
+msgstr "Error de InputStream Adaptive"
+
+#. A GUI message that is displayed when there is a problem playing a stream
+#. Do not translate placeholders: {error-details}
+#. Use of double graphes e.g. {whatyouwant{error-details}whatyouwant} allows you to add additional text printed only when a value is present
+msgctxt "#30301"
+msgid "Unable to play the stream.{[CR]Error: {error-details}}"
+msgstr "No se puede reproducir el flujo.{[CR]Error: {error-details}}"
 
 #~ msgctxt "#30232"
 #~ msgid "Video stream {codec} {quality}"
