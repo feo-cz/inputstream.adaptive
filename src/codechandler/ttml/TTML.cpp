@@ -215,6 +215,11 @@ void TTML2SRT::ParseTagBody(pugi::xml_node nodeTT)
 void TTML2SRT::ParseTagSpan(pugi::xml_node spanNode, std::string& subText)
 {
   StackStyle(XML::GetAttrib(spanNode, "style"));
+  std::string_view beginTime = XML::GetAttrib(spanNode, "begin");
+  std::string_view endTime = XML::GetAttrib(spanNode, "end");
+  const bool hasTiming = !beginTime.empty() && !endTime.empty();
+  std::string text;
+
   // Parse additional style attributes of node and add them as another style stack
   StackStyle(ParseStyle(spanNode));
 
@@ -224,23 +229,28 @@ void TTML2SRT::ParseTagSpan(pugi::xml_node spanNode, std::string& subText)
     if (spanTextNode.type() == pugi::node_pcdata)
     {
       // It's a text part
-      AppendStyledText(spanTextNode.value(), subText);
+      AppendStyledText(spanTextNode.value(), text);
     }
     else if (spanTextNode.type() == pugi::node_element)
     {
       if (STRING::Compare(spanTextNode.name(), "span"))
       {
-        ParseTagSpan(spanTextNode, subText);
+        ParseTagSpan(spanTextNode, text);
       }
       else if (STRING::Compare(spanTextNode.name(), "br"))
       {
-        subText += "<br/>";
+        text += "<br/>";
       }
     }
   }
 
   UnstackStyle();
   UnstackStyle();
+
+  if (hasTiming)
+    StackSubtitle("child_span", beginTime, endTime, text);
+  else
+    subText += text;
 }
 
 void TTML2SRT::AppendStyledText(std::string_view textPart, std::string& subText)
