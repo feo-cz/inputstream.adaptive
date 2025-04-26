@@ -103,6 +103,12 @@ public:
   void SetNowTime(uint64_t time) { m_mockTime = time; }
   void SetLastUpdated(const std::chrono::system_clock::time_point tm) { lastUpdated_ = tm; }
   std::chrono::system_clock::time_point GetNowTimeChrono() { return m_mock_time_chrono; };
+  /*!
+   * \brief UTCTiming on unit tests by default is disabled, because it may require HTTP requests,
+   *        then the clock offset will be forced to be always 0.
+   *        By calling this method will allow the parser to resolve UTCTiming fields.
+   */
+  void EnableUTCTiming() { m_enableUTCTimingResolve = true; }
 
   /*!
    * \brief Run manually a manifest update with the specified file
@@ -122,6 +128,7 @@ private:
 
   uint64_t m_mockTime = 10000000000;
   std::chrono::system_clock::time_point m_mock_time_chrono = std::chrono::system_clock::now();
+  bool m_enableUTCTimingResolve{false};
 
   std::string m_manifestUpdUrl; // Temporarily stores the url where to request the manifest update
 };

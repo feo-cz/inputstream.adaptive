@@ -187,6 +187,9 @@ bool DASHTestTree::DownloadManifestUpd(const std::string& url,
 
 int64_t DASHTestTree::ResolveUTCTiming(pugi::xml_node node)
 {
+  if (m_enableUTCTimingResolve)
+    return CDashTree::ResolveUTCTiming(node);
+
   return 0;
 }
 
