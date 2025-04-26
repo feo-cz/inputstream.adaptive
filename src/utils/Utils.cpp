@@ -11,10 +11,13 @@
 #include "Base64Utils.h"
 #include "StringUtils.h"
 #include "log.h"
+#include "oscompat.h" // _mkgmtime
 
 #include <algorithm> // any_of
 #include <chrono>
 #include <cstring>
+#include <iomanip> // get_time
+#include <sstream>
 #include <stdio.h>
 
 using namespace UTILS;
@@ -320,6 +323,21 @@ uint64_t UTILS::GetTimestampMs()
   auto currentTime = std::chrono::system_clock::now();
   auto epochTime = currentTime.time_since_epoch();
   return std::chrono::duration_cast<std::chrono::milliseconds>(epochTime).count();
+}
+
+uint64_t UTILS::ConvertDate2822ToTs(const std::string& date)
+{
+  if (date.empty())
+    return 0;
+
+  std::tm tm{};
+  static const char* format = "%a, %d %b %Y %H:%M:%S GMT";
+  std::istringstream ss(date);
+  ss >> std::get_time(&tm, format);
+  if (ss.fail())
+    return 0;
+
+  return static_cast<uint64_t>(_mkgmtime(&tm));
 }
 
 std::vector<uint8_t> UTILS::ZeroPadding(const std::vector<uint8_t>& data, const size_t padSize)

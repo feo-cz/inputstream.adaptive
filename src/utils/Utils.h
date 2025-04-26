@@ -43,6 +43,15 @@ uint64_t GetTimestamp();
 uint64_t GetTimestampMs();
 
 /*!
+ * \brief Convert a date format RFC 2822 (mostly used on HTTP headers)
+ *        to the relative timestamp format.
+ *        Format example: "Tue, 22 Apr 2025 15:46:09 GMT" to 1745336769
+ * \param date The date in RFC 2822 format
+ * \return The timestamp in seconds
+ */
+uint64_t ConvertDate2822ToTs(const std::string& date);
+
+/*!
  * \brief Add zero-pad on the left side of data when the data size is less than pad size
  * \param data The data
  * \param padSize The length of padding
