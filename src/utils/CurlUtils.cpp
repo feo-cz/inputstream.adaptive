@@ -181,11 +181,14 @@ void StoreCookies(const std::string& url, const std::vector<std::string>& cookie
 }
 } // unnamed namespace
 
-UTILS::CURL::CUrl::CUrl(const std::string& url)
+UTILS::CURL::CUrl::CUrl(const std::string& url, const RequestType reqType /* = RequestType::AUTO */)
 {
   if (m_file.CURLCreate(url))
   {
     auto& kodiProps = CSrvBroker::GetKodiProps();
+
+    if (reqType == RequestType::HEAD)
+      m_file.CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "customrequest", "HEAD");
 
     // Default curl options
     m_file.CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "seekable", "0");
