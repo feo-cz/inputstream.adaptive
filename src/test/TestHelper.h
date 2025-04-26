@@ -118,6 +118,8 @@ private:
 
   virtual CDashTree* Clone() const override { return new DASHTestTree{*this}; }
 
+  virtual int64_t ResolveUTCTiming(pugi::xml_node node) override;
+
   uint64_t m_mockTime = 10000000000;
   std::chrono::system_clock::time_point m_mock_time_chrono = std::chrono::system_clock::now();
 

@@ -10,6 +10,8 @@
 
 #include "../utils/CurlUtils.h"
 
+#include <pugixml.hpp>
+
 std::string testHelper::testFile;
 std::string testHelper::effectiveUrl;
 std::vector<std::string> testHelper::downloadList;
@@ -181,6 +183,11 @@ bool DASHTestTree::DownloadManifestUpd(const std::string& url,
     return true;
   }
   return false;
+}
+
+int64_t DASHTestTree::ResolveUTCTiming(pugi::xml_node node)
+{
+  return 0;
 }
 
 HLSTestTree::HLSTestTree() : CHLSTree() 

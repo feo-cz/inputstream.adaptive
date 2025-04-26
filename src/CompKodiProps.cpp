@@ -411,6 +411,22 @@ void ADP::KODI_PROPS::CCompKodiProps::ParseManifestConfig(const std::string& dat
     {
       m_manifestConfig.liveDelay = jDictVal.GetUint64();
     }
+    else if (configName == "dash_utctiming" && jDictVal.IsObject())
+    {
+      for (auto& jPairUnwrap : jDictVal.GetObject()) // Iterate JSON dict
+      {
+        if (!jPairUnwrap.name.IsString() || !jPairUnwrap.value.IsString())
+        {
+          LOG::LogF(LOGERROR, "The manifest parameter \"dash_utctiming\" contains invalid values");
+          break;
+        }
+        std::pair<std::string, std::string> utcTiming;
+        utcTiming.first = jPairUnwrap.name.GetString();
+        utcTiming.second = jPairUnwrap.value.GetString();
+        m_manifestConfig.dashUTCTiming = utcTiming;
+        break;
+      }
+    }
     else
     {
       LOG::LogF(LOGERROR, "Unsupported \"%s\" config or wrong data type on \"%s\" property",
