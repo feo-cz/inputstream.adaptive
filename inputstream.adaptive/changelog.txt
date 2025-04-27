@@ -1,3 +1,6 @@
+v21.5.12 (2025-04-27)
+- [Dash] Fix SegmentTemplate TSB to prevent use extra live delay workarounds
+
 v21.5.11 (2025-04-15)
 - Fix live delay that was causing broken playback in some cases
 
