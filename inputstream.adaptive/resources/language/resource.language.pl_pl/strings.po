@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: translations@kodi.tv\n"
-"PO-Revision-Date: 2025-04-14 16:08+0000\n"
+"PO-Revision-Date: 2025-04-22 14:12+0000\n"
 "Last-Translator: Marek Adamski <fevbew@wp.pl>\n"
 "Language-Team: Polish <https://kodi.weblate.cloud/projects/kodi-add-ons-videoplayer-inputstream/inputstream-adaptive/pl_pl/>\n"
 "Language: pl_pl\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Weblate 5.10.4\n"
+"X-Generator: Weblate 5.11\n"
 
 msgctxt "Addon Summary"
 msgid "InputStream client for adaptive streams"
@@ -343,6 +343,19 @@ msgstr "Włącz szczegółowe debugowanie"
 msgctxt "#30243"
 msgid "Verbose debugging can be useful for debugging components, but in some cases it may expose sensitive information in the log."
 msgstr "Szczegółowe debugowanie może być przydatne przy debugowaniu komponentów, ale w niektórych przypadkach może ujawnić poufne informacje w dzienniku."
+
+# empty strings reserved for settings from id 30244 to 30299
+#. A GUI window title, "InputStream Adaptive" its the add-on name, not to be translated
+msgctxt "#30300"
+msgid "InputStream Adaptive error"
+msgstr "Błąd InputStream Adaptive"
+
+#. A GUI message that is displayed when there is a problem playing a stream
+#. Do not translate placeholders: {error-details}
+#. Use of double graphes e.g. {whatyouwant{error-details}whatyouwant} allows you to add additional text printed only when a value is present
+msgctxt "#30301"
+msgid "Unable to play the stream.{[CR]Error: {error-details}}"
+msgstr "Nie można odtworzyć strumienia.{[CR]Błąd: {error-details}}"
 
 #~ msgctxt "#30232"
 #~ msgid "Video stream {codec} {quality}"
