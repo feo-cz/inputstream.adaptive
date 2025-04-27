@@ -70,6 +70,8 @@ struct ManifestConfig
   bool hlsFixDiscontSequence{false};
   // Custom delay from LIVE edge in seconds
   uint64_t liveDelay{0};
+  // Allows to set a custom UTC Timing for DASH live streams (schemeIdUri, value)
+  std::optional<std::pair<std::string, std::string>> dashUTCTiming;
 };
 
 struct DrmCfg

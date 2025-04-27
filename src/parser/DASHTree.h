@@ -90,6 +90,7 @@ protected:
   std::optional<bool> ParseTagContentProtectionSecDec(pugi::xml_node nodeParent);
 
   uint32_t ParseAudioChannelConfig(pugi::xml_node node);
+  virtual int64_t ResolveUTCTiming(pugi::xml_node node);
 
   void MergeAdpSets();
 
@@ -119,5 +120,6 @@ protected:
   uint64_t m_mediaPresDuration{0}; // MPD Media presentation duration attribute value, in ms (may be not provided)
 
   uint64_t m_minimumUpdatePeriod{PLAYLIST::NO_VALUE}; // in seconds, NO_VALUE if not set
+  std::optional<int64_t> m_clockOffset; // Clock offset in ms, based on UTCTiming element
 };
 } // namespace adaptive

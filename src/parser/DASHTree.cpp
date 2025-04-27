@@ -97,11 +97,39 @@ std::string DetectCodecFromMimeType(std::string_view mimeType)
   return "";
 }
 
+// \brief Make an HTTP request to get UTC Timing and return the string
+std::string RequestUTCTiming(const std::string& url, CURL::RequestType reqType)
+{
+  CURL::CUrl curl(url, reqType);
+  const int statusCode = curl.Open();
+  if (statusCode == -1 || statusCode >= 400)
+  {
+    LOG::LogF(LOGERROR, "Unable to retrieve UTC timing from url: %s", url.c_str());
+    return {};
+  }
+
+  std::string date;
+  if (reqType == CURL::RequestType::HEAD)
+  {
+    date = curl.GetResponseHeader("date");
+  }
+  else
+  {
+    if (curl.Read(date) != CURL::ReadStatus::IS_EOF)
+    {
+      LOG::LogF(LOGERROR, "Unable to retrieve UTC timing data from url: (url: %s)", url.c_str());
+      return {};
+    }
+  }
+  return date;
+}
+
 } // unnamed namespace
 
 
 adaptive::CDashTree::CDashTree(const CDashTree& left) : AdaptiveTree(left)
 {
+  m_clockOffset = left.m_clockOffset;
 }
 
 void adaptive::CDashTree::Configure(CHOOSER::IRepresentationChooser* reprChooser,
@@ -190,9 +218,26 @@ bool adaptive::CDashTree::ParseManifest(const std::string& data)
   }
 
   // Parse <MPD> <UTCTiming> tags
-  //! @todo: needed implementation
-  if (nodeMPD.child("UTCTiming"))
-    LOG::LogF(LOGWARNING, "The <UTCTiming> tag element is not supported so playback problems may occur.");
+  if (!m_clockOffset.has_value())
+    m_clockOffset = ResolveUTCTiming(nodeMPD);
+
+  // If TSB is not set but availabilityStartTime, use the last one as TSB
+  // since all segments from availabilityStartTime are available
+  if (m_timeShiftBufferDepth == 0 && available_time_ > 0)
+  {
+    const uint64_t now = stream_start_ + *m_clockOffset;
+    m_timeShiftBufferDepth = now - available_time_;
+  }
+
+  // TSB can be very large, limit it to avoid excessive memory consumption
+  uint64_t tsbLimitMs = 14400000; // Default 4 hours
+
+  auto& manifestCfg = CSrvBroker::GetKodiProps().GetManifestConfig();
+  if (manifestCfg.timeShiftBufferLimit.has_value())
+    tsbLimitMs = *manifestCfg.timeShiftBufferLimit * 1000;
+
+  if (m_timeShiftBufferDepth > tsbLimitMs)
+    m_timeShiftBufferDepth = tsbLimitMs;
 
   // Parse <MPD> <BaseURL> tag (just first, multi BaseURL not supported yet)
   std::string mpdUrl = base_url_;
@@ -311,21 +356,6 @@ void adaptive::CDashTree::ParseTagMPDAttribs(pugi::xml_node nodeMPD)
   if (XML::QueryAttrib(nodeMPD, "availabilityStartTime", availabilityStartTimeStr))
     available_time_ =
         static_cast<uint64_t>(XML::ParseDate(availabilityStartTimeStr.c_str()) * 1000);
-
-  // If TSB is not set but availabilityStartTime, use the last one as TSB
-  // since all segments from availabilityStartTime are available
-  if (m_timeShiftBufferDepth == 0 && available_time_ > 0)
-    m_timeShiftBufferDepth = stream_start_ - available_time_;
-
-  // TSB can be very large, limit it to avoid excessive memory consumption
-  uint64_t tsbLimitMs = 14400000; // Default 4 hours
-
-  auto& manifestCfg = CSrvBroker::GetKodiProps().GetManifestConfig();
-  if (manifestCfg.timeShiftBufferLimit.has_value())
-    tsbLimitMs = *manifestCfg.timeShiftBufferLimit * 1000;
-
-  if (m_timeShiftBufferDepth > tsbLimitMs)
-    m_timeShiftBufferDepth = tsbLimitMs;
 
   std::string suggestedPresentationDelayStr;
   if (XML::QueryAttrib(nodeMPD, "suggestedPresentationDelay", suggestedPresentationDelayStr))
@@ -1078,7 +1108,8 @@ void adaptive::CDashTree::ParseTagRepresentation(pugi::xml_node nodeRepr,
           periodDurMs = m_mediaPresDuration;
 
         // Generate segments from TSB
-        uint64_t tsbStart = (stream_start_ - available_time_) - m_timeShiftBufferDepth;
+        const uint64_t tsbNow = stream_start_ + *m_clockOffset;
+        uint64_t tsbStart = (tsbNow - available_time_) - m_timeShiftBufferDepth;
         uint64_t tsbEnd = tsbStart + m_timeShiftBufferDepth;
         if (m_timeShiftBufferDepth > 0 && tsbEnd > periodStartMs)
         {
@@ -1095,16 +1126,8 @@ void adaptive::CDashTree::ParseTagRepresentation(pugi::xml_node nodeRepr,
 
           segmentsCount = std::max<size_t>(durationMs / segDurMs, 1);
 
-          if (available_time_ == 0)
-          {
-            time = tsbStart * segTemplate->GetTimescale() / 1000;
-            segNumber = tsbStart / segDurMs;
-          }
-          else
-          {
-            time += tsbStart * segTemplate->GetTimescale() / 1000;
-            segNumber += tsbStart / segDurMs;
-          }
+          segNumber += (tsbStart - periodStartMs) / segDurMs;
+          time += (segNumber - segTemplate->GetStartNumber()) * segTemplate->GetDuration();
         }
         else if (periodDurMs > 0)
         {
@@ -1119,9 +1142,16 @@ void adaptive::CDashTree::ParseTagRepresentation(pugi::xml_node nodeRepr,
         else if (repr->HasSegmentEndNr())
           segNumberEnd = repr->GetSegmentEndNr();
 
+        // Current wall clock, in timescale
+        const uint64_t nowScaled = (UTILS::GetTimestampMs() + *m_clockOffset) * segTimescale / 1000;
+
         for (size_t i = 0; i < segmentsCount; ++i)
         {
           if (segNumber > segNumberEnd)
+            break;
+
+          // Make sure to not add segments of the future
+          if (time > nowScaled)
             break;
 
           CSegment seg;
@@ -1466,6 +1496,88 @@ uint32_t adaptive::CDashTree::ParseAudioChannelConfig(pugi::xml_node node)
   return channels;
 }
 
+int64_t adaptive::CDashTree::ResolveUTCTiming(pugi::xml_node node)
+{
+  std::vector<std::pair<std::string, std::string>> utcTimings;
+
+  // Custom UTC timing
+  auto& manifestCfg = CSrvBroker::GetKodiProps().GetManifestConfig();
+  if (manifestCfg.dashUTCTiming.has_value())
+    utcTimings.emplace_back(*manifestCfg.dashUTCTiming);
+
+  // Parse <UTCTiming> child tags
+  for (xml_node nodeUTC : node.children("UTCTiming"))
+  {
+    utcTimings.emplace_back(XML::GetAttrib(nodeUTC, "schemeIdUri"), XML::GetAttrib(nodeUTC, "value"));
+  }
+
+  std::optional<int64_t> tsMs;
+
+  // Elements are in order of preference so the first have the highest priority
+  for (auto& [scheme, value] : utcTimings)
+  {
+    if (scheme == "urn:mpeg:dash:utc:http-head:2012" ||
+        scheme == "urn:mpeg:dash:utc:http-head:2014")
+    {
+      const uint64_t ts =
+          UTILS::ConvertDate2822ToTs(RequestUTCTiming(value, CURL::RequestType::HEAD));
+      if (ts == 0)
+      {
+        LOG::LogF(LOGERROR, "UTCTiming conversion failed from scheme \"%s\"", scheme.c_str());
+        continue;
+      }
+      tsMs = static_cast<int64_t>(ts * 1000);
+      break;
+    }
+    else if (scheme == "urn:mpeg:dash:utc:http-xsdate:2014" ||
+             scheme == "urn:mpeg:dash:utc:http-iso:2014" ||
+             scheme == "urn:mpeg:dash:utc:http-xsdate:2012" ||
+             scheme == "urn:mpeg:dash:utc:http-iso:2012")
+    {
+      const double ts = XML::ParseDate(RequestUTCTiming(value, CURL::RequestType::AUTO).c_str(), 0);
+      if (ts == 0)
+      {
+        LOG::LogF(LOGERROR, "UTCTiming conversion failed from scheme \"%s\"", scheme.c_str());
+        continue;
+      }
+      tsMs = static_cast<int64_t>(ts * 1000);
+      break;
+    }
+    else if (scheme == "urn:mpeg:dash:utc:direct:2014" ||
+             scheme == "urn:mpeg:dash:utc:direct:2012")
+    {
+      const double ts = XML::ParseDate(value.c_str(), 0);
+      if (ts == 0)
+      {
+        LOG::LogF(LOGERROR, "A problem occurred in the UTCTiming scheme \"%s\" parsing", scheme.c_str());
+        continue;
+      }
+      tsMs = static_cast<int64_t>(ts * 1000);
+      break;
+    }
+    else if (scheme == "urn:mpeg:dash:utc:http-ntp:2014" ||
+             scheme == "urn:mpeg:dash:utc:ntp:2014" ||
+             scheme == "urn:mpeg:dash:utc:sntp:2014")
+    {
+      LOG::Log(LOGDEBUG, "NTP UTCTiming scheme \"%s\" not supported", scheme.c_str());
+    }
+    else
+      LOG::Log(LOGDEBUG, "UTCTiming scheme \"%s\" not supported", scheme.c_str());
+  }
+
+  int64_t offset{0};
+
+  if (tsMs.has_value())
+  {
+    offset = *tsMs - GetTimestamp();
+    LOG::Log(LOGDEBUG, "UTCTiming clock offset %lli ms", offset);
+  }
+  else if (!utcTimings.empty())
+    LOG::Log(LOGWARNING, "Unable to get UTCTiming, playback problems may occur");
+
+  return offset;
+}
+
 //! @todo: MergeAdpSets its a kind of workaround
 //! its missing a middle interface where store "streams" (or media tracks) data in a form
 //! that is detached from "tree" interface, this would avoid the force
@@ -1774,9 +1886,6 @@ bool adaptive::CDashTree::InsertLiveSegment(PLAYLIST::CPeriod* period,
     return false;
   */
 
-  //! @todo: expired_segments_ should be reworked, see also other parsers
-  repr->expired_segments_++;
-
   const CSegment* segment = repr->Timeline().Get(pos);
 
   if (!segment)
@@ -1786,11 +1895,28 @@ bool adaptive::CDashTree::InsertLiveSegment(PLAYLIST::CPeriod* period,
     return false;
   }
 
+  // Current wall clock, in timescale
+  const uint64_t nowScaled =
+      (UTILS::GetTimestampMs() + *m_clockOffset) * repr->GetSegmentTemplate()->GetTimescale() / 1000;
+
+  const uint64_t segEndPts = segment->m_endPts + repr->GetSegmentTemplate()->GetDuration();
+
+  if (segEndPts >= nowScaled)
+  {
+    // Attempt to add segments beyond the current time are not available segments, if it happens
+    // IsWaitForSegment will be set and playback becomes buffering until the next manifest update
+    LOG::LogF(LOGDEBUG, "Insert live segment skipped! Attempt to add future segments (rep id: %s)",
+              repr->GetId().c_str());
+    return false;
+  }
+
+  //! @todo: expired_segments_ should be reworked, see also other parsers
+  repr->expired_segments_++;
+
   CSegment segCopy = *segment;
-  uint64_t dur = segCopy.m_endPts - segCopy.startPTS_;
-  segCopy.startPTS_ = segCopy.m_endPts;
-  segCopy.m_endPts = segCopy.startPTS_ + dur;
-  segCopy.m_time = segCopy.m_endPts;
+  segCopy.startPTS_ = segment->m_endPts;
+  segCopy.m_endPts = segEndPts;
+  segCopy.m_time = segCopy.startPTS_;
   segCopy.m_number++;
 
   LOG::LogF(LOGDEBUG, "Insert live segment to adptation set \"%s\" (Start PTS: %llu, number: %llu)",

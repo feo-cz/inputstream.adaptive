@@ -25,6 +25,12 @@ namespace UTILS
 namespace CURL
 {
 
+enum class RequestType
+{
+  AUTO, // By default will be GET, but become POST if body data are provided
+  HEAD,
+};
+
 enum class ReadStatus
 {
   IS_EOF, // The end-of-file is reached
@@ -41,7 +47,7 @@ public:
   * \brief Create CUrl.
   * \param url The url of the file to download
   */
-  CUrl(const std::string& url);
+  CUrl(const std::string& url, const RequestType reqType = RequestType::AUTO);
 
  /*!
   * \brief Create CUrl for POST request, if the data are empty, GET will be performed.
