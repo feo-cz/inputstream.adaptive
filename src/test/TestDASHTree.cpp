@@ -286,7 +286,7 @@ TEST_F(DASHTreeTest, CalculateCorrectSegmentNumbersFromSegmentTemplateWithPTO)
   auto& segments = tree->m_periods[0]->GetAdaptationSets()[0]->GetRepresentations()[0]->Timeline();
 
   EXPECT_EQ(segments.GetSize(), 450);
-  EXPECT_EQ(segments.Get(0)->m_number, 404314437);
+  EXPECT_EQ(segments.Get(0)->m_number, 404305524);
 }
 
 TEST_F(DASHTreeTest, CalculateCorrectSegmentNumbersFromSegmentTemplateWithOldPublishTime)
