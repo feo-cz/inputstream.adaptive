@@ -1,3 +1,11 @@
+v22.2.2 (2025-04-27)
+- Implemented GUI messages for common playback problems
+- [Dash] Implemented UTCTiming for more accurate live streaming start
+- [Dash] Fix SegmentTemplate TSB to prevent use extra live delay workarounds
+- [TTML] Fix missing subtitles when read nested Span tag with timing
+- New «dash_utctiming» parameter to inputstream.adaptive.manifest_config, see wiki for details
+- Updated translations
+
 v22.2.1 (2025-04-15)
 - Add new setting «Resolution limit» to Stream selection «Ask Quality»
 - Implemented Color Transfer Characteristic to detect HDR types (if manifest provides it)
