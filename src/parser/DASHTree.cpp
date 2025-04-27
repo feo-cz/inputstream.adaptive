@@ -1102,16 +1102,8 @@ void adaptive::CDashTree::ParseTagRepresentation(pugi::xml_node nodeRepr,
 
           segmentsCount = std::max<size_t>(durationMs / segDurMs, 1);
 
-          if (available_time_ == 0)
-          {
-            time = tsbStart * segTemplate->GetTimescale() / 1000;
-            segNumber = tsbStart / segDurMs;
-          }
-          else
-          {
-            time += tsbStart * segTemplate->GetTimescale() / 1000;
-            segNumber += tsbStart / segDurMs;
-          }
+          segNumber += (tsbStart - periodStartMs) / segDurMs;
+          time += (segNumber - segTemplate->GetStartNumber()) * segTemplate->GetDuration();
         }
         else if (periodDurMs > 0)
         {
