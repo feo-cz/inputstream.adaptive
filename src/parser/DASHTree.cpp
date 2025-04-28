@@ -527,6 +527,13 @@ void adaptive::CDashTree::ParseTagAdaptationSet(pugi::xml_node nodeAdp, PLAYLIST
       if (STRING::StartsWith(value, "caption")) // caption or captions
         adpSet->SetIsImpaired(true);
     }
+    else if (schemeIdUri == "urn:tva:metadata:cs:AudioPurposeCS:2007")
+    {
+      if (value == "1") // Visually impaired
+        adpSet->SetIsImpaired(true);
+      else if (value == "2") // Hearing impaired
+        adpSet->SetIsImpaired(true);
+    }
   }
 
   if (contentType.empty())
