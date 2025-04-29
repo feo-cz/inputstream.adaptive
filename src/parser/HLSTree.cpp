@@ -13,7 +13,6 @@
 #include "aes_decrypter.h"
 #include "decrypters/HelperPr.h"
 #include "decrypters/Helpers.h"
-#include "kodi/tools/StringUtils.h"
 #include "utils/Base64Utils.h"
 #include "utils/StringUtils.h"
 #include "utils/UrlUtils.h"
@@ -27,7 +26,6 @@
 
 using namespace PLAYLIST;
 using namespace UTILS;
-using namespace kodi::tools;
 
 namespace
 {
@@ -72,12 +70,10 @@ std::map<std::string, std::string> ParseTagAttributes(const std::string& tagValu
         ++inValue;
     }
 
-    std::string attribName = tagValue.substr(offset, value - offset);
-    StringUtils::TrimRight(attribName);
+    std::string attribName = STRING::TrimRight(tagValue.substr(offset, value - offset));
 
     std::string attribValue =
-        tagValue.substr(value + (inValue ? 2 : 1), end - value - (inValue ? 3 : 1));
-    StringUtils::Trim(attribValue);
+        STRING::Trim(tagValue.substr(value + (inValue ? 2 : 1), end - value - (inValue ? 3 : 1)));
 
     tagAttribs[attribName] = attribValue;
     offset = end + 1;
