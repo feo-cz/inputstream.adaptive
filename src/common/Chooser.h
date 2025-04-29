@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include <string_view>
-
 #ifdef INPUTSTREAM_TEST_BUILD
 #include "test/KodiStubs.h"
 #else

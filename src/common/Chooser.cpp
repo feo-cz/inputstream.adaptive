@@ -21,6 +21,8 @@
 #include "utils/log.h"
 #include "utils/GUIUtils.h"
 
+#include <string_view>
+
 using namespace ADP;
 using namespace CHOOSER;
 using namespace PLAYLIST;
