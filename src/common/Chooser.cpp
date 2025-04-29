@@ -21,8 +21,6 @@
 #include "utils/log.h"
 #include "utils/GUIUtils.h"
 
-#include <vector>
-
 using namespace ADP;
 using namespace CHOOSER;
 using namespace PLAYLIST;
