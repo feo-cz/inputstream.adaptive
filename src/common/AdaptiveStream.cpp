@@ -16,7 +16,6 @@
 #include "CompKodiProps.h"
 #include "SrvBroker.h"
 #include "kodi/tools/StringUtils.h"
-#include "oscompat.h"
 #include "utils/CurlUtils.h"
 #include "utils/UrlUtils.h"
 #include "utils/log.h"
