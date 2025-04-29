@@ -803,7 +803,7 @@ bool SESSION::CSession::GetNextSample(ISampleReader*& sampleReader)
     {
       // Advice is that VP does not want to wait longer than 10ms for a return from
       // DemuxRead() - here we ask to not wait at all and if ReadSample has not yet
-      // finished we return the dummy reader instead
+      // finished will return "true" to feed an empty packet
       if (streamReader->IsReadSampleAsyncWorking())
       {
         waiting = stream.get();
