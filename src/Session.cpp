@@ -19,7 +19,6 @@
 #include "decrypters/DrmFactory.h"
 #include "decrypters/Helpers.h"
 #include "samplereader/SampleReaderFactory.h"
-#include "utils/Base64Utils.h"
 #include "utils/CurlUtils.h"
 #include "utils/GUIUtils.h"
 #include "utils/StringUtils.h"
