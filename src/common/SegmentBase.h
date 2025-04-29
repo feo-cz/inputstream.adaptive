@@ -16,8 +16,6 @@
 #include <kodi/AddonBase.h>
 #endif
 
-#include <string_view>
-
 namespace PLAYLIST
 {
 // Forward
