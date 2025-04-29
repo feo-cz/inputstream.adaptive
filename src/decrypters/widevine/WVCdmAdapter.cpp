@@ -16,8 +16,6 @@
 #include "utils/FileUtils.h"
 #include "utils/log.h"
 
-#include <kodi/Filesystem.h>
-
 using namespace UTILS;
 
 namespace
