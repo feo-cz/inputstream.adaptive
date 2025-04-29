@@ -78,7 +78,7 @@ std::unordered_set<Cookie> ParseCookies(const std::string& url,
       }
       else if (name == "max-age") // max-age value has the precedence over "Expires"
       {
-        cookie.m_expires = UTILS::GetTimestamp() + (STRING::ToUint64(value) * 1000);
+        cookie.m_expires = UTILS::GetTimestamp() + STRING::ToUint64(value);
       }
       else if (name == "expires" && cookie.m_expires == 0)
       {
