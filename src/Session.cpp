@@ -1189,11 +1189,11 @@ PLAYLIST::CAdaptationSet* SESSION::CSession::DetermineDefaultAdpSet(PLAYLIST::CP
   //! @todo: this is a rough first implementation that have a fixed codec priority order,
   //! and only for video streams. In the future it should be improved
   //! for example check if hardware have capabilities and made it customizable,
-  //! since low-end devices may prefer older codecs such as H264 since they
-  //! do not require high-performance hardware to process the decoding.
+  //! since low-end devices may prefer older codecs such as H264 as they may
+  //! not have high-performance hardware to process the decoding.
   //! The current sorting is intended just to limit bandwidth consumption
   //! by prioritizing video codecs with high efficiency
-  const std::vector<std::string> videoCodecOrder = {
+  static const std::vector<std::string> videoCodecOrder = {
       CODEC::FOURCC_DVHE, CODEC::FOURCC_HEV1, CODEC::FOURCC_DVH1, CODEC::FOURCC_HVC1,
       CODEC::FOURCC_HEVC, CODEC::FOURCC_AV01, CODEC::NAME_AV1,    CODEC::FOURCC_VP09,
       CODEC::NAME_VP9,    CODEC::FOURCC_AVC_, CODEC::FOURCC_H264};
