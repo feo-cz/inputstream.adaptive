@@ -19,10 +19,6 @@
 #include "utils/Utils.h"
 #include "utils/log.h"
 
-#ifndef INPUTSTREAM_TEST_BUILD
-#include <kodi/General.h>
-#endif
-
 #include <algorithm>
 // #include <cassert>
 #include <chrono>
