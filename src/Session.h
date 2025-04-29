@@ -171,12 +171,6 @@ public:
    */
   uint32_t GetIncludedStreamMask() const;
 
-
-  /*! \brief Get the type crypto key system in use
-   *  \return enum of crypto key system
-   */
-  STREAM_CRYPTO_KEY_SYSTEM GetCryptoKeySystem(std::string_view keySystem) const;
-
   /*! \brief Check if there is an initial discontinuity sequence number
    *  \return True if there is an initial discontinuity sequence number
    */

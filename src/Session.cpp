@@ -1074,20 +1074,6 @@ uint32_t SESSION::CSession::GetIncludedStreamMask() const
   return res;
 }
 
-STREAM_CRYPTO_KEY_SYSTEM SESSION::CSession::GetCryptoKeySystem(std::string_view keySystem) const
-{
-  if (keySystem == DRM::KS_WIDEVINE)
-    return STREAM_CRYPTO_KEY_SYSTEM_WIDEVINE;
-  else if (keySystem == DRM::KS_WISEPLAY)
-    return STREAM_CRYPTO_KEY_SYSTEM_WISEPLAY;
-  else if (keySystem == DRM::KS_PLAYREADY)
-    return STREAM_CRYPTO_KEY_SYSTEM_PLAYREADY;
-  else if (keySystem == DRM::KS_CLEARKEY)
-    return STREAM_CRYPTO_KEY_SYSTEM_CLEARKEY;
-  else
-    return STREAM_CRYPTO_KEY_SYSTEM_NONE;
-}
-
 int CSession::GetChapter() const
 {
   if (m_adaptiveTree)
