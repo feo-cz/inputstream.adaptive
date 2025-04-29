@@ -11,7 +11,5 @@
 #include <time.h>
 
 #ifndef _WIN32
-#define stricmp strcasecmp
-#define strnicmp strncasecmp
 time_t _mkgmtime(struct tm *tm);
 #endif
