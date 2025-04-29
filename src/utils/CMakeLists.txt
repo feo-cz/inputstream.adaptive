@@ -6,6 +6,7 @@ set(SOURCES
   FileUtils.cpp
   GUIUtils.cpp
   JsonUtils.cpp
+  oscompat.cpp
   StringUtils.cpp
   ThreadPool.cpp
   UrlUtils.cpp
@@ -23,6 +24,7 @@ set(HEADERS
   GUIUtils.h
   JsonUtils.h
   log.h
+  oscompat.h
   ResultType.h
   StringUtils.h
   ThreadPool.h
