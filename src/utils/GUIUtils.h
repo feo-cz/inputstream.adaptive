@@ -54,5 +54,11 @@ void MessageDialog(const std::string& windowTitle, const std::string& msg);
  */
 void ErrorDialog(const std::string& errorMsg = "");
 
+/*!
+ * \brief Check if "Adjust refresh rate" kodi setting is enabled
+ * \return true if enabled, otherwise false
+ */
+bool IsAdjustRefreshRateEnabled();
+
 } // namespace GUI
 } // namespace UTILS

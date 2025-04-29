@@ -19,10 +19,7 @@
 #include "Representation.h"
 #include "SrvBroker.h"
 #include "utils/log.h"
-
-#ifndef INPUTSTREAM_TEST_BUILD
-#include <kodi/gui/General.h>
-#endif
+#include "utils/GUIUtils.h"
 
 #include <vector>
 
@@ -79,11 +76,7 @@ IRepresentationChooser* CHOOSER::CreateRepresentationChooser()
 
 CHOOSER::IRepresentationChooser::IRepresentationChooser()
 {
-  AdjustRefreshRateStatus adjRefreshRate{kodi::gui::GetAdjustRefreshRateStatus()};
-
-  if (adjRefreshRate == AdjustRefreshRateStatus::ADJUST_REFRESHRATE_STATUS_ON_START ||
-      adjRefreshRate == AdjustRefreshRateStatus::ADJUST_REFRESHRATE_STATUS_ON_STARTSTOP)
-    m_isAdjustRefreshRate = true;
+  m_isAdjustRefreshRate = UTILS::GUI::IsAdjustRefreshRateEnabled();
 }
 
 void CHOOSER::IRepresentationChooser::OnUpdateScreenRes()
