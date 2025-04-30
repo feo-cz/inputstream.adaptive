@@ -373,7 +373,8 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
               extradata,
               (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED) != 0))
       {
-        m_codecHandler->m_extraData.SetData(extradata.data(), extradata.size());
+        m_codecHandler->m_extraData.SetData(extradata.data(),
+                                            static_cast<AP4_Size>(extradata.size()));
       }
     }
 
