@@ -124,7 +124,7 @@ SResult CWVCdmAdapter::Initialize(const DRM::Config& config, CWVDecrypter* host)
   const std::vector<uint8_t>& cert = m_config.license.serverCert;
   if (!cert.empty())
   {
-    cdmAdapter->SetServerCertificate(0, cert.data(), cert.size());
+    cdmAdapter->SetServerCertificate(0, cert.data(), static_cast<uint32_t>(cert.size()));
   }
 
   // cdmAdapter->GetStatusForPolicy();
