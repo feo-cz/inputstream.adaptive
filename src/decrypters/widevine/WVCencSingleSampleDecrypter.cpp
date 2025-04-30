@@ -36,7 +36,7 @@ void CWVCencSingleSampleDecrypter::SetSession(const std::string sessionId,
   std::lock_guard<std::mutex> lock(m_renewalLock);
 
   m_strSession = sessionId;
-  m_challenge.SetData(data, dataSize);
+  m_challenge.SetData(data, static_cast<AP4_Size>(dataSize));
   LOG::LogF(LOGDEBUG, "Opened widevine session ID: %s", m_strSession.c_str());
 }
 
@@ -186,7 +186,7 @@ void CWVCencSingleSampleDecrypter::CloseSessionId()
   {
     LOG::LogF(LOGDEBUG, "Closing widevine session ID: %s", m_strSession.c_str());
     m_cdmAdapter->GetCDM()->CloseSession(++m_promiseId, m_strSession.data(),
-                                                 m_strSession.size());
+                                         static_cast<uint32_t>(m_strSession.size()));
 
     LOG::LogF(LOGDEBUG, "Widevine session ID %s closed", m_strSession.c_str());
     m_strSession.clear();
@@ -323,9 +323,9 @@ bool CWVCencSingleSampleDecrypter::SendSessionMessage()
     FILESYS::SaveFile(debugFilePath, respData, true);
   }
 
-  m_cdmAdapter->GetCDM()->UpdateSession(++m_promiseId, m_strSession.data(), m_strSession.size(),
-                                        reinterpret_cast<const uint8_t*>(respData.c_str()),
-                                        respData.size());
+  m_cdmAdapter->GetCDM()->UpdateSession(
+      ++m_promiseId, m_strSession.data(), static_cast<uint32_t>(m_strSession.size()),
+      reinterpret_cast<const uint8_t*>(respData.c_str()), static_cast<uint32_t>(respData.size()));
 
   if (m_keys.empty())
   {
@@ -404,7 +404,7 @@ AP4_UI32 CWVCencSingleSampleDecrypter::AddPool()
     if (m_fragmentPool[i].m_nalLengthSize == 99)
     {
       m_fragmentPool[i].m_nalLengthSize = 0;
-      return i;
+      return static_cast<AP4_UI32>(i);
     }
   m_fragmentPool.push_back(FINFO());
   m_fragmentPool.back().m_nalLengthSize = 0;
@@ -443,7 +443,7 @@ void CWVCencSingleSampleDecrypter::RepackSubsampleData(AP4_DataBuffer& dataIn,
                                                        AP4_DataBuffer& dataOut,
                                                        size_t& pos,
                                                        size_t& cipherPos,
-                                                       const unsigned int subsamplePos,
+                                                       const size_t subsamplePos,
                                                        const AP4_UI16* bytesOfCleartextData,
                                                        const AP4_UI32* bytesOfEncryptedData)
 {
@@ -456,7 +456,7 @@ void CWVCencSingleSampleDecrypter::RepackSubsampleData(AP4_DataBuffer& dataIn,
 
 void CWVCencSingleSampleDecrypter::UnpackSubsampleData(AP4_DataBuffer& dataIn,
                                                        size_t& pos,
-                                                       const unsigned int subsamplePos,
+                                                       const size_t subsamplePos,
                                                        const AP4_UI16* bytesOfCleartextData,
                                                        const AP4_UI32* bytesOfEncryptedData)
 {

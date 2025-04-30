@@ -123,12 +123,12 @@ private:
                            AP4_DataBuffer& dataOut,
                            size_t& startPos,
                            size_t& cipherPos,
-                           const unsigned int subsamplePos,
+                           const size_t subsamplePos,
                            const AP4_UI16* bytesOfCleartextData,
                            const AP4_UI32* bytesOfEncryptedData);
   void UnpackSubsampleData(AP4_DataBuffer& dataIn,
                            size_t& startPos,
-                           const unsigned int subsamplePos,
+                           const size_t subsamplePos,
                            const AP4_UI16* bytesOfCleartextData,
                            const AP4_UI32* bytesOfEncryptedData);
   void SetInput(cdm::InputBuffer_2& cdmInputBuffer,
