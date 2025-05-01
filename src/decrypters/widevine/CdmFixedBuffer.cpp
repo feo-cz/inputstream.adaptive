@@ -21,7 +21,7 @@ void CdmFixedBuffer::initialize(void* instance, uint8_t* data, size_t dataSize, 
   m_instance = instance;
   m_data = data;
   m_dataSize = 0;
-  m_capacity = dataSize;
+  m_capacity = static_cast<uint32_t>(dataSize);
   m_buffer = buffer;
   m_host = host;
 }

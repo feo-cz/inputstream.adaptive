@@ -15,6 +15,7 @@
 #else
 #include <kodi/gui/dialogs/OK.h>
 #include <kodi/gui/dialogs/Select.h>
+#include <kodi/gui/General.h>
 #endif
 
 using namespace UTILS;
@@ -50,4 +51,12 @@ void UTILS::GUI::ErrorDialog(const std::string& errorMsg /* = "" */)
                                                       {{"error-details", errorMsg}}, '{', '}');
 
   kodi::gui::dialogs::OK::ShowAndGetInput(GetLocalizedString(30300), msg);
+}
+
+bool UTILS::GUI::IsAdjustRefreshRateEnabled()
+{
+  AdjustRefreshRateStatus adjRefreshRate{kodi::gui::GetAdjustRefreshRateStatus()};
+
+  return (adjRefreshRate == AdjustRefreshRateStatus::ADJUST_REFRESHRATE_STATUS_ON_START ||
+          adjRefreshRate == AdjustRefreshRateStatus::ADJUST_REFRESHRATE_STATUS_ON_STARTSTOP);
 }

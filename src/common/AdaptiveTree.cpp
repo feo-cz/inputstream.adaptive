@@ -15,19 +15,12 @@
 #include "common/AdaptiveUtils.h"
 #include "utils/FileUtils.h"
 #include "utils/StringUtils.h"
-#include "utils/UrlUtils.h"
 #include "utils/Utils.h"
 #include "utils/log.h"
-
-#ifndef INPUTSTREAM_TEST_BUILD
-#include <kodi/General.h>
-#endif
 
 #include <algorithm>
 // #include <cassert>
 #include <chrono>
-#include <stdlib.h>
-#include <string.h>
 
 using namespace PLAYLIST;
 using namespace UTILS;

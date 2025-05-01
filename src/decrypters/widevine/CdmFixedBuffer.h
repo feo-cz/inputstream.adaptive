@@ -15,14 +15,8 @@ class CWVDecrypter;
 class ATTR_DLL_LOCAL CdmFixedBuffer : public cdm::Buffer
 {
 public:
-  CdmFixedBuffer()
-    : m_data(nullptr),
-      m_dataSize(0),
-      m_capacity(0),
-      m_buffer(nullptr),
-      m_instance(nullptr),
-      m_host(nullptr){};
-  virtual ~CdmFixedBuffer(){};
+  CdmFixedBuffer() {}
+  virtual ~CdmFixedBuffer() {}
 
   virtual void Destroy() override;
 
@@ -39,10 +33,10 @@ public:
   void* Buffer() const { return m_buffer; };
 
 private:
-  uint8_t* m_data;
-  size_t m_dataSize;
-  size_t m_capacity;
-  void* m_buffer;
-  void* m_instance;
-  CWVDecrypter* m_host;
+  uint8_t* m_data{nullptr};
+  uint32_t m_dataSize{0};
+  uint32_t m_capacity{0};
+  void* m_buffer{nullptr};
+  void* m_instance{nullptr};
+  CWVDecrypter* m_host{nullptr};
 };

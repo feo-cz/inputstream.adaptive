@@ -202,8 +202,7 @@ void media::ToCdmInputBuffer(const DEMUX_PACKET* encryptedBuffer,
 {
   inputBuffer->data = encryptedBuffer->pData;
   inputBuffer->data_size = encryptedBuffer->iSize;
-  inputBuffer->timestamp = encryptedBuffer->pts;
-
+  inputBuffer->timestamp = static_cast<int64_t>(encryptedBuffer->pts * 1000000 / STREAM_TIME_BASE);
   inputBuffer->key_id = encryptedBuffer->cryptoInfo->kid;
   inputBuffer->key_id_size = 16;
   inputBuffer->iv = encryptedBuffer->cryptoInfo->iv;

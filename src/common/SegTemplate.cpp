@@ -11,13 +11,10 @@
 #include "utils/log.h"
 #include "utils/StringUtils.h"
 
-#include "kodi/tools/StringUtils.h"
-
 #include <cstdio> // snprintf
 
 using namespace PLAYLIST;
 using namespace UTILS;
-using namespace kodi::tools;
 
 std::string PLAYLIST::CSegmentTemplate::GetInitialization() const
 {

@@ -10,7 +10,6 @@
 
 #include "oscompat.h" // _mkgmtime
 #include "StringUtils.h"
-#include "kodi/tools/StringUtils.h"
 #include "log.h"
 #include "pugixml.hpp"
 
@@ -18,7 +17,6 @@
 #include <regex>
 
 using namespace UTILS::XML;
-using namespace kodi::tools;
 using namespace pugi;
 
 namespace

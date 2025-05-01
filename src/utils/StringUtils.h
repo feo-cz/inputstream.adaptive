@@ -285,6 +285,13 @@ std::string ToHexadecimal(const std::vector<uint8_t> data);
 std::string Trim(std::string value);
 
 /*!
+ * \brief Trim a string with remove of not wanted spaces at the end of string.
+ * \param value The string to be trimmed
+ * \return The string trimmed
+ */
+std::string TrimRight(std::string value);
+
+/*!
  * \brief Convert a hex string to bytes.
  * \param hex The hex string
  * \return The string on its byte representation

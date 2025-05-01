@@ -1859,13 +1859,6 @@ bool adaptive::CDashTree::InsertLiveSegment(PLAYLIST::CPeriod* period,
                                             PLAYLIST::CRepresentation* repr,
                                             size_t pos)
 {
-  //! @todo: seem this method should be used with manifests having SegmentTemplate without timeline only
-  //! if so the code should use the SegmentTemplate info to generate the next segment.
-  //! 
-  //! For now has been limited to manifests that have SegmentTemplate without timeline,
-  //! if in future there is no bad feedbacks from users, this can be cleaned up
-  //! Note: As dash specs SegmentList is no longer supported for live streaming.
-
   if (HasManifestUpdatesSegs() || pos == SEGMENT_NO_POS || !repr->HasSegmentTemplate() ||
       repr->GetSegmentTemplate()->HasTimeline())
     return false;

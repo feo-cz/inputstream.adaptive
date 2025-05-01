@@ -15,8 +15,7 @@
 #include "Chooser.h"
 #include "CompKodiProps.h"
 #include "SrvBroker.h"
-#include "kodi/tools/StringUtils.h"
-#include "oscompat.h"
+#include "utils/StringUtils.h"
 #include "utils/CurlUtils.h"
 #include "utils/UrlUtils.h"
 #include "utils/log.h"
@@ -32,7 +31,6 @@
 
 using namespace adaptive;
 using namespace std::chrono_literals;
-using namespace kodi::tools;
 using namespace PLAYLIST;
 using namespace UTILS;
 
@@ -276,12 +274,12 @@ bool AdaptiveStream::PrepareDownload(const PLAYLIST::CRepresentation* rep,
 
     if (seg.range_end_ != NO_VALUE)
     {
-      rangeHeader = StringUtils::Format("bytes=%llu-%llu", seg.range_begin_ + fileOffset,
-                                        seg.range_end_ + fileOffset);
+      rangeHeader = STRING::Format("bytes=%llu-%llu", seg.range_begin_ + fileOffset,
+                                   seg.range_end_ + fileOffset);
     }
     else
     {
-      rangeHeader = StringUtils::Format("bytes=%llu-", seg.range_begin_ + fileOffset);
+      rangeHeader = STRING::Format("bytes=%llu-", seg.range_begin_ + fileOffset);
     }
 
     downloadInfo.m_addHeaders["Range"] = rangeHeader;

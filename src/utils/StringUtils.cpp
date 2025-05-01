@@ -335,6 +335,12 @@ std::string UTILS::STRING::Trim(std::string value)
   return value;
 }
 
+std::string UTILS::STRING::TrimRight(std::string value)
+{
+  StringUtils::TrimRight(value);
+  return value;
+}
+
 std::vector<uint8_t> UTILS::STRING::HexToBytes(const std::string& hex)
 {
   std::vector<uint8_t> bytes;

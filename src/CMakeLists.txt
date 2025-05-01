@@ -1,7 +1,6 @@
 set(SOURCES
   AdaptiveByteStream.cpp
   main.cpp
-  oscompat.cpp
   Session.cpp
   SrvBroker.cpp
   CompKodiProps.cpp
@@ -13,7 +12,6 @@ set(SOURCES
 set(HEADERS
   AdaptiveByteStream.h
   main.h
-  oscompat.h
   Session.h
   SrvBroker.h
   CompKodiProps.h
