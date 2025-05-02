@@ -104,20 +104,6 @@ SResult CWVCdmAdapter::Initialize(const DRM::Config& config, CWVDecrypter* host)
     return SResult::Error("Cannot load Widevine CDM.");
   }
 
-  const std::string version{cdmAdapter->GetVersion()};
-
-  if (version == "4.10.2891.0")
-  {
-    // This version have unclear problems
-    // such as crashes on OnStorageId() method calls and others video decoding crashes
-    LOG::Log(LOGERROR,
-             "THE CDM VERSION \"4.10.2891.0\" IS NOT SUPPORTED DUE TO UNCLEAR LIBRARY ISSUES.\n"
-             "------------------------------> PLEASE INSTALL AN ALTERNATIVE VERSION OF WIDEVINE CDM!");
-
-    return SResult::Error("Widevine CDM version " + version +
-                          " cannot be used. Install an alternative version.");
-  }
-
   if (!cdmAdapter->Initialize())
     return SResult::Error("Cannot initialize Widevine CDM.");
 
