@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <stdarg.h> // va_list, va_start, va_arg, va_end
+#include <string>
 #include <string_view>
 
 //Functionality wich is supported by the Decrypter
