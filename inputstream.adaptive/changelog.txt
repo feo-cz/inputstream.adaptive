@@ -1,3 +1,8 @@
+v22.2.3 (2025-05-04)
+- Fix crash with Widevine CDM 4.10.2891.0
+- [Widevine] Updated CDM interface
+- [Dash] Add «urn:tva:metadata:cs:AudioPurposeCS:2007» scheme parsing
+
 v22.2.2 (2025-04-27)
 - Implemented GUI messages for common playback problems
 - [Dash] Implemented UTCTiming for more accurate live streaming start
