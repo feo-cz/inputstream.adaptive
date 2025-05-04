@@ -1461,7 +1461,7 @@ SSD_DECODE_RETVAL WV_CencSingleSampleDecrypter::VideoFrameDataToPicture(void* ho
     picture->decodedDataSize = videoFrame.FrameBuffer()->Size();
     picture->buffer = static_cast<CdmFixedBuffer*>(videoFrame.FrameBuffer())->Buffer();
 
-    for (unsigned int i(0); i < cdm::VideoPlane::kMaxPlanes; ++i)
+    for (unsigned int i(0); i < cdm::kMaxPlanes; ++i)
     {
       picture->planeOffsets[i] = videoFrame.PlaneOffset(static_cast<cdm::VideoPlane>(i));
       picture->stride[i] = videoFrame.Stride(static_cast<cdm::VideoPlane>(i));
