@@ -1125,7 +1125,7 @@ VIDEOCODEC_RETVAL CWVCencSingleSampleDecrypter::VideoFrameDataToPicture(
     picture->decodedDataSize = videoFrame.FrameBuffer()->Size();
     picture->videoBufferHandle = static_cast<CdmFixedBuffer*>(videoFrame.FrameBuffer())->Buffer();
 
-    for (size_t i = 0; i < cdm::VideoPlane::kMaxPlanes; ++i)
+    for (size_t i = 0; i < cdm::kMaxPlanes; ++i)
     {
       picture->planeOffsets[i] = videoFrame.PlaneOffset(static_cast<cdm::VideoPlane>(i));
       picture->stride[i] = videoFrame.Stride(static_cast<cdm::VideoPlane>(i));

@@ -17,7 +17,6 @@
 
 #include <utility>
 
-// To keep in sync with SSDLogLevel on SSD_dll.h
 enum LogLevel
 {
   LOGDEBUG,

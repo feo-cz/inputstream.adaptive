@@ -8,11 +8,13 @@
 
 #include "cdm_adapter.h"
 
-//! @todo: provide an appropriate interface for log output
-#include "../../src/utils/log.h"
+#include "../../debug.h"
+#include "../base/limits.h"
 
 #include <chrono>
+#include <cstring>
 #include <thread>
+
 #include <sys/stat.h>
 
 #ifdef _WIN32
@@ -20,8 +22,6 @@
 #endif
 
 #define DCHECK(condition) assert(condition)
-
-#include "../base/limits.h"
 
 #ifdef __APPLE__
 #include <sys/time.h>
@@ -38,6 +38,8 @@ int clock_gettime(int clk_id, struct timespec* t) {
 #define CLOCK_REALTIME 1
 #endif
 #endif
+
+using namespace CDM_DBG;
 
 namespace media {
 
@@ -68,12 +70,12 @@ void* GetCdmHost(int host_interface_version, void* user_data)
 
   switch (host_interface_version)
   {
-    case cdm::Host_9::kVersion:
-      return static_cast<cdm::Host_9*>(adapter);
     case cdm::Host_10::kVersion:
       return static_cast<cdm::Host_10*>(adapter);
     case cdm::Host_11::kVersion:
       return static_cast<cdm::Host_11*>(adapter);
+    case cdm::Host_12::kVersion:
+      return static_cast<cdm::Host_12*>(adapter);
     default:
       return nullptr;
   }
@@ -147,22 +149,6 @@ bool CreateDirs(const char* path)
 
 }  // namespace
 
-cdm::AudioDecoderConfig_1 ToAudioDecoderConfig_1(
-  const cdm::AudioDecoderConfig_2& config) {
-  return{ config.codec,
-    config.channel_count,
-    config.bits_per_channel,
-    config.samples_per_second,
-    config.extra_data,
-    config.extra_data_size };
-}
-
-cdm::VideoDecoderConfig_1 ToVideoDecoderConfig_1(
-  const cdm::VideoDecoderConfig_3& config) {
-  return{ config.codec,      config.profile,    config.format,
-    config.coded_size, config.extra_data, config.extra_data_size };
-}
-
 cdm::VideoDecoderConfig_2 ToVideoDecoderConfig_2(
   const cdm::VideoDecoderConfig_3& config) {
   return{ config.codec,
@@ -174,13 +160,6 @@ cdm::VideoDecoderConfig_2 ToVideoDecoderConfig_2(
     config.encryption_scheme };
 }
 
-cdm::InputBuffer_1 ToInputBuffer_1(const cdm::InputBuffer_2& buffer) {
-  return{ buffer.data,       buffer.data_size,
-    buffer.key_id,     buffer.key_id_size,
-    buffer.iv,         buffer.iv_size,
-    buffer.subsamples, buffer.num_subsamples,
-    buffer.timestamp };
-}
 
 /*******************************         CdmAdapter        ****************************************/
 
@@ -198,7 +177,6 @@ CdmAdapter::CdmAdapter(
 , key_system_(key_system)
 , cdm_config_(cdm_config)
 , active_buffer_(0)
-, cdm9_(0), cdm10_(0), cdm11_(0)
 {
   //DCHECK(!key_system_.empty());
   Initialize();
@@ -206,12 +184,12 @@ CdmAdapter::CdmAdapter(
 
 CdmAdapter::~CdmAdapter()
 {
-  if (cdm9_)
-    cdm9_->Destroy(), cdm9_ = nullptr;
-  else if (cdm10_)
-    cdm10_->Destroy(), cdm10_ = nullptr;
+  if (cdm12_)
+    cdm12_->Destroy(), cdm12_ = nullptr;
   else if (cdm11_)
     cdm11_->Destroy(), cdm11_ = nullptr;
+  else if (cdm10_)
+    cdm10_->Destroy(), cdm10_ = nullptr;
   else
     return;
 
@@ -223,14 +201,14 @@ CdmAdapter::~CdmAdapter()
 void CdmAdapter::Initialize()
 {
   m_isClosingSession = false;
-  if (cdm9_ || cdm10_ || cdm11_)
+  if (cdm12_ || cdm11_ || cdm10_)
   {
-    if (cdm9_)
-      cdm9_->Destroy(), cdm9_ = nullptr;
-    else if (cdm10_)
-      cdm10_->Destroy(), cdm10_ = nullptr;
+    if (cdm12_)
+      cdm12_->Destroy(), cdm12_ = nullptr;
     else if (cdm11_)
       cdm11_->Destroy(), cdm11_ = nullptr;
+    else if (cdm10_)
+      cdm10_->Destroy(), cdm10_ = nullptr;
     base::UnloadNativeLibrary(library_);
     library_ = 0;
   }
@@ -240,8 +218,7 @@ void CdmAdapter::Initialize()
 
   if (!library_)
   {
-    LOG::LogF(LOGERROR, "%s: Failed to load library: %s", __FUNCTION__,
-             error.ToString().c_str());
+    LogF(LogLevel::ERROR, "Failed to load library: %s", error.ToString().c_str());
     return;
   }
 
@@ -258,18 +235,7 @@ void CdmAdapter::Initialize()
   }
 
   std::string version{get_cdm_verion_func()};
-
-  if (version == "4.10.2891.0")
-  {
-    // This version have unclear problems
-    // such as crashes on OnStorageId() method calls and others video decoding crashes
-    LOG::Log(LOGERROR,
-             "THE CDM VERSION \"4.10.2891.0\" IS NOT SUPPORTED DUE TO UNCLEAR LIBRARY ISSUES.\n"
-             "------------------------------> PLEASE INSTALL AN OLDER VERSION OF WIDEVINE CDM!");
-    return;
-  }
-
-  LOG::LogF(LOGDEBUG, "CDM version: %s", version.c_str());
+  Log(LogLevel::DEBUG, "CDM version: %s", version.c_str());
 
 #if defined(OS_WIN)
   // Load DXVA before sandbox lockdown to give CDM access to Output Protection
@@ -279,26 +245,31 @@ void CdmAdapter::Initialize()
 
   init_cdm_func();
 
-  cdm11_ = static_cast<cdm::ContentDecryptionModule_11*>(create_cdm_func(11, key_system_.data(), key_system_.size(), GetCdmHost, this));
+  cdm12_ = static_cast<cdm::ContentDecryptionModule_12*>(create_cdm_func(
+      12, key_system_.data(), static_cast<uint32_t>(key_system_.size()), GetCdmHost, this));
 
-  if (!cdm11_)
+  if (!cdm12_)
   {
-    cdm10_ = static_cast<cdm::ContentDecryptionModule_10*>(create_cdm_func(10, key_system_.data(), key_system_.size(), GetCdmHost, this));
+    cdm11_ = static_cast<cdm::ContentDecryptionModule_11*>(create_cdm_func(
+        11, key_system_.data(), static_cast<uint32_t>(key_system_.size()), GetCdmHost, this));
 
-    if (!cdm10_)
-      cdm9_ = reinterpret_cast<cdm::ContentDecryptionModule_9*>(create_cdm_func(9, key_system_.data(), key_system_.size(), GetCdmHost, this));
+    if (!cdm11_)
+    {
+      cdm10_ = static_cast<cdm::ContentDecryptionModule_10*>(create_cdm_func(
+          10, key_system_.data(), static_cast<uint32_t>(key_system_.size()), GetCdmHost, this));
+    }
   }
 
-  if (cdm9_ || cdm10_ || cdm11_)
+  if (cdm12_ || cdm11_ || cdm10_)
   {
-    if (cdm9_)
-      cdm9_->Initialize(cdm_config_.allow_distinctive_identifier,
-        cdm_config_.allow_persistent_state);
-    else if(cdm10_)
-      cdm10_->Initialize(cdm_config_.allow_distinctive_identifier,
+    if(cdm12_)
+      cdm12_->Initialize(cdm_config_.allow_distinctive_identifier,
         cdm_config_.allow_persistent_state, false);
     else if (cdm11_)
       cdm11_->Initialize(cdm_config_.allow_distinctive_identifier,
+        cdm_config_.allow_persistent_state, false);
+    else if (cdm10_)
+      cdm10_->Initialize(cdm_config_.allow_distinctive_identifier,
         cdm_config_.allow_persistent_state, false);
   }
   else
@@ -329,15 +300,15 @@ void CdmAdapter::SetServerCertificate(uint32_t promise_id,
     server_certificate_data_size > limits::kMaxCertificateLength) {
   return;
   }
-  if (cdm9_)
-    cdm9_->SetServerCertificate(promise_id, server_certificate_data,
-      server_certificate_data_size);
-  else if (cdm10_)
-    cdm10_->SetServerCertificate(promise_id, server_certificate_data,
+  
+  if (cdm12_)
+    cdm12_->SetServerCertificate(promise_id, server_certificate_data,
       server_certificate_data_size);
   else if (cdm11_)
     cdm11_->SetServerCertificate(promise_id, server_certificate_data,
       server_certificate_data_size);
+  else if (cdm10_)
+    cdm10_->SetServerCertificate(promise_id, server_certificate_data, server_certificate_data_size);
 }
 
 void CdmAdapter::CreateSessionAndGenerateRequest(uint32_t promise_id,
@@ -346,21 +317,15 @@ void CdmAdapter::CreateSessionAndGenerateRequest(uint32_t promise_id,
   const uint8_t* init_data,
   uint32_t init_data_size)
 {
-  if (cdm9_)
-    cdm9_->CreateSessionAndGenerateRequest(
-      promise_id, session_type,
-      init_data_type, init_data,
-      init_data_size);
-  else  if (cdm10_)
-    cdm10_->CreateSessionAndGenerateRequest(
-      promise_id, session_type,
-      init_data_type, init_data,
-      init_data_size);
-  else  if (cdm11_)
-    cdm11_->CreateSessionAndGenerateRequest(
-      promise_id, session_type,
-      init_data_type, init_data,
-      init_data_size);
+  if (cdm12_)
+    cdm12_->CreateSessionAndGenerateRequest(promise_id, session_type, init_data_type, init_data,
+                                            init_data_size);
+  else if (cdm11_)
+    cdm11_->CreateSessionAndGenerateRequest(promise_id, session_type, init_data_type, init_data,
+                                            init_data_size);
+  else if (cdm10_)
+    cdm10_->CreateSessionAndGenerateRequest(promise_id, session_type, init_data_type, init_data,
+                                            init_data_size);
 }
 
 void CdmAdapter::LoadSession(uint32_t promise_id,
@@ -368,15 +333,12 @@ void CdmAdapter::LoadSession(uint32_t promise_id,
   const char* session_id,
   uint32_t session_id_size)
 {
-  if (cdm9_)
-    cdm9_->LoadSession(promise_id, session_type,
-      session_id, session_id_size);
-  else if (cdm10_)
-    cdm10_->LoadSession(promise_id, session_type,
-      session_id, session_id_size);
+  if (cdm12_)
+    cdm12_->LoadSession(promise_id, session_type, session_id, session_id_size);
   else if (cdm11_)
-    cdm11_->LoadSession(promise_id, session_type,
-      session_id, session_id_size);
+    cdm11_->LoadSession(promise_id, session_type, session_id, session_id_size);
+  else if (cdm10_)
+    cdm10_->LoadSession(promise_id, session_type, session_id, session_id_size);
 }
 
 void CdmAdapter::UpdateSession(uint32_t promise_id,
@@ -385,15 +347,12 @@ void CdmAdapter::UpdateSession(uint32_t promise_id,
   const uint8_t* response,
   uint32_t response_size)
 {
-  if (cdm9_)
-    cdm9_->UpdateSession(promise_id, session_id, session_id_size,
-            response, response_size);
-  else if(cdm10_)
-    cdm10_->UpdateSession(promise_id, session_id, session_id_size,
-            response, response_size);
+  if (cdm12_)
+    cdm12_->UpdateSession(promise_id, session_id, session_id_size, response, response_size);
   else if (cdm11_)
-    cdm11_->UpdateSession(promise_id, session_id, session_id_size,
-      response, response_size);
+    cdm11_->UpdateSession(promise_id, session_id, session_id_size, response, response_size);
+  else if (cdm10_)
+    cdm10_->UpdateSession(promise_id, session_id, session_id_size, response, response_size);
 }
 
 void CdmAdapter::CloseSession(uint32_t promise_id,
@@ -405,12 +364,12 @@ void CdmAdapter::CloseSession(uint32_t promise_id,
     m_isClosingSession = true;
   }
   m_sessionClosingCond.notify_all();
-  if (cdm9_)
-    cdm9_->CloseSession(promise_id, session_id, session_id_size);
-  else if (cdm10_)
-    cdm10_->CloseSession(promise_id, session_id, session_id_size);
+  if (cdm12_)
+    cdm12_->CloseSession(promise_id, session_id, session_id_size);
   else if (cdm11_)
     cdm11_->CloseSession(promise_id, session_id, session_id_size);
+  else if (cdm10_)
+    cdm10_->CloseSession(promise_id, session_id, session_id_size);
   // remove any shared_ptr references left
   m_asyncTimerTasks.clear();
 }
@@ -419,22 +378,22 @@ void CdmAdapter::RemoveSession(uint32_t promise_id,
   const char* session_id,
   uint32_t session_id_size)
 {
-  if (cdm9_)
-    cdm9_->RemoveSession(promise_id, session_id, session_id_size);
-  else if (cdm10_)
-    cdm10_->RemoveSession(promise_id, session_id, session_id_size);
+  if (cdm12_)
+    cdm12_->RemoveSession(promise_id, session_id, session_id_size);
   else if (cdm11_)
     cdm11_->RemoveSession(promise_id, session_id, session_id_size);
+  else if (cdm10_)
+    cdm10_->RemoveSession(promise_id, session_id, session_id_size);
 }
 
 void CdmAdapter::TimerExpired(void* context)
 {
-  if (cdm9_)
-    cdm9_->TimerExpired(context);
-  else if (cdm10_)
-    cdm10_->TimerExpired(context);
+  if (cdm12_)
+    cdm12_->TimerExpired(context);
   else if (cdm11_)
     cdm11_->TimerExpired(context);
+  else if (cdm10_)
+    cdm10_->TimerExpired(context);
 }
 
 cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
@@ -449,15 +408,12 @@ cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
   active_buffer_ = decrypted_buffer->DecryptedBuffer();
   cdm::Status ret;
 
-  if (cdm9_)
-    ret = cdm9_->Decrypt(ToInputBuffer_1(encrypted_buffer), decrypted_buffer);
+  if (cdm12_)
+    ret = cdm12_->Decrypt(encrypted_buffer, decrypted_buffer);
+  else if (cdm11_)
+    ret = cdm11_->Decrypt(encrypted_buffer, decrypted_buffer);
   else if (cdm10_)
     ret = cdm10_->Decrypt(encrypted_buffer, decrypted_buffer);
-  else if (cdm11_)
-  {
-    cdm::InputBuffer_2 tmp(encrypted_buffer);
-    ret = cdm11_->Decrypt(tmp, decrypted_buffer);
-  }
 
   active_buffer_ = 0;
   return ret;
@@ -466,45 +422,47 @@ cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
 cdm::Status CdmAdapter::InitializeAudioDecoder(
   const cdm::AudioDecoderConfig_2& audio_decoder_config)
 {
-  if (cdm9_)
-    return cdm9_->InitializeAudioDecoder(ToAudioDecoderConfig_1(audio_decoder_config));
-  else if (cdm10_)
-    return cdm10_->InitializeAudioDecoder(audio_decoder_config);
+  if (cdm12_)
+    return cdm12_->InitializeAudioDecoder(audio_decoder_config);
   else if (cdm11_)
     return cdm11_->InitializeAudioDecoder(audio_decoder_config);
+  else if (cdm10_)
+    return cdm10_->InitializeAudioDecoder(audio_decoder_config);
+
   return cdm::kDeferredInitialization;
 }
 
 cdm::Status CdmAdapter::InitializeVideoDecoder(
   const cdm::VideoDecoderConfig_3& video_decoder_config)
 {
-  if (cdm9_)
-    return cdm9_->InitializeVideoDecoder(ToVideoDecoderConfig_1(video_decoder_config));
+  if (cdm12_)
+    return cdm12_->InitializeVideoDecoder(video_decoder_config);
+  else if (cdm11_)
+    return cdm11_->InitializeVideoDecoder(ToVideoDecoderConfig_2(video_decoder_config));
   else if (cdm10_)
     return cdm10_->InitializeVideoDecoder(ToVideoDecoderConfig_2(video_decoder_config));
-  else if (cdm11_)
-    return cdm11_->InitializeVideoDecoder(video_decoder_config);
+
   return cdm::kDeferredInitialization;
 }
 
 void CdmAdapter::DeinitializeDecoder(cdm::StreamType decoder_type)
 {
-  if (cdm9_)
-    cdm9_->DeinitializeDecoder(decoder_type);
-  else if (cdm10_)
-    cdm10_->DeinitializeDecoder(decoder_type);
+  if (cdm12_)
+    cdm12_->DeinitializeDecoder(decoder_type);
   else if (cdm11_)
     cdm11_->DeinitializeDecoder(decoder_type);
+  else if (cdm10_)
+    cdm10_->DeinitializeDecoder(decoder_type);
 }
 
 void CdmAdapter::ResetDecoder(cdm::StreamType decoder_type)
 {
-  if (cdm9_)
-    cdm9_->ResetDecoder(decoder_type);
-  else if (cdm10_)
-    cdm10_->ResetDecoder(decoder_type);
+  if (cdm12_)
+    cdm12_->ResetDecoder(decoder_type);
   else if (cdm11_)
     cdm11_->ResetDecoder(decoder_type);
+  else if (cdm10_)
+    cdm10_->ResetDecoder(decoder_type);
 }
 
 cdm::Status CdmAdapter::DecryptAndDecodeFrame(const cdm::InputBuffer_2& encrypted_buffer,
@@ -513,12 +471,12 @@ cdm::Status CdmAdapter::DecryptAndDecodeFrame(const cdm::InputBuffer_2& encrypte
   std::lock_guard<std::mutex> lock(decrypt_mutex_);
   cdm::Status ret(cdm::kDeferredInitialization);
 
-  if (cdm9_)
-    ret = cdm9_->DecryptAndDecodeFrame(ToInputBuffer_1(encrypted_buffer), video_frame);
-  else if (cdm10_)
-    ret = cdm10_->DecryptAndDecodeFrame(encrypted_buffer, video_frame);
+  if (cdm12_)
+    ret = cdm12_->DecryptAndDecodeFrame(encrypted_buffer, video_frame);
   else if (cdm11_)
     ret = cdm11_->DecryptAndDecodeFrame(encrypted_buffer, video_frame);
+  else if (cdm10_)
+    ret = cdm10_->DecryptAndDecodeFrame(encrypted_buffer, video_frame);
 
   active_buffer_ = 0;
   return ret;
@@ -528,39 +486,36 @@ cdm::Status CdmAdapter::DecryptAndDecodeSamples(const cdm::InputBuffer_2& encryp
   cdm::AudioFrames* audio_frames)
 {
   std::lock_guard<std::mutex> lock(decrypt_mutex_);
-  if (cdm9_)
-    return cdm9_->DecryptAndDecodeSamples(ToInputBuffer_1(encrypted_buffer), audio_frames);
-  else if (cdm10_)
-    return cdm10_->DecryptAndDecodeSamples(encrypted_buffer, audio_frames);
+  if (cdm12_)
+    return cdm12_->DecryptAndDecodeSamples(encrypted_buffer, audio_frames);
   else if (cdm11_)
     return cdm11_->DecryptAndDecodeSamples(encrypted_buffer, audio_frames);
+  else if (cdm10_)
+    return cdm10_->DecryptAndDecodeSamples(encrypted_buffer, audio_frames);
   return cdm::kDeferredInitialization;
 }
 
 void CdmAdapter::OnPlatformChallengeResponse(
   const cdm::PlatformChallengeResponse& response)
 {
-  if (cdm9_)
-    cdm9_->OnPlatformChallengeResponse(response);
-  else if (cdm10_)
-    cdm10_->OnPlatformChallengeResponse(response);
+  if (cdm12_)
+    cdm12_->OnPlatformChallengeResponse(response);
   else if (cdm11_)
     cdm11_->OnPlatformChallengeResponse(response);
+  else if (cdm10_)
+    cdm10_->OnPlatformChallengeResponse(response);
 }
 
 void CdmAdapter::OnQueryOutputProtectionStatus(cdm::QueryResult result,
   uint32_t link_mask,
   uint32_t output_protection_mask)
 {
-  if (cdm9_)
-    cdm9_->OnQueryOutputProtectionStatus(result, link_mask,
-      output_protection_mask);
-  else if (cdm10_)
-    cdm10_->OnQueryOutputProtectionStatus(result, link_mask,
-      output_protection_mask);
+  if (cdm12_)
+    cdm12_->OnQueryOutputProtectionStatus(result, link_mask, output_protection_mask);
   else if (cdm11_)
-    cdm11_->OnQueryOutputProtectionStatus(result, link_mask,
-      output_protection_mask);
+    cdm11_->OnQueryOutputProtectionStatus(result, link_mask, output_protection_mask);
+  else if (cdm10_)
+    cdm10_->OnQueryOutputProtectionStatus(result, link_mask, output_protection_mask);
 }
 
 /******************************** HOST *****************************************/
@@ -635,11 +590,32 @@ void CdmAdapter::OnSessionKeysChange(const char* session_id,
     char* bufferPtr{buffer};
     for (uint32_t j{0}; j < keys_info[i].key_id_size; ++j)
       bufferPtr += std::snprintf(bufferPtr, 3, "%02X", (int)keys_info[i].key_id[j]);
-    LOG::Log(LOGDEBUG, "%s: Sessionkey %s status: %d syscode: %u", __func__, buffer,
-                 keys_info[i].status, keys_info[i].system_code);
+    Log(LogLevel::DEBUG, "OnSessionKeysChange: KID %s, Status: %d, System code: %u", buffer,
+        keys_info[i].status, keys_info[i].system_code);
 
     SendClientMessage(session_id, session_id_size, CdmAdapterClient::kSessionKeysChange,
       keys_info[i].key_id, keys_info[i].key_id_size, keys_info[i].status);
+  }
+}
+
+void CdmAdapter::OnSessionKeysChange(const char* session_id,
+                                     uint32_t session_id_size,
+                                     bool has_additional_usable_key,
+                                     const cdm::KeyInformation_2* keys_info,
+                                     uint32_t keys_info_count)
+{
+  for (uint32_t i(0); i < keys_info_count; ++i)
+  {
+    char buffer[128];
+    char* bufferPtr{buffer};
+    for (uint32_t j{0}; j < keys_info[i].key_id_size; ++j)
+      bufferPtr += std::snprintf(bufferPtr, 3, "%02X", (int)keys_info[i].key_id[j]);
+    Log(LogLevel::DEBUG, "OnSessionKeysChange: KID %s, Status: %d, System code: %u", buffer,
+        keys_info[i].status, keys_info[i].system_code);
+
+    SendClientMessage(session_id, session_id_size, CdmAdapterClient::kSessionKeysChange,
+                      keys_info[i].key_id, keys_info[i].key_id_size,
+                      static_cast<uint32_t>(keys_info[i].status));
   }
 }
 
@@ -684,9 +660,11 @@ cdm::FileIO* CdmAdapter::CreateFileIO(cdm::FileIOClient* client)
   return new CdmFileIoImpl(cdm_base_path_, client);
 }
 
-
-// Host_9 specific implementations
 void CdmAdapter::OnResolveKeyStatusPromise(uint32_t promise_id, cdm::KeyStatus key_status)
+{
+}
+
+void CdmAdapter::OnResolveKeyStatusPromise(uint32_t promise_id, cdm::KeyStatus_2 key_status)
 {
 }
 
@@ -703,15 +681,21 @@ void CdmAdapter::OnSessionMessage(const char* session_id, uint32_t session_id_si
 
 void CdmAdapter::RequestStorageId(uint32_t version)
 {
-  if (cdm10_)
-    cdm10_->OnStorageId(1, nullptr, 0);
+  if (cdm12_)
+    cdm12_->OnStorageId(version, nullptr, 0);
   else if (cdm11_)
-    cdm11_->OnStorageId(1, nullptr, 0);
+    cdm11_->OnStorageId(version, nullptr, 0);
+  else if (cdm10_)
+    cdm10_->OnStorageId(version, nullptr, 0);
+}
+
+void CdmAdapter::ReportMetrics(cdm::MetricName metric_name, uint64_t value)
+{
 }
 
 void CdmAdapter::OnInitialized(bool success)
 {
-  LOG::LogF(LOGDEBUG, "CDM is initialized: %s", success ? "true" : "false");
+  Log(LogLevel::DEBUG, "CDM is initialized: %s", success ? "true" : "false");
 }
 
 
@@ -762,14 +746,14 @@ void CdmFileIoImpl::Read()
     }
   } else
     status = cdm::FileIOClient::Status::kSuccess;
-  client_->OnReadComplete(status, data_buffer_, sz);
+  client_->OnReadComplete(status, data_buffer_, static_cast<uint32_t>(sz));
 }
 
 void CdmFileIoImpl::Write(const uint8_t* data, uint32_t data_size)
 {
   if (!ExistsDir(base_path_.c_str()) && !CreateDirs(base_path_.c_str()))
   {
-    LOG::LogF(LOGERROR, "Cannot create directory: %s", base_path_.c_str());
+    LogF(LogLevel::ERROR, "Cannot create directory: %s", base_path_.c_str());
     client_->OnWriteComplete(cdm::FileIOClient::Status::kError);
     return;
   }

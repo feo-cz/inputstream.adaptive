@@ -69,16 +69,16 @@ private:
   cdm::Size m_size;
   cdm::ColorSpace m_colorSpace;
 
-  uint32_t m_planeOffsets[cdm::VideoPlane::kMaxPlanes];
-  uint32_t m_stride[cdm::VideoPlane::kMaxPlanes];
+  uint32_t m_planeOffsets[cdm::kMaxPlanes];
+  uint32_t m_stride[cdm::kMaxPlanes];
 
   uint64_t m_pts;
 };
 
-class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
-  , public cdm::Host_9
-  , public cdm::Host_10
-  , public cdm::Host_11
+class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>,
+                   public cdm::Host_10,
+                   public cdm::Host_11,
+                   public cdm::Host_12
 {
  public:
    void timerfunc(CdmAdapter* adp, int64_t delay, void* context);
@@ -158,6 +158,9 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
   void OnResolveKeyStatusPromise(uint32_t promise_id,
     cdm::KeyStatus key_status) override;
 
+  // Used by CDM12 and beyond
+  void OnResolveKeyStatusPromise(uint32_t promise_id, cdm::KeyStatus_2 key_status) override;
+
 	void OnResolveNewSessionPromise(uint32_t promise_id,
     const char* session_id,
     uint32_t session_id_size) override;
@@ -180,6 +183,13 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
     uint32_t session_id_size,
     bool has_additional_usable_key,
     const cdm::KeyInformation* keys_info,
+    uint32_t keys_info_count) override;
+
+  // Used by CDM12 and beyond
+	void OnSessionKeysChange(const char* session_id,
+    uint32_t session_id_size,
+    bool has_additional_usable_key,
+    const cdm::KeyInformation_2* keys_info,
     uint32_t keys_info_count) override;
 
 	void OnExpirationChange(const char* session_id,
@@ -205,7 +215,7 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>
 
 	void RequestStorageId(uint32_t version) override;
 
-  cdm::CdmProxy* RequestCdmProxy(cdm::CdmProxyClient* client) override { return nullptr; };
+  void ReportMetrics(cdm::MetricName metric_name, uint64_t value) override;
 
   void OnInitialized(bool success) override;
 
@@ -250,9 +260,9 @@ private:
   cdm::MessageType message_type_;
   cdm::Buffer *active_buffer_;
 
-  cdm::ContentDecryptionModule_9 *cdm9_;
-  cdm::ContentDecryptionModule_10 *cdm10_;
-  cdm::ContentDecryptionModule_11 *cdm11_;
+  cdm::ContentDecryptionModule_10* cdm10_{nullptr};
+  cdm::ContentDecryptionModule_11* cdm11_{nullptr};
+  cdm::ContentDecryptionModule_12* cdm12_{nullptr};
 
   DISALLOW_COPY_AND_ASSIGN(CdmAdapter);
 };

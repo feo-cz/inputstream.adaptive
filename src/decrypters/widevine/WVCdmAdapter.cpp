@@ -11,6 +11,7 @@
 #include "CdmFixedBuffer.h"
 #include "WVCencSingleSampleDecrypter.h"
 #include "WVDecrypter.h"
+#include "cdm/debug.h"
 #include "decrypters/Helpers.h"
 #include "utils/FileUtils.h"
 #include "utils/log.h"
@@ -28,6 +29,30 @@ namespace
 #else
   constexpr const char* LIBRARY_FILENAME = "libwidevinecdm.so";
 #endif
+
+void DebugLog(const CDM_DBG::LogLevel level, const char* msg)
+{
+  switch (level)
+  {
+    case CDM_DBG::LogLevel::ERROR:
+      LOG::Log(LOGERROR, msg);
+      break;
+    case CDM_DBG::LogLevel::WARNING:
+      LOG::Log(LOGWARNING, msg);
+      break;
+    case CDM_DBG::LogLevel::INFO:
+      LOG::Log(LOGINFO, msg);
+      break;
+    case CDM_DBG::LogLevel::DEBUG:
+      LOG::Log(LOGDEBUG, msg);
+      break;
+    case CDM_DBG::LogLevel::FATAL:
+      LOG::Log(LOGFATAL, msg);
+      break;
+    default:
+      break;
+  }
+}
 } // unnamed namespace
 
 CWVCdmAdapter::CWVCdmAdapter(std::string_view licenseURL,
@@ -36,6 +61,8 @@ CWVCdmAdapter::CWVCdmAdapter(std::string_view licenseURL,
                              CWVDecrypter* host)
   : m_licenseUrl(licenseURL), m_host(host), m_codecInstance(nullptr)
 {
+  CDM_DBG::SetDBGMsgCallback(DebugLog);
+
   if (m_host->GetLibraryPath().empty())
   {
     LOG::LogF(LOGERROR, "Widevine CDM library path not specified");
