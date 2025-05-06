@@ -78,6 +78,29 @@ bool isUrl(std::string url,
   return true;
 }
 
+void RemovePrefixSingleDot(std::string& url)
+{
+  size_t pos{0};
+  // Remove occurrences of "/./" preserving the separator
+  while ((pos = url.find("/./")) != std::string::npos)
+  {
+    url.erase(pos, 2);
+  }
+
+  if (StringUtils::EndsWith(url, "/."))
+    url.pop_back(); // Delete the dot and preserve the separator
+}
+
+void RemovePrefixDoubleDot(std::string& url)
+{
+  size_t pos{0};
+  // Remove occurrences of "/../" preserving the separator
+  while ((pos = url.find("/../")) != std::string::npos)
+  {
+    url.erase(pos, 3);
+  }
+}
+
 /*
  * \brief Remove and resolve special dot's from the end of the url.
  *        e.g. "http://foo.bar/sub1/sub2/.././" will result "http://foo.bar/sub1/"
@@ -88,18 +111,18 @@ std::string RemoveDotSegments(std::string url)
   size_t numSegsRemove{0};
   size_t currPos{0};
   size_t startPos{url.size() - 2};
-  while ((currPos = url.rfind("/", startPos)) != std::string::npos)
+  while ((currPos = url.rfind('/', startPos)) != std::string::npos)
   {
     // Stop to ignore "/../" from the start of string, e.g. ignored --> "../../something/../" <-- handled
-    if (url.substr(currPos + 1, startPos - currPos + 1) != PREFIX_DOUBLE_DOT)
+    if (currPos == 0 || url.substr(currPos + 1, startPos - currPos + 1) != PREFIX_DOUBLE_DOT)
       break;
     startPos = currPos - 1;
     numSegsRemove++;
   }
 
   // Remove special prefixes
-  UTILS::STRING::ReplaceAll(url, PREFIX_DOUBLE_DOT, "");
-  UTILS::STRING::ReplaceAll(url, PREFIX_SINGLE_DOT, "");
+  RemovePrefixSingleDot(url);
+  RemovePrefixDoubleDot(url);
 
   size_t addrsStartPos{0};
   if (IsUrlAbsolute(url))
@@ -286,8 +309,6 @@ std::string UTILS::URL::Join(std::string baseUrl, std::string relativeUrl)
 
   if (relativeUrl == ".") // Ignore single dot
     relativeUrl.clear();
-  else if (relativeUrl.compare(0, 2, PREFIX_SINGLE_DOT) == 0) // Ignore prefix ./
-    relativeUrl.erase(0, 2);
 
   // Sanitize for missing backslash
   if (relativeUrl == ".." || StringUtils::EndsWith(relativeUrl, "/.."))

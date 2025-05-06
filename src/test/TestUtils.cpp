@@ -134,6 +134,17 @@ TEST_F(UtilsTest, JoinUrls)
   otherUrl = "./";
   EXPECT_EQ(URL::Join(baseUrl, otherUrl), "https://foo.bar/sub1/sub2/");
 
+
+  baseUrl = "https://foo.bar/sub1../sub2./";
+  otherUrl = ".ending";
+  EXPECT_EQ(URL::Join(baseUrl, otherUrl), "https://foo.bar/sub1../sub2./.ending");
+
+  otherUrl = "./.ending/.";
+  EXPECT_EQ(URL::Join(baseUrl, otherUrl), "https://foo.bar/sub1../sub2./.ending/");
+
+  otherUrl = "./.ending/./";
+  EXPECT_EQ(URL::Join(baseUrl, otherUrl), "https://foo.bar/sub1../sub2./.ending/");
+
   // Less common and malformed test cases
 
   baseUrl = "https://foo.bar/sub1/sub2/";
