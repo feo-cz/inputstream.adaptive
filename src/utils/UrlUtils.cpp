@@ -12,10 +12,7 @@
 #include "StringUtils.h"
 #include "log.h"
 
-#include "kodi/tools/StringUtils.h"
-
 using namespace UTILS;
-using namespace kodi::tools;
 
 namespace
 {
@@ -298,7 +295,7 @@ std::string UTILS::URL::Join(std::string baseUrl, std::string relativeUrl)
     relativeUrl.clear();
 
   // Sanitize for missing backslash
-  if (relativeUrl == ".." || StringUtils::EndsWith(relativeUrl, "/.."))
+  if (relativeUrl == ".." || relativeUrl.ends_with("/.."))
     relativeUrl += "/";
 
   // The part of the base url after last / is not a directory so will not be taken into account
