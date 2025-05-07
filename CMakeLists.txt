@@ -15,7 +15,7 @@ set(DECRYPTERPATH "special://home/cdm")
 find_package(Kodi REQUIRED)
 find_package(pugixml REQUIRED)
 find_package(Bento4 REQUIRED)
-find_package(RAPIDJSON REQUIRED)
+find_package(NlohmannJSON REQUIRED)
 
 if(WIN32)
   if(MSVC)
@@ -50,6 +50,7 @@ list(APPEND ADP_HEADERS ${HEADERS_LIST})
 
 include_directories(${INCLUDES}
                     ${KODI_INCLUDE_DIR}/.. # Hack way with "/..", need bigger Kodi cmake rework to match right include ways (becomes done in future)
+                    ${NLOHMANNJSON_INCLUDE_DIRS}
                     src/
 )
 
@@ -64,7 +65,6 @@ endif()
 
 list(APPEND DEPLIBS ${PUGIXML_LIBRARIES}
                     ${BENTO4_LIBRARIES}
-                    ${RAPIDJSON_LIBRARIES}
                     mpegts
                     webm_parser
 )

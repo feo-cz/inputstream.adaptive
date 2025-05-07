@@ -16,10 +16,11 @@
 #include "utils/Utils.h"
 #include "utils/log.h"
 
+#include <nlohmann/json.hpp>
+
 #include <string_view>
 
-#include <rapidjson/document.h>
-
+using njson = nlohmann::json;
 using namespace UTILS;
 using namespace ADP::KODI_PROPS;
 
@@ -75,17 +76,17 @@ void LogProp(std::string_view name, std::string_view value, bool isValueRedacted
 }
 
 void LogDrmJsonDictKeys(std::string_view keyName,
-                        const rapidjson::Value& dictValue,
+                        const njson& dictValue,
                         std::string_view keySystem)
 {
-  if (dictValue.IsObject())
+  if (dictValue.is_object())
   {
     std::string keys;
-    for (auto it = dictValue.MemberBegin(); it != dictValue.MemberEnd(); ++it)
+    for (auto& [name, jValue] : dictValue.items())
     {
       if (!keys.empty())
         keys += ", ";
-      keys += it->name.GetString();
+      keys += name;
     }
     LOG::Log(LOGDEBUG,
              "Found DRM config for key system: \"%s\" -> Dictionary: \"%s\", Values: \"%s\"",
@@ -306,32 +307,27 @@ void ADP::KODI_PROPS::CCompKodiProps::ParseConfig(const std::string& data)
    * Expected JSON structure:
    * { "config_name": "value", ... }
    */
-  rapidjson::Document jDoc;
-  jDoc.Parse(data.c_str(), data.size());
-
-  if (!jDoc.IsObject())
+  const njson jData = njson::parse(data, nullptr, false);
+  if (jData.is_discarded() || !jData.is_object())
   {
-    LOG::LogF(LOGERROR, "Malformed JSON data in to \"%s\" property", PROP_MANIFEST_CONFIG.data());
+    LOG::LogF(LOGERROR, "Malformed JSON data in to \"%s\" property", PROP_CONFIG.data());
     return;
   }
 
   // Iterate dictionary
-  for (auto& jChildObj : jDoc.GetObject())
+  for (auto& [configName, jValue] : jData.items())
   {
-    const std::string configName = jChildObj.name.GetString();
-    rapidjson::Value& jDictVal = jChildObj.value;
-
-    if (configName == "ssl_verify_peer" && jDictVal.IsBool())
+    if (configName == "ssl_verify_peer" && jValue.is_boolean())
     {
-      m_config.curlSSLVerifyPeer = jDictVal.GetBool();
+      m_config.curlSSLVerifyPeer = jValue.get<bool>();
     }
-    else if (configName == "internal_cookies" && jDictVal.IsBool())
+    else if (configName == "internal_cookies" && jValue.is_boolean())
     {
-      m_config.internalCookies = jDictVal.GetBool();
+      m_config.internalCookies = jValue.get<bool>();
     }
-    else if (configName == "check_hdcp" && jDictVal.IsString())
+    else if (configName == "check_hdcp" && jValue.is_string())
     {
-      std::string_view value = jDictVal.GetString();
+      std::string_view value = jValue.get<std::string_view>();
 
       if (value.empty() || value == "default")
         m_config.hdcpCheck = HdcpCheckType::DEFAULT;
@@ -341,9 +337,9 @@ void ADP::KODI_PROPS::CCompKodiProps::ParseConfig(const std::string& data)
         LOG::LogF(LOGERROR, "Value \"%s\" isnt supported on \"%s\" config of \"%s\" property",
                   value.data(), configName.c_str(), PROP_MANIFEST_CONFIG.data());
     }
-    else if (configName == "resolution_limit" && jDictVal.IsString())
+    else if (configName == "resolution_limit" && jValue.is_string())
     {
-      std::string_view value = jDictVal.GetString();
+      std::string_view value = jValue.get<std::string_view>();
       if (!value.empty())
       {
         auto pos = value.find('x');
@@ -375,54 +371,49 @@ void ADP::KODI_PROPS::CCompKodiProps::ParseManifestConfig(const std::string& dat
    * Expected JSON structure:
    * { "config_name": "value", ... }
    */
-  rapidjson::Document jDoc;
-  jDoc.Parse(data.c_str(), data.size());
-
-  if (!jDoc.IsObject())
+  const njson jData = njson::parse(data, nullptr, false);
+  if (jData.is_discarded() || !jData.is_object())
   {
     LOG::LogF(LOGERROR, "Malformed JSON data in to \"%s\" property", PROP_MANIFEST_CONFIG.data());
     return;
   }
 
   // Iterate dictionary
-  for (auto& jChildObj : jDoc.GetObject())
+  for (auto& [configName, jValue] : jData.items())
   {
-    const std::string configName = jChildObj.name.GetString();
-    rapidjson::Value& jDictVal = jChildObj.value;
-
-    if (configName == "timeshift_bufferlimit" && jDictVal.IsNumber())
+    if (configName == "timeshift_bufferlimit" && jValue.is_number_unsigned())
     {
-      if (jDictVal.GetUint() > 0)
-        m_manifestConfig.timeShiftBufferLimit = jDictVal.GetUint();
+      if (jValue.get<uint32_t>() > 0)
+        m_manifestConfig.timeShiftBufferLimit = jValue.get<uint32_t>();
     }
-    else if (configName == "hls_ignore_endlist" && jDictVal.IsBool())
+    else if (configName == "hls_ignore_endlist" && jValue.is_boolean())
     {
-       m_manifestConfig.hlsIgnoreEndList = jDictVal.GetBool();
+      m_manifestConfig.hlsIgnoreEndList = jValue.get<bool>();
     }
-    else if (configName == "hls_fix_mediasequence" && jDictVal.IsBool())
+    else if (configName == "hls_fix_mediasequence" && jValue.is_boolean())
     {
-       m_manifestConfig.hlsFixMediaSequence = jDictVal.GetBool();
+      m_manifestConfig.hlsFixMediaSequence = jValue.get<bool>();
     }
-    else if (configName == "hls_fix_discsequence" && jDictVal.IsBool())
+    else if (configName == "hls_fix_discsequence" && jValue.is_boolean())
     {
-       m_manifestConfig.hlsFixDiscontSequence = jDictVal.GetBool();
+      m_manifestConfig.hlsFixDiscontSequence = jValue.get<bool>();
     }
-    else if (configName == "live_delay" && jDictVal.IsUint64())
+    else if (configName == "live_delay" && jValue.is_number_unsigned())
     {
-      m_manifestConfig.liveDelay = jDictVal.GetUint64();
+      m_manifestConfig.liveDelay = jValue.get<uint64_t>();
     }
-    else if (configName == "dash_utctiming" && jDictVal.IsObject())
+    else if (configName == "dash_utctiming" && jValue.is_object())
     {
-      for (auto& jPairUnwrap : jDictVal.GetObject()) // Iterate JSON dict
+      for (auto& [schemeId, jValue] : jValue.items()) // Iterate JSON dict
       {
-        if (!jPairUnwrap.name.IsString() || !jPairUnwrap.value.IsString())
+        if (!jValue.is_string())
         {
           LOG::LogF(LOGERROR, "The manifest parameter \"dash_utctiming\" contains invalid values");
           break;
         }
         std::pair<std::string, std::string> utcTiming;
-        utcTiming.first = jPairUnwrap.name.GetString();
-        utcTiming.second = jPairUnwrap.value.GetString();
+        utcTiming.first = schemeId;
+        utcTiming.second = jValue.get<std::string>();
         m_manifestConfig.dashUTCTiming = utcTiming;
         break;
       }
@@ -651,110 +642,103 @@ bool ADP::KODI_PROPS::CCompKodiProps::ParseDrmConfig(const std::string& data)
    *                        ... },
    *   "keysystem_name_2" : { ... }}
    */
-  rapidjson::Document jDoc;
-  jDoc.Parse(data.c_str(), data.size());
-
-  if (!jDoc.IsObject())
+  const njson jData = njson::parse(data, nullptr, false);
+  if (jData.is_discarded() || !jData.is_object())
   {
     LOG::LogF(LOGERROR, "Malformed JSON data in to \"%s\" property", PROP_DRM.data());
     return false;
   }
 
   // Iterate key systems dict
-  for (auto& jChildObj : jDoc.GetObject())
+  for (auto& [keySystem, jValue] : jData.items())
   {
-    const char* keySystem = jChildObj.name.GetString();
-
     if (!DRM::IsValidKeySystem(keySystem))
     {
-      LOG::LogF(LOGERROR, "Ignored unknown key system \"%s\" on DRM property", keySystem);
+      LOG::LogF(LOGERROR, "Ignored unknown key system \"%s\" on DRM property", keySystem.c_str());
       continue;
     }
 
     DrmCfg& drmCfg = m_drmConfigs[keySystem]; // create new configuration
-    auto& jDictVal = jChildObj.value;
 
-    if (!jDictVal.IsObject())
+    if (!jValue.is_object())
     {
       LOG::LogF(LOGERROR, "Cannot parse key system \"%s\" value on DRM property, wrong data type",
-                keySystem);
+                keySystem.c_str());
       continue;
     }
 
     // Parse main DRM config
 
-    LogDrmJsonDictKeys("main", jDictVal, keySystem);
+    LogDrmJsonDictKeys("main", jValue, keySystem);
 
-    if (jDictVal.HasMember("force_single_session") && jDictVal["force_single_session"].IsBool())
-      drmCfg.isForceSingleSession = jDictVal["force_single_session"].GetBool();
+    if (jValue.contains("force_single_session") && jValue["force_single_session"].is_boolean())
+      drmCfg.isForceSingleSession = jValue["force_single_session"].get<bool>();
 
-    if (jDictVal.HasMember("persistent_storage") && jDictVal["persistent_storage"].IsBool())
-      drmCfg.isPersistentStorage = jDictVal["persistent_storage"].GetBool();
+    if (jValue.contains("persistent_storage") && jValue["persistent_storage"].is_boolean())
+      drmCfg.isPersistentStorage = jValue["persistent_storage"].get<bool>();
 
-    if (jDictVal.HasMember("secure_decoder") && jDictVal["secure_decoder"].IsBool())
-      drmCfg.isSecureDecoderEnabled = jDictVal["secure_decoder"].GetBool();
+    if (jValue.contains("secure_decoder") && jValue["secure_decoder"].is_boolean())
+      drmCfg.isSecureDecoderEnabled = jValue["secure_decoder"].get<bool>();
 
-    if (jDictVal.HasMember("init_data") && jDictVal["init_data"].IsString())
-      drmCfg.initData = jDictVal["init_data"].GetString();
+    if (jValue.contains("init_data") && jValue["init_data"].is_string())
+      drmCfg.initData = jValue["init_data"].get<std::string>();
 
-    if (jDictVal.HasMember("pre_init_data") && jDictVal["pre_init_data"].IsString())
-      drmCfg.preInitData = jDictVal["pre_init_data"].GetString();
+    if (jValue.contains("pre_init_data") && jValue["pre_init_data"].is_string())
+      drmCfg.preInitData = jValue["pre_init_data"].get<std::string>();
 
-    if (jDictVal.HasMember("optional_key_req_params") &&
-        jDictVal["optional_key_req_params"].IsObject())
+    if (jValue.contains("optional_key_req_params") && jValue["optional_key_req_params"].is_object())
     {
-      for (auto& jPairOptKeyReqParam :
-           jDictVal["optional_key_req_params"].GetObject()) // Iterate JSON dict
+      for (auto& [paramName, jValue] : jData.items()) // Iterate JSON dict
       {
-        if (jPairOptKeyReqParam.name.IsString() && jPairOptKeyReqParam.value.IsString())
+        if (!jValue.is_string())
         {
-          drmCfg.optKeyReqParams.emplace(jPairOptKeyReqParam.name.GetString(),
-                                         jPairOptKeyReqParam.value.GetString());
+          LOG::LogF(LOGERROR, "The DRM parameter \"optional_key_req_params\" contains invalid values");
+          break;
         }
+        drmCfg.optKeyReqParams.emplace(paramName, jValue.get<std::string>());
       }
     }
 
-    if (jDictVal.HasMember("priority") && jDictVal["priority"].IsUint())
-      drmCfg.priority = jDictVal["priority"].GetUint();
+    if (jValue.contains("priority") && jValue["priority"].is_number_unsigned())
+      drmCfg.priority = jValue["priority"].get<uint32_t>();
 
     // Parse license DRM config
 
-    if (jDictVal.HasMember("license") && jDictVal["license"].IsObject())
+    if (jValue.contains("license") && jValue["license"].is_object())
     {
-      auto& jDictLic = jDictVal["license"];
+      auto& jDictLic = jValue["license"];
 
       LogDrmJsonDictKeys("license", jDictLic, keySystem);
 
-      if (jDictLic.HasMember("server_certificate") && jDictLic["server_certificate"].IsString())
-        drmCfg.license.serverCert = jDictLic["server_certificate"].GetString();
+      if (jDictLic.contains("server_certificate") && jDictLic["server_certificate"].is_string())
+        drmCfg.license.serverCert = jDictLic["server_certificate"].get<std::string>();
 
-      if (jDictLic.HasMember("server_url") && jDictLic["server_url"].IsString())
-        drmCfg.license.serverUri = jDictLic["server_url"].GetString();
+      if (jDictLic.contains("server_url") && jDictLic["server_url"].is_string())
+        drmCfg.license.serverUri = jDictLic["server_url"].get<std::string>();
 
-      if (jDictLic.HasMember("use_http_get_request") && jDictLic["use_http_get_request"].IsBool())
-        drmCfg.license.isHttpGetRequest = jDictLic["use_http_get_request"].GetBool();
+      if (jDictLic.contains("use_http_get_request") && jDictLic["use_http_get_request"].is_boolean())
+        drmCfg.license.isHttpGetRequest = jDictLic["use_http_get_request"].get<bool>();
 
-      if (jDictLic.HasMember("req_headers") && jDictLic["req_headers"].IsString())
-        ParseHeaderString(drmCfg.license.reqHeaders, jDictLic["req_headers"].GetString());
+      if (jDictLic.contains("req_headers") && jDictLic["req_headers"].is_string())
+        ParseHeaderString(drmCfg.license.reqHeaders, jDictLic["req_headers"].get<std::string>());
 
-      if (jDictLic.HasMember("req_params") && jDictLic["req_params"].IsString())
-        drmCfg.license.reqParams = jDictLic["req_params"].GetString();
+      if (jDictLic.contains("req_params") && jDictLic["req_params"].is_string())
+        drmCfg.license.reqParams = jDictLic["req_params"].get<std::string>();
 
-      if (jDictLic.HasMember("req_data") && jDictLic["req_data"].IsString())
-        drmCfg.license.reqData = jDictLic["req_data"].GetString();
+      if (jDictLic.contains("req_data") && jDictLic["req_data"].is_string())
+        drmCfg.license.reqData = jDictLic["req_data"].get<std::string>();
 
-      if (jDictLic.HasMember("wrapper") && jDictLic["wrapper"].IsString())
-        drmCfg.license.wrapper = STRING::ToLower(jDictLic["wrapper"].GetString());
+      if (jDictLic.contains("wrapper") && jDictLic["wrapper"].is_string())
+        drmCfg.license.wrapper = STRING::ToLower(jDictLic["wrapper"].get<std::string>());
 
-      if (jDictLic.HasMember("unwrapper") && jDictLic["unwrapper"].IsString())
-        drmCfg.license.unwrapper = STRING::ToLower(jDictLic["unwrapper"].GetString());
+      if (jDictLic.contains("unwrapper") && jDictLic["unwrapper"].is_string())
+        drmCfg.license.unwrapper = STRING::ToLower(jDictLic["unwrapper"].get<std::string>());
 
-      if (jDictLic.HasMember("unwrapper_params") && jDictLic["unwrapper_params"].IsObject())
+      if (jDictLic.contains("unwrapper_params") && jDictLic["unwrapper_params"].is_object())
       {
-        for (auto& jPairUnwrap : jDictLic["unwrapper_params"].GetObject()) // Iterate JSON dict
+        for (auto& [paramName, jValue] : jDictLic["unwrapper_params"].items()) // Iterate JSON dict
         {
-          if (!jPairUnwrap.name.IsString() ||
-              !(jPairUnwrap.value.IsString() || jPairUnwrap.value.IsBool()))
+          if (!(jValue.is_string() || jValue.is_boolean()))
           {
             LOG::LogF(LOGERROR,
                       "The license parameter \"unwrapper_params\" contains invalid values");
@@ -762,21 +746,25 @@ bool ADP::KODI_PROPS::CCompKodiProps::ParseDrmConfig(const std::string& data)
           }
 
           std::string value;
-          if (jPairUnwrap.value.IsString())
-            value = jPairUnwrap.value.GetString();
-          else if (jPairUnwrap.value.IsBool())
-            value = jPairUnwrap.value.GetBool() ? "true" : "false";
+          if (jValue.is_string())
+            value = jValue.get<std::string>();
+          else if (jValue.is_boolean())
+            value = jValue.get<bool>() ? "true" : "false";
 
-          drmCfg.license.unwrapperParams.emplace(jPairUnwrap.name.GetString(), value);
+          drmCfg.license.unwrapperParams.emplace(paramName, value);
         }
       }
 
-      if (jDictLic.HasMember("keyids") && jDictLic["keyids"].IsObject())
+      if (jDictLic.contains("keyids") && jDictLic["keyids"].is_object())
       {
-        for (auto const& keyid : jDictLic["keyids"].GetObject())
+        for (auto& [kid, jValue] : jDictLic["keyids"].items())
         {
-          if (keyid.name.IsString() && keyid.value.IsString())
-            drmCfg.license.keys[keyid.name.GetString()] = (keyid.value.GetString());
+          if (!jValue.is_string())
+          {
+            LOG::LogF(LOGERROR, "The DRM parameter \"keyids\" contains invalid values");
+            break;
+          }
+          drmCfg.license.keys[kid] = jValue.get<std::string>();
         }
       }
     }

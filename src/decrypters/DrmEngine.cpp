@@ -24,10 +24,9 @@
 #include "utils/UrlUtils.h"
 #include "utils/log.h"
 
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
+#include <nlohmann/json.hpp>
 
+using njson = nlohmann::json;
 using namespace DRM;
 using namespace UTILS;
 
@@ -586,11 +585,8 @@ bool DRM::CDRMEngine::ConfigureClearKey(std::vector<DRM::DRMInfo>& drmInfos)
   }
   else // Create license uri with jwkSets
   {
-    rapidjson::Document jDoc;
-    jDoc.SetObject();
-    auto& allocator = jDoc.GetAllocator();
-
-    rapidjson::Value jwkSets{rapidjson::kArrayType};
+    njson jData;
+    njson jwkSets = njson::array();
 
     for (auto& [kid, key] : drmCfg.license.keys)
     {
@@ -599,22 +595,19 @@ bool DRM::CDRMEngine::ConfigureClearKey(std::vector<DRM::DRMInfo>& drmInfos)
       const std::string kidVal =
           BASE64::UrlSafeEncode(BASE64::Encode(DRM::ConvertKidStrToBytes(kid), false));
 
-      rapidjson::Value jwkSet{rapidjson::kObjectType};
-      jwkSet.AddMember("k", rapidjson::Value(kVal.c_str(), allocator), allocator);
-      jwkSet.AddMember("kid", rapidjson::Value(kidVal.c_str(), allocator), allocator);
-      jwkSet.AddMember("kty", "oct", allocator);
-      jwkSets.PushBack(jwkSet, allocator);
+      njson jwkSet;
+      jwkSet["k"] = kVal;
+      jwkSet["kid"] = kidVal;
+      jwkSet["kty"] = "oct";
+      jwkSets.push_back(jwkSet);
     }
 
-    jDoc.AddMember("keys", jwkSets, allocator);
-    jDoc.AddMember("type", "temporary", allocator);
+    jData["keys"] = jwkSets;
+    jData["type"] = "temporary";
 
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer{buffer};
-    jDoc.Accept(writer);
+    const std::string dumps = jData.dump(-1, ' ', false, njson::error_handler_t::ignore);
 
-    licenseUri =
-        "data:application/json;base64," + BASE64::Encode(buffer.GetString(), buffer.GetSize());
+    licenseUri = "data:application/json;base64," + BASE64::Encode(dumps);
   }
 
   DRM::DRMInfo drmInfo;

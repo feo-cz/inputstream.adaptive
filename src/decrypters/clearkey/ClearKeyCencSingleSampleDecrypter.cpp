@@ -18,12 +18,11 @@
 #include "utils/UrlUtils.h"
 #include "utils/log.h"
 
+#include <nlohmann/json.hpp>
+
 #include <algorithm>
 
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-
+using njson = nlohmann::json;
 using namespace UTILS;
 
 uint32_t CClearKeyCencSingleSampleDecrypter::g_sessionIdCount = 1;
@@ -178,29 +177,16 @@ std::string CClearKeyCencSingleSampleDecrypter::CreateLicenseRequest(
    * { "kids":
    *     [
    *         "nrQFDeRLSAKTLifXUIPiZg"
-   *     ]
+   *     ],
    * "type":"temporary" }
    */
 
   std::string b64Kid = BASE64::UrlSafeEncode(BASE64::Encode(defaultKeyId, false));
 
-  rapidjson::Document jDoc;
-  jDoc.SetObject();
-  auto& allocator = jDoc.GetAllocator();
-
-  rapidjson::Value kids{rapidjson::kArrayType};
-  rapidjson::Value jKid;
-
-  jKid.SetString(b64Kid.c_str(), allocator);
-  kids.PushBack(jKid, allocator);
-
-  jDoc.AddMember("kids", kids, allocator);
-  jDoc.AddMember("type", "temporary", allocator);
-
-  rapidjson::StringBuffer buffer;
-  rapidjson::Writer<rapidjson::StringBuffer> writer{buffer};
-  jDoc.Accept(writer);
-  return buffer.GetString();
+  njson jData;
+  jData["kids"] = njson::array({b64Kid});
+  jData["type"] = "temporary";
+  return jData.dump(-1, ' ', false, njson::error_handler_t::ignore);
 }
 
 bool CClearKeyCencSingleSampleDecrypter::ParseLicenseResponse(std::string data)
@@ -211,63 +197,59 @@ bool CClearKeyCencSingleSampleDecrypter::ParseLicenseResponse(std::string data)
    *         "k": "FmY0xnWCPCNaSpRG-tUuTQ",
    *         "kid": "nrQFDeRLSAKTLifXUIPiZg",
    *         "kty": "oct"
-   *     }
+   *     }],
    * "type": "temporary"}
    */
-
-  rapidjson::Document jDoc;
-  jDoc.Parse(data.c_str(), data.size());
-
-  if (!jDoc.IsObject())
+  const njson jData = njson::parse(data, nullptr, false);
+  if (jData.is_discarded() || !jData.is_object())
   {
     LOG::LogF(LOGERROR, "Malformed JSON data in license response");
     return false;
   }
 
-  for (auto& jChildObj : jDoc.GetObject())
+  if (jData.contains("Message") && jData["Message"].is_string())
   {
+    LOG::LogF(LOGERROR, "Error in license response: %s",
+              jData["Message"].get<std::string>().c_str());
+    return false;
+  }
+  if (!jData.contains("keys") || !jData["keys"].is_array() || jData["keys"].empty())
+  {
+    LOG::LogF(LOGERROR, "No keys in license response");
+    return false;
+  }
+
+  for (const auto& item : jData["keys"]) // Iterate array
+  {
+    if (!item.is_object())
+    {
+      LOG::LogF(LOGERROR, "Unexpected JSON format in the license response");
+      continue;
+    }
+
     std::string b64Key;
     std::string b64KeyId;
-    const std::string keyName = jChildObj.name.GetString();
-    rapidjson::Value& jDictVal = jChildObj.value;
 
-    if (keyName == "Message" && jDictVal.IsString())
+    if (item.contains("k") && item["k"].is_string())
+      b64Key = item["k"].get<std::string>();
+
+    if (item.contains("kid") && item["kid"].is_string())
+      b64KeyId = item["kid"].get<std::string>();
+
+    if (b64Key.empty() || b64KeyId.empty())
     {
-      LOG::LogF(LOGERROR, "Error in license response: %s", jDictVal.GetString());
-      return false;
+      LOG::LogF(LOGERROR, "Malformed key pair value in the license response");
+      continue;
     }
 
-    if (!jDoc.HasMember("keys"))
-    {
-      LOG::LogF(LOGERROR, "No keys in license response");
-      return false;
-    }
+    b64Key = BASE64::UrlSafeDecode(b64Key);
+    BASE64::AddPadding(b64Key);
 
-    if (keyName == "keys" && jDictVal.IsArray())
-    {
-      for (auto const& jArrayKey : jDictVal.GetArray())
-      {
-        if (jArrayKey.IsObject())
-        {
-          if (jArrayKey.HasMember("k") && jArrayKey["k"].IsString())
-            b64Key = jArrayKey["k"].GetString();
+    b64KeyId = BASE64::UrlSafeDecode(b64KeyId);
+    BASE64::AddPadding(b64KeyId);
 
-          if (jArrayKey.HasMember("kid") && jArrayKey["kid"].IsString())
-            b64KeyId = jArrayKey["kid"].GetString();
-        }
-
-        if (!b64Key.empty() && !b64KeyId.empty())
-        {
-          b64Key = BASE64::UrlSafeDecode(b64Key);
-          BASE64::AddPadding(b64Key);
-
-          b64KeyId = BASE64::UrlSafeDecode(b64KeyId);
-          BASE64::AddPadding(b64KeyId);
-
-          m_keyPairs.emplace(b64KeyId, b64Key);
-        }
-      }
-    }
+    m_keyPairs.emplace(b64KeyId, b64Key);
   }
+
   return true;
 }
