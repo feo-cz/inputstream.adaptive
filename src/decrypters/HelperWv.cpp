@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <map>
 
+using njson = nlohmann::json;
 using namespace pugi;
 using namespace UTILS;
 
@@ -500,10 +501,8 @@ bool DRM::WvUnwrapLicense(std::string_view wrapper,
         return false;
       }
 
-      rapidjson::Document jDoc;
-      jDoc.Parse(data.c_str(), data.size());
-
-      if (!jDoc.IsObject())
+      const njson jData = njson::parse(data, nullptr, false);
+      if (jData.is_discarded() || !jData.is_object())
       {
         LOG::LogF(LOGERROR,
                   "Unable to parse license data as JSON format, malformed data or wrong wrapper");
@@ -514,20 +513,20 @@ bool DRM::WvUnwrapLicense(std::string_view wrapper,
       if (STRING::KeyExists(params, "path_data_traverse"))
         isJsonDataTraverse = STRING::ToLower(params.at("path_data_traverse")) == "true";
 
-      const rapidjson::Value* jDataObjValue;
+      const njson* jDataObjValue;
       if (isJsonDataTraverse)
-        jDataObjValue = JSON::GetValueTraversePaths(jDoc, params.at("path_data"));
+        jDataObjValue = JSON::GetValueTraversePaths(jData, params.at("path_data"));
       else
-        jDataObjValue = JSON::GetValueAtPath(jDoc, params.at("path_data"));
+        jDataObjValue = JSON::GetValueAtPath(jData, params.at("path_data"));
 
-      if (!jDataObjValue || !jDataObjValue->IsString())
+      if (!jDataObjValue || !jDataObjValue->is_string())
       {
         LOG::LogF(LOGERROR, "Unable to get license data from JSON path, possible wrong path on "
                             "\"path_data\" parameter");
         return false;
       }
 
-      data = jDataObjValue->GetString();
+      data = jDataObjValue->get<std::string>();
 
       if (STRING::KeyExists(params, "path_hdcp_res"))
       {
@@ -535,28 +534,28 @@ bool DRM::WvUnwrapLicense(std::string_view wrapper,
         if (STRING::KeyExists(params, "path_hdcp_res_traverse"))
           isJsonHdcpTraverse = STRING::ToLower(params.at("path_hdcp_res_traverse")) == "true";
 
-        const rapidjson::Value* jHdcpObjValue;
+        const njson* jHdcpObjValue;
         if (isJsonHdcpTraverse)
-          jHdcpObjValue = JSON::GetValueTraversePaths(jDoc, params.at("path_hdcp_res"));
+          jHdcpObjValue = JSON::GetValueTraversePaths(jData, params.at("path_hdcp_res"));
         else
-          jHdcpObjValue = JSON::GetValueAtPath(jDoc, params.at("path_hdcp_res"));
+          jHdcpObjValue = JSON::GetValueAtPath(jData, params.at("path_hdcp_res"));
 
         if (!jHdcpObjValue)
         {
           LOG::LogF(LOGWARNING, "Unable to parse JSON HDCP resolution, path \"%s\" not found",
                     params.at("path_hdcp_res").c_str());
         }
-        else if (jHdcpObjValue->IsInt())
+        else if (jHdcpObjValue->is_number_float())
         {
-          hdcpResLimit = jHdcpObjValue->GetInt();
+          hdcpResLimit = static_cast<int>(jHdcpObjValue->get<float>());
         }
-        else if (jHdcpObjValue->IsDouble())
+        else if (jHdcpObjValue->is_number())
         {
-          hdcpResLimit = static_cast<int>(jHdcpObjValue->GetDouble());
+          hdcpResLimit = jHdcpObjValue->get<int>();
         }
-        else if (jHdcpObjValue->IsString())
+        else if (jHdcpObjValue->is_string())
         {
-          std::string_view resValue = jHdcpObjValue->GetString();
+          std::string_view resValue = jHdcpObjValue->get<std::string_view>();
 
           auto pos = resValue.find('x');
           if (pos != std::string_view::npos) // Expected format width x height (e.g. "1280x720")
@@ -582,29 +581,29 @@ bool DRM::WvUnwrapLicense(std::string_view wrapper,
         if (STRING::KeyExists(params, "path_hdcp_ver_traverse"))
           isJsonHdcpTraverse = STRING::ToLower(params.at("path_hdcp_ver_traverse")) == "true";
 
-        const rapidjson::Value* jHdcpObjValue;
+        const njson* jHdcpObjValue;
         if (isJsonHdcpTraverse)
-          jHdcpObjValue = JSON::GetValueTraversePaths(jDoc, params.at("path_hdcp_ver"));
+          jHdcpObjValue = JSON::GetValueTraversePaths(jData, params.at("path_hdcp_ver"));
         else
-          jHdcpObjValue = JSON::GetValueAtPath(jDoc, params.at("path_hdcp_ver"));
+          jHdcpObjValue = JSON::GetValueAtPath(jData, params.at("path_hdcp_ver"));
 
         if (!jHdcpObjValue)
         {
           LOG::LogF(LOGWARNING, "Unable to parse JSON HDCP version, path \"%s\" not found",
                     params.at("path_hdcp_ver").c_str());
         }
-        else if (jHdcpObjValue->IsInt())
+        else if (jHdcpObjValue->is_number_float())
         {
-          hdcpVerLimit = jHdcpObjValue->GetInt();
+          hdcpVerLimit = static_cast<int>(jHdcpObjValue->get<float>() * 10);
         }
-        else if (jHdcpObjValue->IsDouble())
+        else if (jHdcpObjValue->is_number())
         {
-          hdcpVerLimit = static_cast<int>(jHdcpObjValue->GetDouble() * 10);
+          hdcpVerLimit = jHdcpObjValue->get<int>();
         }
-        else if (jHdcpObjValue->IsString())
+        else if (jHdcpObjValue->is_string())
         {
           // Try convert the string value e.g. "HDCP_NONE" --> 0, "HDCP_V2_2" --> 22
-          hdcpVerLimit = STRING::GetNumbers(jHdcpObjValue->GetString());
+          hdcpVerLimit = STRING::GetNumbers(jHdcpObjValue->get<std::string_view>());
         }
         else
         {

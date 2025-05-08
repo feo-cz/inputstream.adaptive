@@ -10,7 +10,7 @@
 
 #include <string>
 
-#include <rapidjson/document.h>
+#include <nlohmann/json.hpp>
 
 namespace UTILS
 {
@@ -18,12 +18,13 @@ namespace JSON
 {
 
 /*!
- * \brief Get value from a JSON path e.g. "a/b/c"
+ * \brief Get a JSON value from a path by using JSON pointer (RFC 6901)
+ *        e.g. "/a/b/c"
  * \param node The json object where get the value
- * \param path The path where the value is contained
+ * \param path The JSON pointer path where the value is contained
  * \return The json object if found, otherwise nullptr.
  */
-const rapidjson::Value* GetValueAtPath(const rapidjson::Value& node, const std::string& path);
+const nlohmann::json* GetValueAtPath(const nlohmann::json& node, std::string path);
 
 /*!
  * \brief Get value from an unknown JSON path,
@@ -32,8 +33,7 @@ const rapidjson::Value* GetValueAtPath(const rapidjson::Value& node, const std::
  * \param keyName The key name to search for
  * \return The json object if found, otherwise nullptr.
  */
-const rapidjson::Value* GetValueTraversePaths(const rapidjson::Value& node,
-                                              const std::string& keyName);
+const nlohmann::json* GetValueTraversePaths(const nlohmann::json& node, const std::string& keyName);
 
 } // namespace JSON
 } // namespace UTILS

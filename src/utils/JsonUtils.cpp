@@ -8,47 +8,51 @@
 
 #include "JsonUtils.h"
 
+#include "log.h"
+
+using njson = nlohmann::json;
+
 namespace
 {
-const rapidjson::Value* TraversePaths(const rapidjson::Value& node, const std::string& keyName)
+const nlohmann::json* TraversePaths(const nlohmann::json& node, const std::string& keyName)
 {
-  if (node.IsObject())
+  if (node.is_object())
   {
-    for (auto itr = node.MemberBegin(); itr != node.MemberEnd(); ++itr)
+    for (auto& [jName, jValue] : node.items())
     {
-      if (itr->name.GetString() == keyName)
+      if (jName == keyName)
       {
-        if (itr->value.IsString() || itr->value.IsNumber())
-          return &itr->value;
-        else if (itr->value.IsObject() || itr->value.IsArray())
+        if (jValue.is_string() || jValue.is_number())
+          return &jValue;
+        else if (jValue.is_object() || jValue.is_array())
         {
-          const rapidjson::Value* ret = TraversePaths(itr->value, keyName);
+          const njson* ret = TraversePaths(jValue, keyName);
           if (ret)
             return ret;
         }
       }
-      else if (itr->value.IsArray())
+      else if (jValue.is_array())
       {
-        for (auto& item : itr->value.GetArray())
+        for (const auto& item : jValue)
         {
-          const rapidjson::Value* ret = TraversePaths(item, keyName);
+          const njson* ret = TraversePaths(item, keyName);
           if (ret)
             return ret;
         }
       }
-      else if (itr->value.IsObject())
+      else if (jValue.is_object())
       {
-        const rapidjson::Value* ret = TraversePaths(itr->value, keyName);
+        const njson* ret = TraversePaths(jValue, keyName);
         if (ret)
           return ret;
       }
     }
   }
-  else if (node.IsArray())
+  else if (node.is_array())
   {
-    for (auto& item : node.GetArray())
+    for (const auto& item : node)
     {
-      const rapidjson::Value* ret = TraversePaths(item, keyName);
+      const njson* ret = TraversePaths(item, keyName);
       if (ret)
         return ret;
     }
@@ -59,29 +63,31 @@ const rapidjson::Value* TraversePaths(const rapidjson::Value& node, const std::s
 
 } // unnamed namespace
 
-const rapidjson::Value* UTILS::JSON::GetValueAtPath(const rapidjson::Value& node,
-                                                    const std::string& path)
+const nlohmann::json* UTILS::JSON::GetValueAtPath(const nlohmann::json& node, std::string path)
 {
-  size_t pos = path.find('/');
-  std::string current_level = path.substr(0, pos);
+  if (path.empty())
+    return nullptr;
 
-  if (node.IsObject() && node.HasMember(current_level.c_str()))
+  if (path.front() != '/')
+    path.insert(0, "/");
+
+  try
   {
-    if (pos == std::string::npos)
-    {
-      return &node[current_level.c_str()];
-    }
-    else
-    {
-      return GetValueAtPath(node[current_level.c_str()], path.substr(pos + 1));
-    }
+    const njson::json_pointer jPointer(path);
+
+    if (node.contains(jPointer))
+      return &node.at(jPointer);
+  }
+  catch (...)
+  {
+    LOG::LogF(LOGERROR, "Cannot get JSON data, possible malformed path \"%s\"", path.c_str());
   }
 
   return nullptr;
 }
 
-const rapidjson::Value* UTILS::JSON::GetValueTraversePaths(const rapidjson::Value& node,
-                                                           const std::string& keyName)
+const nlohmann::json* UTILS::JSON::GetValueTraversePaths(const nlohmann::json& node,
+                                                         const std::string& keyName)
 {
   return TraversePaths(node, keyName);
 }
