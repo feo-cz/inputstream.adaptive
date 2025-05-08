@@ -46,13 +46,6 @@ using namespace UTILS;
 
 namespace
 {
-std::string ReplacePlaceHolders(std::string str, const std::string_view id, uint32_t bandwidth)
-{
-  STRING::ReplaceAll(str, "$RepresentationID$", id);
-  STRING::ReplaceAll(str, "$Bandwidth$", std::to_string(bandwidth));
-  return str;
-}
-
 StreamType DetectStreamType(std::string_view contentType, std::string_view mimeType)
 {
   StreamType streamType = StreamType::NOTYPE;
