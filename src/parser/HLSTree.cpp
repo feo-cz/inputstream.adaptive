@@ -459,8 +459,6 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
 
   rep->SetBaseUrl(sourceUrl);
 
-  EncryptionType currentEncryptionType = EncryptionType::NONE;
-
   // To know in advance if EXT-X-PROGRAM-DATE-TIME is available
   bool hasProgramDateTime = STRING::Contains(data, "#EXT-X-PROGRAM-DATE-TIME:");
   bool hasEndList{false}; // Determine if there is the EXT-X-ENDLIST tag

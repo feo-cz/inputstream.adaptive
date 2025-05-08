@@ -47,16 +47,6 @@ enum class EncryptionState
   NOT_SUPPORTED, // Unsupported encryption
 };
 
-enum class EncryptionType
-{
-  NOT_SUPPORTED,
-  NONE,
-  CLEARKEY,
-  AES128,
-  WIDEVINE,
-  PLAYREADY,
-};
-
 enum class ContainerType
 {
   NOTYPE,
