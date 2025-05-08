@@ -97,7 +97,7 @@ double UTILS::XML::ParseDuration(std::string_view durationStr)
 size_t UTILS::XML::CountChilds(pugi::xml_node node, const char* childTagName /* = "" */)
 {
   size_t count{0};
-  for (xml_node nodeChild : node.children(childTagName))
+  for ([[maybe_unused]] xml_node nodeChild : node.children(childTagName))
   {
     count++;
   }
