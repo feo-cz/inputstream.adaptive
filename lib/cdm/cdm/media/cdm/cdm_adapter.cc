@@ -436,7 +436,7 @@ cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
   std::lock_guard<std::mutex> lock(decrypt_mutex_);
 
   active_buffer_ = decrypted_buffer->DecryptedBuffer();
-  cdm::Status ret;
+  cdm::Status ret{cdm::Status::kDecryptError};
 
   if (cdm12_)
     ret = cdm12_->Decrypt(encrypted_buffer, decrypted_buffer);
