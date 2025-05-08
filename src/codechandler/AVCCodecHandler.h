@@ -22,6 +22,6 @@ public:
 
 private:
   unsigned int m_countPictureSetIds;
-  STREAMCODEC_PROFILE m_codecProfile;
   bool m_needSliceInfo;
+  STREAMCODEC_PROFILE m_codecProfile;
 };
