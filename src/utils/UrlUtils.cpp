@@ -288,7 +288,6 @@ std::string UTILS::URL::GetBaseDomain(std::string url)
     const size_t portPos = url.find_first_of(':', domainStartPos);
     const size_t pathPos = url.find_first_of('/', domainStartPos);
 
-    size_t endPos = url.size();
     if (portPos != std::string::npos && portPos < pathPos)
       url.erase(portPos); // remove port number
     else if (pathPos != std::string::npos)
