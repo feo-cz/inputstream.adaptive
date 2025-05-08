@@ -466,8 +466,6 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
   uint64_t programDateTime{NO_VALUE}; // EXT-X-PROGRAM-DATE-TIME in ms or NO_VALUE
   uint64_t currentSegNumber{0};
 
-  uint64_t lastSegStartPts{NO_PTS_VALUE}; // The start PTS of last segment in the previous manifest
-
   uint64_t mediaSequenceNbr{0};
 
   CSegContainer newSegments;
