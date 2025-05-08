@@ -66,13 +66,11 @@ void CInputStreamAdaptive::Close(void)
 bool CInputStreamAdaptive::GetStreamIds(std::vector<unsigned int>& ids)
 {
   LOG::Log(LOGDEBUG, "GetStreamIds()");
-  INPUTSTREAM_IDS iids;
 
   if (m_session)
   {
     CPeriod* period;
     int period_id = m_session->GetPeriodId();
-    iids.m_streamCount = 0;
     unsigned int id;
 
     for (unsigned int i(1); i <= INPUTSTREAM_MAX_STREAM_COUNT && i <= m_session->GetStreamCount();
