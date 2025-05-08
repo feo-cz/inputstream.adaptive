@@ -283,7 +283,7 @@ uint32_t UTILS::STRING::HexStrToUint(std::string_view hexValue)
 
 bool UTILS::STRING::ToHexBytes(const std::string& str, std::vector<uint8_t>& bytes)
 {
-  for (int i = 0; i < str.length(); i += 2)
+  for (size_t i = 0; i < str.length(); i += 2)
   {
     char* end;
     uint8_t byte = static_cast<uint8_t>(std::strtol(str.substr(i, 2).c_str(), &end, 16));
