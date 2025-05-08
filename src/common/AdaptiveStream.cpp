@@ -443,8 +443,6 @@ bool AdaptiveStream::parseIndexRange(PLAYLIST::CRepresentation* rep,
   AP4_MemoryByteStream byteStream{reinterpret_cast<const AP4_Byte*>(buffer.data()),
                                   static_cast<AP4_Size>(buffer.size())};
 
-  CAdaptationSet* adpSet = getAdaptationSet();
-
   if (rep->GetContainerType() == ContainerType::WEBM)
   {
     if (rep->GetSegmentBase()->GetIndexRangeBegin() == 0)
