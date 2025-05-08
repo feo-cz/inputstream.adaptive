@@ -148,7 +148,7 @@ enum class EVENT_TYPE
       RUNNING,
       STOPPED,
       PAUSED
-    } state_;
+    } state_{STOPPED};
 
     // Segment download section
 
@@ -259,10 +259,10 @@ enum class EVENT_TYPE
       std::thread download_thread_;
       bool thread_stop_;
     };
-    THREADDATA *thread_data_;
+    THREADDATA* thread_data_{nullptr};
 
     AdaptiveTree* m_tree;
-    AdaptiveStreamObserver *observer_;
+    AdaptiveStreamObserver* observer_{nullptr};
     // Active configuration
     PLAYLIST::CPeriod* current_period_;
     PLAYLIST::CAdaptationSet* current_adp_;
@@ -271,7 +271,7 @@ enum class EVENT_TYPE
 
     // Decrypter IV used to decrypt HLS segment
     // We need to store here because linked to representation
-    uint8_t m_decrypterIv[16];
+    uint8_t m_decrypterIv[16]{0};
 
     // Minimum segment buffer size (segment_buffers_)
     uint32_t assured_buffer_length_{0};
@@ -282,13 +282,14 @@ enum class EVENT_TYPE
     // Number of segments stored in segment buffer (segment_buffers_) currently in download and downloaded
     size_t valid_segment_buffers_{0};
 
-    std::size_t segment_read_pos_;
-    uint64_t absolute_position_;
-    uint64_t currentPTSOffset_, absolutePTSOffset_;
+    std::size_t segment_read_pos_{0};
+    uint64_t absolute_position_{0};
+    uint64_t currentPTSOffset_{0};
+    uint64_t absolutePTSOffset_{0};
 
     std::atomic<bool> worker_processing_;
-    bool m_fixateInitialization;
-    uint64_t m_segmentFileOffset;
+    bool m_fixateInitialization{false};
+    uint64_t m_segmentFileOffset{0};
 
     // Defines the event to start the stream, the status will be resetted by start stream method.
     EVENT_TYPE m_startEvent{EVENT_TYPE::STREAM_START};

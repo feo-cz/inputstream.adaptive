@@ -39,18 +39,11 @@ uint32_t AdaptiveStream::globalClsId = 0;
 AdaptiveStream::AdaptiveStream(AdaptiveTree* tree,
                                PLAYLIST::CAdaptationSet* adp,
                                PLAYLIST::CRepresentation* initialRepr)
-  : thread_data_(nullptr),
-    m_tree(tree),
-    observer_(nullptr),
+  : m_tree(tree),
     current_period_(m_tree->m_currentPeriod),
     current_adp_(adp),
     current_rep_(initialRepr),
-    segment_read_pos_(0),
-    currentPTSOffset_(0),
-    absolutePTSOffset_(0),
-    lastUpdated_(std::chrono::system_clock::now()),
-    m_fixateInitialization(false),
-    m_segmentFileOffset(0)
+    lastUpdated_(std::chrono::system_clock::now())
 {
   auto& kodiProps = CSrvBroker::GetKodiProps();
   m_streamParams = kodiProps.GetStreamParams();
