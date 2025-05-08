@@ -357,37 +357,32 @@ void adaptive::CHLSTree::FixDiscSequence(std::stringstream& streamData, uint32_t
       // can fit one of the existing ones, otherwise fallback to the last one.
       // With a malformed manifest update this could cause any kind of playback oddities,
       // such as segments played multiple times, or periods switched before the end of their playback.
-      for (auto& period : m_periods)
+      for (auto itPeriod = m_periods.begin(); itPeriod != m_periods.end(); ++itPeriod)
       {
-        for (auto itPeriod = m_periods.begin(); itPeriod != m_periods.end(); ++itPeriod)
+        if ((*itPeriod)->GetStart() == NO_VALUE)
+          continue;
+
+        auto nextPeriod = itPeriod + 1;
+
+        if (nextPeriod != m_periods.end())
         {
-          if ((*itPeriod)->GetStart() == NO_VALUE)
-            continue;
-
-          auto nextPeriod = itPeriod + 1;
-
-          if (nextPeriod != m_periods.end())
+          if ((*itPeriod)->GetStart() <= periodsStartTime[0] &&
+              (*itPeriod)->GetStart() < periodsEndTime[0] &&
+              (*nextPeriod)->GetStart() >= periodsEndTime[0])
           {
-            if ((*itPeriod)->GetStart() <= periodsStartTime[0] &&
-                (*itPeriod)->GetStart() < periodsEndTime[0] &&
-                (*nextPeriod)->GetStart() >= periodsEndTime[0])
-            {
-              discSeqNumberFix = (*itPeriod)->GetSequence();
-              isDiscFound = true;
-              break;
-            }
-          }
-          else
-          {
-            if ((*itPeriod)->GetStart() <= periodsStartTime[0])
-            {
-              discSeqNumberFix = (*itPeriod)->GetSequence();
-              isDiscFound = true;
-            }
+            discSeqNumberFix = (*itPeriod)->GetSequence();
+            isDiscFound = true;
+            break;
           }
         }
-        if (isDiscFound)
-          break;
+        else
+        {
+          if ((*itPeriod)->GetStart() <= periodsStartTime[0])
+          {
+            discSeqNumberFix = (*itPeriod)->GetSequence();
+            isDiscFound = true;
+          }
+        }
       }
     }
   }
