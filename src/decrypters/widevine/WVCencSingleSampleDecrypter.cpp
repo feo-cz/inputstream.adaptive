@@ -49,8 +49,8 @@ CWVCencSingleSampleDecrypter::CWVCencSingleSampleDecrypter(
   : m_cdmAdapter(cdmAdapter),
     m_pssh(pssh),
     m_promiseId(1),
-    m_isDrained(true),
     m_defaultKeyId(defaultKeyId),
+    m_isDrained(true),
     m_EncryptionMode(cryptoMode)
 {
   SetParentIsOwner(false);
