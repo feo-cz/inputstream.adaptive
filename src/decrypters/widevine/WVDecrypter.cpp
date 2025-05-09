@@ -13,6 +13,7 @@
 #include "WVCencSingleSampleDecrypter.h"
 #include "utils/Base64Utils.h"
 #include "utils/FileUtils.h"
+#include "utils/GUIUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/log.h"
 
@@ -63,8 +64,8 @@ SResult CWVDecrypter::OpenDRMSystem(const DRM::Config& config)
 {
   if (config.license.serverUri.empty())
   {
-    LOG::LogF(LOGERROR, "The DRM license server url has not been specified");
-    return SResult::Error("Missing DRM license server URL.");
+    LOG::LogF(LOGERROR, "The DRM license server url has not been configured");
+    return SResult::Error(GUI::GetLocalizedString(30306));
   }
 
   auto cdmAdapter = std::make_shared<CWVCdmAdapter>();
