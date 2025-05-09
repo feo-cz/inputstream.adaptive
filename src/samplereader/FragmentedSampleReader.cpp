@@ -559,7 +559,7 @@ void CFragmentedSampleReader::ParseTrafTfrf(AP4_UuidAtom* uuidAtom)
     return;
   }
   uint8_t version = parser.ReadNextUnsignedChar();
-  uint32_t flags = parser.ReadNextUnsignedInt24();
+  [[maybe_unused]] uint32_t flags = parser.ReadNextUnsignedInt24();
   uint8_t fragmentCount = parser.ReadNextUnsignedChar();
 
   for (uint8_t index = 0; index < fragmentCount; index++)

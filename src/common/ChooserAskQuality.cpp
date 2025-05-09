@@ -41,25 +41,6 @@ std::string CovertFpsToString(float value)
   return str;
 }
 
-void ReplacePhValue(std::string& text,
-                    const std::string& phTextPart,
-                    const std::string& phName,
-                    const std::string& value)
-{
-  std::string result;
-  if (!value.empty())
-  {
-    result = phTextPart;
-    STRING::ReplaceFirst(result, phName, value);
-    // Placeholder contained within other parentheses e.g.: {some text {ph} some text}
-    if (result.front() == '{')
-      result.erase(0, 1);
-    if (result.back() == '}')
-      result.pop_back();
-  }
-  STRING::ReplaceFirst(text, phTextPart, result);
-}
-
 std::string CreateStreamName(const CRepresentation* repr)
 {
   std::string hdrType;

@@ -196,6 +196,7 @@ protected:
    */
   bool ParseMultivariantPlaylist(const std::string& data);
 
+  using AdaptiveTree::SaveManifest; // Make visible original and derived method
   virtual void SaveManifest(PLAYLIST::CAdaptationSet* adpSet,
                             const std::string& data,
                             std::string_view info);

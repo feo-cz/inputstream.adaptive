@@ -291,7 +291,7 @@ bool DRM::PSSH::Parse(const std::vector<uint8_t>& data)
     LOG::LogF(LOGERROR, "Cannot parse PSSH data, malformed data.");
     return false;
   }
-  const uint32_t boxSize = charParser.ReadNextUnsignedInt();
+  charParser.ReadNextUnsignedInt(); // Skip box size
   
   if (!std::equal(charParser.GetDataPos(), charParser.GetDataPos() + 4, PSSHBOX_HEADER_PSSH))
   {
