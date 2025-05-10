@@ -112,6 +112,8 @@ bool IsValidUri(const std::string& uri, std::string_view scheme = "data");
  * \brief Get the byte data from an URI.
  * \param uri[IN] An URL.
  * \param data[OUT] The byte read.
+ * \return Always returns true if it is a URI data format (starts with "data:"),
+ *         even if it contains malformed data. Any other string that is not in URI data format returns false.
  */
 bool GetUriByteData(std::string_view uri, std::vector<uint8_t>& data);
 
