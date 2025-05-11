@@ -371,6 +371,15 @@ menu_data = {
                     'drm': '{"org.w3.clearkey": {"license": {"keyids": {"eb676abbcb345e96bbcf616630f1a3da": "100b6c20940f779a4589152b57d2dacb"}}}}',
                 }
             },
+            'Axiom v9multiFormat [clear key, keys on property]': {
+                SI_ENCRYPT: 'DRMCK,CBCS',
+                SI_FEATURE: 'ADPV',
+                SI_CONFIG: {
+                    'manifest_url': 'https://media.axprod.net/TestVectors/v9-MultiFormat/Encrypted_Cbcs/Manifest.mpd',
+                    'drm_legacy': 'org.w3.clearkey|f8c80c25690f47368132430e5c6994ce:7bc99cb1dd0623cd0b5065056a57a1dd',
+                    'drm': '{"org.w3.clearkey": {"license": {"keyids": {"f8c80c25690f47368132430e5c6994ce": "7bc99cb1dd0623cd0b5065056a57a1dd"}}}}',
+                }
+            },
         },
     },
     'Manifest HLS': {

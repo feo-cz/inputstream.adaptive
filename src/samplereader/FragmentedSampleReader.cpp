@@ -467,9 +467,12 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
 SUCCESS:
   if (m_singleSampleDecryptor && m_codecHandler)
   {
-     m_singleSampleDecryptor->SetFragmentInfo(
-        m_poolId, m_defaultKey, m_codecHandler->m_naluLengthSize, m_codecHandler->m_extraData,
-        m_decrypterCaps.flags, m_readerCryptoInfo);
+    if (AP4_FAILED(m_singleSampleDecryptor->SetFragmentInfo(
+            m_poolId, m_defaultKey, m_codecHandler->m_naluLengthSize, m_codecHandler->m_extraData,
+            m_decrypterCaps.flags, m_readerCryptoInfo)))
+    {
+      return AP4_ERROR_INVALID_FORMAT;
+    }
   }
   return AP4_SUCCESS;
 }
