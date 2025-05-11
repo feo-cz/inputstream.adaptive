@@ -8,8 +8,11 @@
 
 #include "common/AdaptiveCencSampleDecrypter.h"
 #include "decrypters/IDecrypter.h"
+#include "utils/CryptoUtils.h"
 
+#include <cstdint>
 #include <map>
+#include <vector>
 
 class CClearKeyDecrypter;
 
@@ -24,40 +27,58 @@ public:
                                      const std::vector<uint8_t>& defaultKeyId,
                                      CClearKeyDecrypter* host);
   virtual ~CClearKeyCencSingleSampleDecrypter(){};
-  void AddSessionKey(const std::vector<uint8_t>& keyId);
+
   bool HasKeyId(const std::vector<uint8_t>& keyid);
-  virtual AP4_Result SetFragmentInfo(AP4_UI32 pool_id,
-                                     const std::vector<uint8_t>& key,
-                                     const AP4_UI08 nal_length_size,
-                                     AP4_DataBuffer& annexb_sps_pps,
+  virtual AP4_UI32 AddPool() override;
+  virtual void RemovePool(AP4_UI32 poolId) override;
+  virtual AP4_Result SetFragmentInfo(AP4_UI32 poolId,
+                                     const std::vector<uint8_t>& keyId,
+                                     const AP4_UI08 nalLengthSize,
+                                     AP4_DataBuffer& annexbSpsPps,
                                      AP4_UI32 flags,
-                                     CryptoInfo cryptoInfo) override
-  {
-    return AP4_SUCCESS;
-  }
-  virtual AP4_Result DecryptSampleData(AP4_UI32 pool_id,
-                                       AP4_DataBuffer& data_in,
-                                       AP4_DataBuffer& data_out,
+                                     CryptoInfo cryptoInfo) override;
+  virtual AP4_Result DecryptSampleData(AP4_UI32 poolId,
+                                       AP4_DataBuffer& dataIn,
+                                       AP4_DataBuffer& dataOut,
                                        const AP4_UI08* iv,
-                                       unsigned int subsample_count,
-                                       const AP4_UI16* bytes_of_cleartext_data,
-                                       const AP4_UI32* bytes_of_encrypted_data) override;
-  std::string CreateLicenseRequest(const std::vector<uint8_t>& defaultKeyId);
-  bool ParseLicenseResponse(std::string data);
+                                       unsigned int subsampleCount,
+                                       const AP4_UI16* bytesOfCleartextData,
+                                       const AP4_UI32* bytesOfEncryptedData) override;
   void SetDefaultKeyId(const std::vector<uint8_t>& keyId) override{};
   void AddKeyId(const std::vector<uint8_t>& keyId) override{};
-  bool HasKeys() { return !m_keyIds.empty(); }
+  bool HasKeys() { return !m_kidPairs.empty(); }
   std::string GetSessionId() override { return m_sessionId; }
 
 private:
-  void InitDecrypter(const std::vector<uint8_t>& defaultKeyId, const std::vector<uint8_t>& key);
+  void InitDecrypter();
+  std::string CreateLicenseRequest(const std::vector<uint8_t>& defaultKeyId);
+  bool MakeLicenseRequest(const std::string& url,
+                          const std::map<std::string, std::string>& headers,
+                          const std::vector<uint8_t>& kid,
+                          std::vector<uint8_t>& licenseData);
+  bool ParseLicenseResponse(const std::vector<uint8_t>& data);
 
-  AP4_CencSingleSampleDecrypter* m_singleSampleDecrypter{nullptr};
-  std::string m_strSession;
-  std::string m_licenceDefaultKeyId;
-  std::vector<std::vector<uint8_t>> m_keyIds;
-  std::map<std::string, std::string> m_keyPairs;
   CClearKeyDecrypter* m_host;
+
+  std::map<std::vector<uint8_t>, std::vector<uint8_t>> m_kidPairs; // KID - KEY pair
+
+  // \brief Fragment info
+  struct FINFO
+  {
+    std::vector<uint8_t> kid;
+    CryptoInfo cryptoInfo;
+  };
+
+  // \brief Decrypter pool info
+  struct PINFO
+  {
+    FINFO fInfo;
+    bool isChanged{false}; // If true, means FINFO has been updated with different encryption info from previous fragment
+    std::unique_ptr<AP4_CencSingleSampleDecrypter> decrypter;
+  };
+
+  // \brif Decrypter pool
+  std::map<AP4_UI32, PINFO> m_pool; // ID - Pool info
 
   std::string m_sessionId;
   static uint32_t g_sessionIdCount;
