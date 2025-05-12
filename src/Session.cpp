@@ -100,7 +100,7 @@ SResult SESSION::CSession::Initialize(std::string manifestUrl)
 
   CURL::HTTPResponse manifestResp;
   if (!CURL::DownloadFile(manifestUrl, manifestHeaders, {"etag", "last-modified"}, manifestResp))
-    return SResult::Error("Cannot download the manifest file.");
+    return SResult::Error(GUI::GetLocalizedString(30307));
 
   // The download speed with small file sizes is not accurate, we should download at least 512Kb
   // to have a sufficient acceptable value to calculate the bandwidth,
@@ -115,12 +115,18 @@ SResult SESSION::CSession::Initialize(std::string manifestUrl)
 
   m_adaptiveTree = PLAYLIST_FACTORY::CreateAdaptiveTree(manifestResp);
   if (!m_adaptiveTree)
-    return SResult::Error("Unable to determine type of manifest file.");
+  {
+    LOG::LogF(LOGERROR, "Unable to determine type of manifest file.");
+    return SResult::Error(GUI::GetLocalizedString(30308));
+  }
 
   m_adaptiveTree->Configure(m_reprChooser, kodiProps.GetManifestUpdParams());
 
   if (!m_adaptiveTree->Open(manifestResp.effectiveUrl, manifestResp.headers, manifestResp.data))
-    return SResult::Error("Cannot parse the manifest file.");
+  {
+    LOG::LogF(LOGERROR, "Cannot parse the manifest file.");
+    return SResult::Error(GUI::GetLocalizedString(30308));
+  }
 
   m_adaptiveTree->PostOpen();
   m_reprChooser->PostInit();
@@ -349,7 +355,7 @@ void SESSION::CSession::InitializePeriod()
   {
     LOG::LogF(LOGERROR,
               "No stream can be played, common causes: resolution limits or HDCP problem");
-    GUI::ErrorDialog("No stream can be played");
+    GUI::ErrorDialog(GUI::GetLocalizedString(30309));
   }
 }
 

@@ -51,14 +51,16 @@ SResult CreateDRM(std::string_view keySystem, std::shared_ptr<DRM::IDecrypter>& 
   std::string decrypterPath = CSrvBroker::GetSettings().GetDecrypterPath();
   if (decrypterPath.empty())
   {
-    return SResult::Error("Decrypter path not set in the add-on settings.");
+    LOG::LogF(LOGERROR, "No decrypter path set in the add-on settings");
+    return SResult::Error(GUI::GetLocalizedString(30302));
   }
 
   drm = DRM::FACTORY::GetDecrypter(KSToCryptoKeySystem(keySystem));
 
   if (!drm)
   {
-    return SResult::Error("Unable to create the DRM decrypter.");
+    LOG::LogF(LOGERROR, "Unable to create the DRM decrypter");
+    return SResult::Error(GUI::GetLocalizedString(30303));
   }
 
   drm->SetLibraryPath(decrypterPath);
@@ -66,7 +68,8 @@ SResult CreateDRM(std::string_view keySystem, std::shared_ptr<DRM::IDecrypter>& 
   if (!drm->Initialize())
   {
     drm = nullptr;
-    return SResult::Error("Unable to initialize the DRM decrypter.");
+    LOG::LogF(LOGERROR, "Unable to initialize the DRM decrypter");
+    return SResult::Error(GUI::GetLocalizedString(30303));
   }
 
   return SResultCode::OK;

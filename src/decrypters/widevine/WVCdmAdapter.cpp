@@ -14,6 +14,7 @@
 #include "cdm/debug.h"
 #include "decrypters/Helpers.h"
 #include "utils/FileUtils.h"
+#include "utils/GUIUtils.h"
 #include "utils/log.h"
 
 using namespace UTILS;
@@ -101,11 +102,11 @@ SResult CWVCdmAdapter::Initialize(const DRM::Config& config, CWVDecrypter* host)
   if (!cdmAdapter->LoadCDM())
   {
     LOG::Log(LOGERROR, "Unable to load widevine shared library (%s)", cdmPath.c_str());
-    return SResult::Error("Cannot load Widevine CDM.");
+    return SResult::Error(GUI::GetLocalizedString(30304));
   }
 
   if (!cdmAdapter->Initialize())
-    return SResult::Error("Cannot initialize Widevine CDM.");
+    return SResult::Error(GUI::GetLocalizedString(30305));
 
   const std::vector<uint8_t>& cert = m_config.license.serverCert;
   if (!cert.empty())
