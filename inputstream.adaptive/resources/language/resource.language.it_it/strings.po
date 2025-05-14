@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: translations@kodi.tv\n"
-"PO-Revision-Date: 2025-04-23 20:03+0000\n"
+"PO-Revision-Date: 2025-05-13 10:58+0000\n"
 "Last-Translator: Massimo Pissarello <mapi68@gmail.com>\n"
 "Language-Team: Italian <https://kodi.weblate.cloud/projects/kodi-add-ons-videoplayer-inputstream/inputstream-adaptive/it_it/>\n"
 "Language: it_it\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.11\n"
+"X-Generator: Weblate 5.11.3\n"
 
 msgctxt "Addon Summary"
 msgid "InputStream client for adaptive streams"
@@ -356,6 +356,38 @@ msgstr "Errore InputStream Adaptive"
 msgctxt "#30301"
 msgid "Unable to play the stream.{[CR]Error: {error-details}}"
 msgstr "Impossibile riprodurre il flusso.{[CR]Errore: {error-details}}"
+
+msgctxt "#30302"
+msgid "The decryptor path is not set in the add-on settings."
+msgstr "Nelle preferenze dell'add-on manca l'indicazione del percorso del decifratore."
+
+msgctxt "#30303"
+msgid "A problem occurred with the DRM decryptor."
+msgstr "Si è verificato un problema con il decifratore DRM."
+
+msgctxt "#30304"
+msgid "Cannot load Widevine CDM library."
+msgstr "Impossibile caricare la libreria Widevine CDM."
+
+msgctxt "#30305"
+msgid "Cannot initialize Widevine CDM library."
+msgstr "Impossibile inizializzare la libreria Widevine CDM."
+
+msgctxt "#30306"
+msgid "The configuration to play the stream is incomplete or missing."
+msgstr "La configurazione per riprodurre il flusso è incompleta o mancante."
+
+msgctxt "#30307"
+msgid "Cannot download the stream manifest file."
+msgstr "Impossibile scaricare il file manifest del flusso."
+
+msgctxt "#30308"
+msgid "A problem occurred in the stream initialization."
+msgstr "Si è verificato un problema durante l'inizializzazione del flusso."
+
+msgctxt "#30309"
+msgid "No audio/video stream can be played."
+msgstr "Non è possibile riprodurre alcun flusso audio/video."
 
 #~ msgctxt "#30232"
 #~ msgid "Video stream {codec} {quality}"

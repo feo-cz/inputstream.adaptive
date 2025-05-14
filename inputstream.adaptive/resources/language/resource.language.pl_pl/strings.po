@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: translations@kodi.tv\n"
-"PO-Revision-Date: 2025-04-22 14:12+0000\n"
+"PO-Revision-Date: 2025-05-12 12:02+0000\n"
 "Last-Translator: Marek Adamski <fevbew@wp.pl>\n"
 "Language-Team: Polish <https://kodi.weblate.cloud/projects/kodi-add-ons-videoplayer-inputstream/inputstream-adaptive/pl_pl/>\n"
 "Language: pl_pl\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Weblate 5.11\n"
+"X-Generator: Weblate 5.11.3\n"
 
 msgctxt "Addon Summary"
 msgid "InputStream client for adaptive streams"
@@ -356,6 +356,38 @@ msgstr "Błąd InputStream Adaptive"
 msgctxt "#30301"
 msgid "Unable to play the stream.{[CR]Error: {error-details}}"
 msgstr "Nie można odtworzyć strumienia.{[CR]Błąd: {error-details}}"
+
+msgctxt "#30302"
+msgid "The decryptor path is not set in the add-on settings."
+msgstr "Ścieżka deszyfratora nie jest ustawiona w ustawieniach dodatku."
+
+msgctxt "#30303"
+msgid "A problem occurred with the DRM decryptor."
+msgstr "Wystąpił problem z dekryptorem DRM."
+
+msgctxt "#30304"
+msgid "Cannot load Widevine CDM library."
+msgstr "Nie można załadować biblioteki CDM Widevine."
+
+msgctxt "#30305"
+msgid "Cannot initialize Widevine CDM library."
+msgstr "Nie można zainicjować biblioteki CDM Widevine."
+
+msgctxt "#30306"
+msgid "The configuration to play the stream is incomplete or missing."
+msgstr "Konfiguracja potrzebna do odtwarzania strumienia jest niekompletna lub jej brakuje."
+
+msgctxt "#30307"
+msgid "Cannot download the stream manifest file."
+msgstr "Nie można pobrać pliku manifestu strumienia."
+
+msgctxt "#30308"
+msgid "A problem occurred in the stream initialization."
+msgstr "Wystąpił problem podczas inicjalizacji strumienia."
+
+msgctxt "#30309"
+msgid "No audio/video stream can be played."
+msgstr "Nie można odtworzyć strumienia audio/wideo."
 
 #~ msgctxt "#30232"
 #~ msgid "Video stream {codec} {quality}"
