@@ -1,3 +1,6 @@
+v21.5.14 (2025-05-15)
+- Fix playback problem due to URLs containing dots on paths
+
 v21.5.13 (2025-05-04)
 - Fix crash with Widevine CDM 4.10.2891.0
 - [Widevine] Updated CDM interface
