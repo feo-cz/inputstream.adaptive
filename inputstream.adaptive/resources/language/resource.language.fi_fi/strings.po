@@ -357,6 +357,38 @@ msgctxt "#30301"
 msgid "Unable to play the stream.{[CR]Error: {error-details}}"
 msgstr ""
 
+msgctxt "#30302"
+msgid "The decryptor path is not set in the add-on settings."
+msgstr ""
+
+msgctxt "#30303"
+msgid "A problem occurred with the DRM decryptor."
+msgstr ""
+
+msgctxt "#30304"
+msgid "Cannot load Widevine CDM library."
+msgstr ""
+
+msgctxt "#30305"
+msgid "Cannot initialize Widevine CDM library."
+msgstr ""
+
+msgctxt "#30306"
+msgid "The configuration to play the stream is incomplete or missing."
+msgstr ""
+
+msgctxt "#30307"
+msgid "Cannot download the stream manifest file."
+msgstr ""
+
+msgctxt "#30308"
+msgid "A problem occurred in the stream initialization."
+msgstr ""
+
+msgctxt "#30309"
+msgid "No audio/video stream can be played."
+msgstr ""
+
 #~ msgctxt "#30232"
 #~ msgid "Video stream {codec} {quality}"
 #~ msgstr "Videovirta {codec} {quality}"
