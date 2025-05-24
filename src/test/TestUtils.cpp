@@ -44,10 +44,10 @@ TEST_F(UtilsTest, DetermineBaseDomain)
   EXPECT_EQ(URL::GetBaseDomain(url), "https://www.foo.bar");
 
   url = "https://www.foo.bar:1234";
-  EXPECT_EQ(URL::GetBaseDomain(url), "https://www.foo.bar");
+  EXPECT_EQ(URL::GetBaseDomain(url), "https://www.foo.bar:1234");
 
   url = "https://www.foo.bar:1234/mpd/test.mpd?ping=pong";
-  EXPECT_EQ(URL::GetBaseDomain(url), "https://www.foo.bar");
+  EXPECT_EQ(URL::GetBaseDomain(url), "https://www.foo.bar:1234");
 
   url = "https://www.foo.bar/example/smil:rtmp.smil/playlist.m3u8?ping=pong";
   EXPECT_EQ(URL::GetBaseDomain(url), "https://www.foo.bar");
