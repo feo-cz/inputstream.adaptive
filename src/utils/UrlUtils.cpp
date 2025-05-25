@@ -285,13 +285,9 @@ std::string UTILS::URL::GetBaseDomain(std::string url)
       return ""; // Not valid
 
     const size_t domainStartPos = schemeEndPos + 3;
-    const size_t portPos = url.find_first_of(':', domainStartPos);
     const size_t pathPos = url.find_first_of('/', domainStartPos);
 
-    size_t endPos = url.size();
-    if (portPos != std::string::npos && portPos < pathPos)
-      url.erase(portPos); // remove port number
-    else if (pathPos != std::string::npos)
+    if (pathPos != std::string::npos)
       url.erase(pathPos); // remove from slash
 
     return url;

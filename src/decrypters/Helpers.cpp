@@ -81,8 +81,19 @@ std::string DRM::GenerateUrlDomainHash(std::string_view url)
   // to avoid possible collisions, so we include the first directory path after the domain name
   // e.g. http://localhost:1234/addonservicename/other_dir/get_license?id=xyz
   // domain will result: http://localhost/addonservicename/
+  // The port number will be removed, since add-ons should use each time a different random
+  // port number to avoid conflicts with other add-ons and/or system services
   if (STRING::Contains(baseDomain, "127.0.0.1") || STRING::Contains(baseDomain, "localhost"))
   {
+    const size_t bdStartPos = baseDomain.find("://") + 3;
+    const size_t bdPortPos = baseDomain.find_first_of(':', bdStartPos);
+    if (bdPortPos != std::string::npos)
+    {
+      // Remove the port number
+      // e.g. "http://localhost:1234" will remove ":1234"
+      baseDomain.erase(bdPortPos);
+    }
+
     const size_t domainStartPos = url.find("://") + 3;
     const size_t pathStartPos = url.find_first_of('/', domainStartPos);
     if (pathStartPos != std::string::npos)
