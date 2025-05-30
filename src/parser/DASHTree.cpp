@@ -70,6 +70,8 @@ StreamType DetectStreamType(std::string_view contentType, std::string_view mimeT
 
 PLAYLIST::ContainerType DetectContainerType(std::string_view mimeType)
 {
+  if (STRING::Contains(mimeType, "/mp4"))
+    return ContainerType::MP4;
   if (STRING::Contains(mimeType, "/webm"))
     return ContainerType::WEBM;
   if (STRING::Contains(mimeType, "/x-matroska"))
@@ -77,7 +79,7 @@ PLAYLIST::ContainerType DetectContainerType(std::string_view mimeType)
   if (STRING::Contains(mimeType, "/ttml+xml") || STRING::Contains(mimeType, "vtt"))
     return ContainerType::TEXT;
 
-  return ContainerType::MP4;
+  return ContainerType::INVALID;
 }
 
 std::string DetectCodecFromMimeType(std::string_view mimeType)
