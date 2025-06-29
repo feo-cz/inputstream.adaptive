@@ -1271,6 +1271,19 @@ void adaptive::CHLSTree::ProcessEncryption(
     else if (encryptMethod == "SAMPLE-AES")
       drmInfo.cryptoMode = CryptoMode::AES_CBC;
   }
+  // FAIRPLAY (unsupported, added to test MP4 stream with Clearkey)
+  else if (STRING::CompareNoCase(keyFormat, "com.apple.streamingkeydelivery"))
+  {
+    DRM::DRMInfo& drmInfo = drmInfos[DRM::KS_FAIRPLAY]; // Create or update
+    drmInfo.keySystem = DRM::KS_FAIRPLAY;
+
+    // There is no DRM/Key management implementation
+
+    if (encryptMethod == "SAMPLE-AES-CTR")
+      drmInfo.cryptoMode = CryptoMode::AES_CTR;
+    else if (encryptMethod == "SAMPLE-AES")
+      drmInfo.cryptoMode = CryptoMode::AES_CBC;
+  }
   else // Unsupported encryption
   {
     LOG::LogF(LOGDEBUG, "Unsupported EXT-X-KEY keyformat \"%s\"", keyFormat.c_str());
