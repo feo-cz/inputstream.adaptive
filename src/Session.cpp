@@ -153,6 +153,9 @@ bool SESSION::CSession::CheckPlayableStreams(PLAYLIST::CPeriod* period)
 
   for (auto& adp : period->GetAdaptationSets())
   {
+    if (adp->GetStreamType() == StreamType::NOTYPE)
+      continue;
+
     for (auto& repr : adp->GetRepresentations())
     {
       //! @todo: Code changed, see todo below about: "Secure path on audio stream is not implemented"
