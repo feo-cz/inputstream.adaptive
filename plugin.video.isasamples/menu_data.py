@@ -512,8 +512,17 @@ menu_data = {
         },
         'HLS VOD with DRM': {
             MI_CONFIG: {},
+            'Ezdrm bunny [clear key, keys on property]': {
+                SI_ENCRYPT: 'DRMWV,DRMFP,CBCS',
+                SI_INFO: 'DRM config set to CK',
+                SI_CONFIG: {
+                    'manifest_url': 'https://drm-test-cf.softvelum.com/live_ezdrm/bunny/playlist.m3u8',
+                    'drm_legacy': 'org.w3.clearkey|5a08b1e4852211ea9758040199929001:d08231c901794b40563524383bd50bb4',
+                    'drm': '{"org.w3.clearkey": {"license": {"keyids": {"5a08b1e4852211ea9758040199929001": "d08231c901794b40563524383bd50bb4"}}}}',
+                }
+            },
             'Ezdrm bunny [multi-drm]': {
-                SI_ENCRYPT: 'DRMWV,DRMFP',
+                SI_ENCRYPT: 'DRMWV,DRMFP,CBCS',
                 SI_INFO: 'DRM config set to widevine',
                 SI_CONFIG: {
                     'manifest_url': 'https://drm-test-cf.softvelum.com/live_ezdrm/bunny/playlist.m3u8',

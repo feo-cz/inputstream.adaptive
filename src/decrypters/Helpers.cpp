@@ -115,6 +115,8 @@ std::string_view DRM::UrnToKeySystem(std::string_view urn)
     return KS_WISEPLAY;
   else if (urn == URN_CLEARKEY || urn == URN_COMMON)
     return KS_CLEARKEY;
+  else if (urn == URN_FAIRPLAY)
+    return KS_FAIRPLAY;
   else
     return "";
 }
@@ -129,6 +131,8 @@ std::string DRM::KeySystemToDrmName(std::string_view ks)
     return "wiseplay";
   else if (ks == KS_CLEARKEY)
     return "clearkey";
+  else if (ks == KS_FAIRPLAY)
+    return "fairplay";
   else
     return "unknown";
 }
@@ -143,6 +147,8 @@ const uint8_t* DRM::KeySystemToUUID(std::string_view ks)
     return ID_WISEPLAY;
   else if (ks == KS_CLEARKEY)
     return ID_CLEARKEY;
+  else if (ks == KS_FAIRPLAY)
+    return ID_FAIRPLAY;
   else
     return nullptr;
 }
@@ -157,6 +163,8 @@ std::string DRM::KeySystemToUUIDstr(std::string_view ks)
     return UUID_WISEPLAY.data();
   else if (ks == KS_CLEARKEY)
     return UUID_CLEARKEY.data();
+  else if (ks == KS_FAIRPLAY)
+    return UUID_FAIRPLAY.data();
   else
     return "unknown";
 }

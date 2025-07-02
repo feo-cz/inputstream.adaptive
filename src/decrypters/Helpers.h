@@ -22,6 +22,7 @@ constexpr std::string_view KS_WIDEVINE = "com.widevine.alpha";
 constexpr std::string_view KS_PLAYREADY = "com.microsoft.playready";
 constexpr std::string_view KS_WISEPLAY = "com.huawei.wiseplay";
 constexpr std::string_view KS_CLEARKEY = "org.w3.clearkey";
+constexpr std::string_view KS_FAIRPLAY = "com.apple.fairplay";
 
 // DRM UUIDs
 
@@ -30,12 +31,14 @@ constexpr std::string_view UUID_PLAYREADY = "9a04f079-9840-4286-ab92-e65be0885f9
 constexpr std::string_view UUID_WISEPLAY = "3d5e6d35-9b9a-41e8-b843-dd3c6e72c42c";
 constexpr std::string_view UUID_CLEARKEY = "e2719d58-a985-b3c9-781a-b030af78d30e";
 constexpr std::string_view UUID_COMMON = "1077efec-c0b2-4d02-ace3-3c1e52e2fb4b";
+constexpr std::string_view UUID_FAIRPLAY = "94ce86fb-07ff-4f43-adb8-93d2fa968ca2";
 
 constexpr std::string_view URN_WIDEVINE = "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed";
 constexpr std::string_view URN_PLAYREADY = "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95";
 constexpr std::string_view URN_WISEPLAY = "urn:uuid:3d5e6d35-9b9a-41e8-b843-dd3c6e72c42c";
 constexpr std::string_view URN_CLEARKEY = "urn:uuid:e2719d58-a985-b3c9-781a-b030af78d30e";
 constexpr std::string_view URN_COMMON = "urn:uuid:1077efec-c0b2-4d02-ace3-3c1e52e2fb4b";
+constexpr std::string_view URN_FAIRPLAY = "urn:uuid:94ce86fb-07ff-4f43-adb8-93d2fa968ca2";
 
 // DRM System ID's
 
@@ -47,6 +50,8 @@ constexpr uint8_t ID_WISEPLAY[16] = {0x3d, 0x5e, 0x6d, 0x35, 0x9b, 0x9a, 0x41, 0
                                      0xb8, 0x43, 0xdd, 0x3c, 0x6e, 0x72, 0xc4, 0x2c};
 constexpr uint8_t ID_CLEARKEY[16] = {0xe2, 0x71, 0x9d, 0x58, 0xa9, 0x85, 0xb3, 0xc9,
                                      0x78, 0x1a, 0xb0, 0x30, 0xaf, 0x78, 0xd3, 0x0e};
+constexpr uint8_t ID_FAIRPLAY[16] = {0x94, 0xce, 0x86, 0xfb, 0x07, 0xff, 0x4f, 0x43,
+                                     0xad, 0xb8, 0x93, 0xd2, 0xfa, 0x96, 0x8c, 0xa2};
 
 std::string KeySystemToDrmName(std::string_view ks);
 
