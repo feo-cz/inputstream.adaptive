@@ -309,6 +309,7 @@ void DRM::ParseWidevinePssh(const std::vector<uint8_t>& wvPsshData,
     {
       int length = ReadProtobufVarint(wvPsshData, offset);
       keyIds.emplace_back(wvPsshData.begin() + offset, wvPsshData.begin() + offset + length);
+      offset += length;
     }
     else // Skip other fields
     {
