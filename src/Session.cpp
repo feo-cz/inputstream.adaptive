@@ -705,7 +705,7 @@ void CSession::EnableStream(CStream* stream, bool enable)
 {
   if (enable)
   {
-    if (!m_timingStream)
+    if (!m_timingStream || stream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO)
       m_timingStream = stream;
 
     stream->m_isEnabled = true;
