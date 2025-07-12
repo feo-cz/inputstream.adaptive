@@ -40,8 +40,6 @@ using namespace UTILS;
  * - MPD-controlled live:
  *   - SegmentTemplate with segments, updates are sheduled to call OnUpdateSegments method to retrieve updated segments
  *   - SegmentTemplate without segments, InsertLiveSegment method will be called to add new segments, combined with sheduled updates
- * - Segment-controlled live:
- *   - SegmentTemplate without segments, demuxer parse the packets and calls InsertLiveFragment method to provide new segments
  */
 
 namespace
@@ -1944,50 +1942,4 @@ void adaptive::CDashTree::InsertLiveSegment(PLAYLIST::CPeriod* currPeriod,
   }
 
   UpdateTotalTime();
-}
-
-bool adaptive::CDashTree::InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
-                                             PLAYLIST::CRepresentation* repr,
-                                             uint64_t fTimestamp,
-                                             uint64_t fDuration,
-                                             uint32_t fTimescale)
-{
-  // MPD segment-controlled live should not have MPD@minimumUpdatePeriod
-  // since its expected to parse segments packets to extract updates
-  if (!m_isLive || !repr->HasSegmentTemplate() || m_minimumUpdatePeriod != NO_VALUE)
-    return false;
-
-  const CSegment* lastSeg = repr->Timeline().GetBack();
-  if (!lastSeg)
-    return false;
-
-  LOG::Log(LOGDEBUG, "Fragment info - timestamp: %llu, duration: %llu, timescale: %u", fTimestamp,
-           fDuration, fTimescale);
-
-  const uint64_t fStartPts =
-      static_cast<uint64_t>(static_cast<double>(fTimestamp) / fTimescale * repr->GetTimescale());
-
-  if (fStartPts <= lastSeg->startPTS_)
-    return false;
-
-  repr->expired_segments_++;
-
-  CSegment segCopy = *lastSeg;
-  const uint64_t duration =
-      static_cast<uint64_t>(static_cast<double>(fDuration) / fTimescale * repr->GetTimescale());
-
-  segCopy.startPTS_ = fStartPts;
-  segCopy.m_endPts = segCopy.startPTS_ + duration;
-  segCopy.m_time = segCopy.startPTS_;
-  segCopy.m_number++;
-
-  LOG::Log(LOGDEBUG, "Insert fragment to adaptation set \"%s\" (PTS: %llu, number: %llu)",
-           adpSet->GetId().c_str(), segCopy.startPTS_, segCopy.m_number);
-
-  for (auto& repr : adpSet->GetRepresentations())
-  {
-    repr->Timeline().Append(segCopy);
-  }
-
-  return true;
 }

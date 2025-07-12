@@ -47,12 +47,6 @@ public:
                                  PLAYLIST::CAdaptationSet* adpSet,
                                  PLAYLIST::CRepresentation* repr) override;
 
-  virtual bool InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
-                                  PLAYLIST::CRepresentation* repr,
-                                  uint64_t fTimestamp,
-                                  uint64_t fDuration,
-                                  uint32_t fTimescale) override;
-
 protected:
   virtual CDashTree* Clone() const override { return new CDashTree{*this}; }
 
