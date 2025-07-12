@@ -698,7 +698,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
             auto& pCurrAdp = m_currentPeriod->GetAdaptationSets()[adpSetPos];
             auto& pCurrRep = pCurrAdp->GetRepresentations()[reprPos];
             pCurrRep->Timeline().Clear();
-            pCurrRep->current_segment_ = nullptr;
+            pCurrRep->current_segment_.reset();
             LOG::Log(LOGDEBUG, "Clear outdated period of discontinuity %u",
                      itPeriod->get()->GetSequence());
           }
@@ -850,30 +850,26 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
 
   period->SetSequence(m_discontSeq + discontCount);
 
-  uint64_t totalTimeMs = 0;
-  if (discontCount > 0 || m_hasDiscontSeq)
-  {
-    if (adp->GetStreamType() != StreamType::SUBTITLE)
-    {
-      uint64_t periodDuration =
-          (rep->Timeline().GetDuration() * m_periods[discontCount]->GetTimescale()) /
-          rep->GetTimescale();
-      m_periods[discontCount]->SetDuration(periodDuration);
-      m_periods[discontCount]->SetTlDuration(periodDuration);
-    }
-
-    for (auto& p : m_periods)
-    {
-      totalTimeMs += p->GetDuration() * 1000 / p->GetTimescale();
-    }
-  }
-  else
-  {
-    totalTimeMs = rep->Timeline().GetDuration() * 1000 / rep->GetTimescale();
-  }
-
   if (adp->GetStreamType() != StreamType::SUBTITLE)
-    m_totalTime = totalTimeMs;
+  {
+    uint64_t periodDuration =
+        (rep->Timeline().GetDuration() * m_periods[discontCount]->GetTimescale()) /
+        rep->GetTimescale();
+
+    if (hasEndList)
+      m_periods[discontCount]->SetDuration(periodDuration);
+
+    m_periods[discontCount]->SetTlDuration(periodDuration);
+  }
+
+  uint64_t totalTimeMs{0};
+
+  for (auto& p : m_periods)
+  {
+    totalTimeMs += p->GetTlDuration() * 1000 / p->GetTimescale();
+  }
+
+  m_totalTime = totalTimeMs;
 
   return ParseStatus::SUCCESS;
 }
@@ -886,7 +882,7 @@ void adaptive::CHLSTree::PrepareSegments(PLAYLIST::CPeriod* period,
   if (segNumber == 0 || segNumber < rep->GetStartNumber() ||
       segNumber == SEGMENT_NO_NUMBER)
   {
-    rep->current_segment_ = nullptr;
+    rep->current_segment_.reset();
   }
   else
   {
@@ -896,7 +892,7 @@ void adaptive::CHLSTree::PrepareSegments(PLAYLIST::CPeriod* period,
     }
 
     rep->current_segment_ =
-        rep->Timeline().Get(static_cast<size_t>(segNumber - rep->GetStartNumber()));
+        *rep->Timeline().Get(static_cast<size_t>(segNumber - rep->GetStartNumber()));
   }
 
   //! @todo: m_currentPeriod != m_periods.back().get() condition should be removed from here

@@ -62,6 +62,8 @@ public:
   std::optional<CAesKeyInfo>& AESKeyInfo() { return m_aesKey; }
   const std::optional<CAesKeyInfo>& AESKeyInfo() const { return m_aesKey; }
 
+  bool IsSame(const CSegment& seg) const;
+
 private:
   bool m_isInitialization{false};
   std::optional<CAesKeyInfo> m_aesKey;
@@ -97,7 +99,14 @@ public:
    *        The search is done by number (if available) otherwise by PTS.
    * \return If found the segment pointer, otherwise nullptr.
    */
-  const CSegment* GetNext(const CSegment* seg) const;
+  const CSegment* GetNext(const CSegment& seg) const;
+
+  /*!
+   * \brief Get the segment preceding the specified one.
+   *        The search is done by number (if available) otherwise by PTS.
+   * \return If found the segment pointer, otherwise nullptr.
+   */
+  const CSegment* GetPrevious(const CSegment& seg) const;
 
   /*!
    * \brief Try find same/similar segment in the timeline.
@@ -107,11 +116,11 @@ public:
   const CSegment* Find(const CSegment& seg) const;
 
   /*!
-   * \brief Get index position of a segment pointer in the timeline.
-   * \param elem The segment pointer to get the position
+   * \brief Get index position of a segment in the timeline.
+   * \param elem The segment to get the position
    * \return The index position, or SEGMENT_NO_POS if not found
    */
-  const size_t GetPos(const CSegment* seg) const;
+  const size_t GetPos(const CSegment& seg) const;
 
   /*!
    * \brief Add a segment to the container.

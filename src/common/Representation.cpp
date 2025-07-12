@@ -95,19 +95,22 @@ void PLAYLIST::CRepresentation::CopyHLSData(const CRepresentation* other)
 
 const CSegment* PLAYLIST::CRepresentation::GetNextSegment()
 {
-  return m_segmentTimeline.GetNext(current_segment_);
+  if (current_segment_.has_value())
+    return m_segmentTimeline.GetNext(*current_segment_);
+  else
+    return m_segmentTimeline.GetFront();
 }
 
 const uint64_t PLAYLIST::CRepresentation::GetCurrentSegNumber() const
 {
-  return GetSegNumber(current_segment_);
+  if (current_segment_.has_value())
+    return GetSegNumber(*current_segment_);
+  else
+    return SEGMENT_NO_NUMBER;
 }
 
-const uint64_t PLAYLIST::CRepresentation::GetSegNumber(const CSegment* seg) const
+const uint64_t PLAYLIST::CRepresentation::GetSegNumber(const CSegment& seg) const
 {
-  if (!seg)
-    return SEGMENT_NO_NUMBER;
-
   const size_t segPos = m_segmentTimeline.GetPos(seg);
 
   if (segPos == SEGMENT_NO_POS)

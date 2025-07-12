@@ -331,7 +331,7 @@ public:
    */
   bool IsLastSegment(const PLAYLIST::CPeriod* segPeriod,
                      const PLAYLIST::CRepresentation* segRep,
-                     const PLAYLIST::CSegment* segment) const;
+                     std::optional<PLAYLIST::CSegment> segment) const;
 
 protected:
   /*!

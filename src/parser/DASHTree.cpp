@@ -1663,7 +1663,7 @@ void adaptive::CDashTree::OnUpdateSegments()
               continue;
             }
 
-            if (!repr->current_segment_) // Representation not used for playback yet
+            if (!repr->current_segment_.has_value()) // Representation not used for playback yet
             {
               repr->Timeline().Swap(updRepr->Timeline());
 
@@ -1717,7 +1717,7 @@ void adaptive::CDashTree::OnUpdateSegments()
             else
             {
               repr->Timeline().Swap(updRepr->Timeline());
-              repr->current_segment_ = foundSeg;
+              repr->current_segment_ = *foundSeg;
 
               // Update period duration
               if (adpSet->GetStreamType() == StreamType::VIDEO ||
@@ -1915,7 +1915,7 @@ void adaptive::CDashTree::InsertLiveSegment(PLAYLIST::CPeriod* currPeriod,
           // The period is outside the TSB so delete all segments,
           // this is the case of video resume from a long pause
           rep->Timeline().Clear();
-          rep->current_segment_ = nullptr;
+          rep->current_segment_.reset();
         }
 
         // Update period timeline duration

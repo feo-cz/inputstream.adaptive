@@ -170,7 +170,7 @@ public:
 
   size_t expired_segments_{0};
 
-  const CSegment* current_segment_{nullptr};
+  std::optional<CSegment> current_segment_;
 
   bool HasInitSegment() const { return m_initSegment.has_value(); }
   void SetInitSegment(CSegment initSegment) { m_initSegment = initSegment; }
@@ -192,7 +192,7 @@ public:
    * \brief Get the segment number of specified segment.
    * \return If found the number, otherwise SEGMENT_NO_NUMBER.
    */
-  const uint64_t GetSegNumber(const CSegment* seg) const;
+  const uint64_t GetSegNumber(const CSegment& seg) const;
 
   uint32_t timescale_ext_{0};
   uint32_t timescale_int_{0};
