@@ -141,3 +141,33 @@ void PLAYLIST::CSegContainer::Clear()
   m_duration = 0;
 }
 
+void PLAYLIST::CSegContainer::PruneToTime(uint64_t pts)
+{
+  while (!m_segments.empty())
+  {
+    const CSegment& segFront = m_segments.front();
+    if (segFront.startPTS_ < pts)
+    {
+      // LOG::LogF(LOGDEBUG, "Prune segment (Start PTS: %llu, number: %llu)", segFront.startPTS_,
+      //           segFront.m_number);
+
+      const uint64_t dur = segFront.m_endPts - segFront.startPTS_;
+
+      // pop_front ensure to not invalidate other segments references
+      m_segments.pop_front();
+
+      if (dur < m_duration)
+        m_duration -= dur;
+      else
+        m_duration = 0;
+
+      if (m_appendCount > 0)
+        --m_appendCount;
+    }
+    else
+    {
+      // Assumed segments are sorted by PTS, so stop here
+      break;
+    }
+  }
+}

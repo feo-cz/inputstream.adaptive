@@ -80,6 +80,7 @@ bool adaptive::CSmoothTree::ParseManifest(const std::string& data)
   period->SetTimescale(XML::GetAttribUint32(nodeSSM, "TimeScale", 10000000));
 
   period->SetDuration(XML::GetAttribUint64(nodeSSM, "Duration"));
+  period->SetTlDuration(XML::GetAttribUint64(nodeSSM, "Duration"));
 
   if (STRING::CompareNoCase(XML::GetAttrib(nodeSSM, "IsLive"), "true"))
   {

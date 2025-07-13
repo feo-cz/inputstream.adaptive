@@ -65,7 +65,18 @@ public:
    * \brief Set the duration, in timescale units.
    */
   void SetDuration(uint64_t duration) { m_duration = duration; }
-  
+
+  /*!
+   * \brief Get the timeline duration (constantly updated for live stream), in timescale units.
+   * \return The duration value.
+   */
+  uint64_t GetTlDuration() const { return m_tlDuration; }
+
+  /*!
+   * \brief Set the timeline duration, in timescale units.
+   */
+  void SetTlDuration(uint64_t duration) { m_tlDuration = duration; }
+
   /*!
    * \brief Get the timescale unit.
    * \return The timescale unit, if not set default value is 1000.
@@ -92,6 +103,14 @@ public:
   void AddAdaptationSet(std::unique_ptr<CAdaptationSet>& adaptationSet);
   std::vector<std::unique_ptr<CAdaptationSet>>& GetAdaptationSets() { return m_adaptationSets; }
 
+  /*!
+   * \brief Determines whether the period is within the specified PTS range.
+   * \param ptsMs The PTS in ms
+   * \return True when within the specified PTS or true when the
+   *         period duration in unknown, otherwise false.
+   */
+  bool IsInRange(uint64_t ptsMs) const;
+
   // Make use of PLAYLIST::StreamType flags
   uint32_t m_includedStreamType{0}; //! @todo: part of this need a rework
 
@@ -104,6 +123,7 @@ protected:
   uint32_t m_sequence{0};
   uint64_t m_start{NO_VALUE};
   uint64_t m_duration{0};
+  uint64_t m_tlDuration{0};
 
   std::optional<bool> m_isSecureDecoderNeeded;
   std::vector<uint32_t> m_segmentTimelineDuration;

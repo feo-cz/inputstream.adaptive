@@ -742,13 +742,12 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
 
         period->SetSequence(m_discontSeq + discontCount);
 
-        rep->SetDuration(newSegments.GetDuration());
-
         if (adp->GetStreamType() != StreamType::SUBTITLE)
         {
           uint64_t periodDuration =
-              (rep->GetDuration() * period->GetTimescale()) / rep->GetTimescale();
+              (newSegments.GetDuration() * period->GetTimescale()) / rep->GetTimescale();
           period->SetDuration(periodDuration);
+          period->SetTlDuration(periodDuration);
         }
 
         FreeSegments(rep);
@@ -849,11 +848,6 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
   rep->Timeline().Swap(newSegments);
   rep->SetStartNumber(mediaSequenceNbr);
 
-  uint64_t reprDur{0};
-  if (rep->Timeline().Get(0))
-    reprDur = rep->Timeline().GetBack()->m_endPts - rep->Timeline().GetFront()->startPTS_;
-
-  rep->SetDuration(reprDur);
   period->SetSequence(m_discontSeq + discontCount);
 
   uint64_t totalTimeMs = 0;
@@ -862,8 +856,10 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
     if (adp->GetStreamType() != StreamType::SUBTITLE)
     {
       uint64_t periodDuration =
-          (rep->GetDuration() * m_periods[discontCount]->GetTimescale()) / rep->GetTimescale();
+          (rep->Timeline().GetDuration() * m_periods[discontCount]->GetTimescale()) /
+          rep->GetTimescale();
       m_periods[discontCount]->SetDuration(periodDuration);
+      m_periods[discontCount]->SetTlDuration(periodDuration);
     }
 
     for (auto& p : m_periods)
@@ -873,7 +869,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
   }
   else
   {
-    totalTimeMs = rep->GetDuration() * 1000 / rep->GetTimescale();
+    totalTimeMs = rep->Timeline().GetDuration() * 1000 / rep->GetTimescale();
   }
 
   if (adp->GetStreamType() != StreamType::SUBTITLE)

@@ -163,6 +163,13 @@ public:
   std::deque<CSegment>::const_reverse_iterator rbegin() const { return m_segments.rbegin(); }
   std::deque<CSegment>::const_reverse_iterator rend() const { return m_segments.rend(); }
 
+  /*!
+   * \brief Prune all segments that have start PTS lower than the specified one
+   *        (expected timeline ordered by PTS, since sequential verification stops at the first match).
+   * \param ts The PTS, in timescale units
+   */
+  void PruneToTime(uint64_t pts);
+
 private:
   // Has been used std::deque because there are uses of pointer references
   // deque container keeps memory addresses even if the container size increases (no reallocations)

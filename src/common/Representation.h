@@ -121,17 +121,6 @@ public:
   void SetStartNumber(uint64_t startNumber) { m_startNumber = startNumber; }
 
   /*!
-   * \brief Get the duration, in timescale units.
-   * \return The duration value.
-   */
-  uint64_t GetDuration() const { return m_duration; }
-
-  /*!
-   * \brief Set the duration, in timescale units.
-   */
-  void SetDuration(uint64_t duration) { m_duration = duration; }
-
-  /*!
    * \brief Get the timescale unit.
    * \return The timescale unit, otherwise 0 if not set.
    */
@@ -237,7 +226,6 @@ protected:
 
   CSegContainer m_segmentTimeline;
 
-  uint64_t m_duration{0};
   uint32_t m_timescale{0};
 
   bool m_isSubtitleFileStream{false};

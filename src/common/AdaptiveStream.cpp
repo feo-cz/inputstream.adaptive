@@ -469,7 +469,6 @@ bool AdaptiveStream::parseIndexRange(PLAYLIST::CRepresentation* rep,
         rep->Timeline().Add(seg);
       }
 
-      rep->SetDuration(rep->Timeline().GetDuration());
       return true;
     }
   }
@@ -566,7 +565,21 @@ bool AdaptiveStream::parseIndexRange(PLAYLIST::CRepresentation* rep,
       rep->SetInitSegment(initSeg);
     }
 
-    rep->SetDuration(rep->Timeline().GetDuration());
+    // Update period timeline duration
+    if (!rep->HasSegmentBase() && current_adp_->GetStreamType() == StreamType::VIDEO ||
+        current_adp_->GetStreamType() == StreamType::AUDIO)
+    {
+      if (rep->GetTimescale() == 0)
+      {
+        LOG::LogF(LOGERROR, "Cannot calculate timeline duration, missing timescale attribute");
+      }
+      else
+      {
+        const uint64_t tlDuration =
+            rep->Timeline().GetDuration() * current_period_->GetTimescale() / rep->GetTimescale();
+        current_period_->SetTlDuration(tlDuration);
+      }
+    }
 
     return true;
   }
@@ -849,29 +862,6 @@ bool AdaptiveStream::ensureSegment()
     else
       nextSegment = current_rep_->GetNextSegment();
 
-    if (!nextSegment && (m_tree->HasManifestUpdates() || m_tree->HasManifestUpdatesSegs()) &&
-        !m_tree->IsLastSegment(current_period_, current_rep_, current_rep_->current_segment_))
-    {
-      // Ensure to add a new segment only when the last one in the buffer has been consumed
-      if (available_segment_buffers_ == 0)
-      {
-        if (m_tree->InsertLiveSegment(getPeriod(), getAdaptationSet(), getRepresentation(),
-                                      getSegmentPos()))
-        {
-          //! @todo: seem to be possible get the segment from InsertLiveSegment and then avoid call get_next_segment
-          nextSegment = current_rep_->GetNextSegment();
-        }
-
-        if (!nextSegment && !current_rep_->IsWaitForSegment())
-        {
-          current_rep_->SetIsWaitForSegment(true);
-          LOG::LogF(LOGDEBUG, "[AS-%u] Begin WaitForSegment stream rep. id \"%s\" period id \"%s\"",
-                    clsId, current_rep_->GetId().c_str(), current_period_->GetId().c_str());
-          return false;
-        }
-      }
-    }
-
     if (nextSegment)
     {
       currentPTSOffset_ =
@@ -976,6 +966,16 @@ bool AdaptiveStream::ensureSegment()
           observer_->OnStreamChange(this);
         return false;
       }
+    }
+    else if (!m_tree->IsLastSegment(current_period_, current_rep_, current_rep_->current_segment_))
+    {
+      if (available_segment_buffers_ == 0 && !current_rep_->IsWaitForSegment())
+      {
+        current_rep_->SetIsWaitForSegment(true);
+        LOG::LogF(LOGDEBUG, "[AS-%u] Begin WaitForSegment stream rep. id \"%s\" period id \"%s\"",
+                  clsId, current_rep_->GetId().c_str(), current_period_->GetId().c_str());
+      }
+      return false;
     }
     else if (current_rep_->IsWaitForSegment() &&
              (m_tree->HasManifestUpdates() || m_tree->HasManifestUpdatesSegs()))
@@ -1200,7 +1200,7 @@ bool AdaptiveStream::seek_time(double seek_seconds, bool preceeding, bool& needR
       return false;
     }
 
-    if (sec_in_ts < current_rep_->Timeline().Get(0)->startPTS_ + current_rep_->GetDuration())
+    if (sec_in_ts < current_rep_->Timeline().Get(0)->startPTS_ + current_rep_->Timeline().GetDuration())
       --choosen_seg;
     else
       return false;
@@ -1258,9 +1258,14 @@ size_t adaptive::AdaptiveStream::getSegmentPos()
 
 bool AdaptiveStream::waitingForSegment() const
 {
-  if ((m_tree->HasManifestUpdates() || m_tree->HasManifestUpdatesSegs()) && state_ == RUNNING)
+  if (m_tree->IsLive() && state_ == RUNNING)
   {
     std::lock_guard<adaptive::AdaptiveTree::TreeUpdateThread> lckUpdTree(m_tree->GetTreeUpdMutex());
+
+    // Some manifests require segments to be generated and managed by the client
+    // so they are not provided by the server through periodic manifest updates
+    m_tree->InsertLiveSegment(current_period_, current_adp_, current_rep_);
+
     // Although IsWaitForSegment may be true, do not anticipate the wait for segments
     // if there are still segments in the buffer that can be read and/or downloaded
     return current_rep_ && current_rep_->IsWaitForSegment() && available_segment_buffers_ == 0;

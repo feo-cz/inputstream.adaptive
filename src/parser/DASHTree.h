@@ -43,10 +43,9 @@ public:
                     const std::map<std::string, std::string>& headers,
                     const std::string& data) override;
 
-  virtual bool InsertLiveSegment(PLAYLIST::CPeriod* period,
+  virtual void InsertLiveSegment(PLAYLIST::CPeriod* period,
                                  PLAYLIST::CAdaptationSet* adpSet,
-                                 PLAYLIST::CRepresentation* repr,
-                                 size_t pos) override;
+                                 PLAYLIST::CRepresentation* repr) override;
 
   virtual bool InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
                                   PLAYLIST::CRepresentation* repr,
@@ -108,6 +107,15 @@ protected:
 
   virtual void OnUpdateSegments() override;
 
+  void GenerateTemplatedSegments(PLAYLIST::CSegmentTemplate& segTemplate,
+                                 const uint64_t periodStartMs,
+                                 const uint64_t periodDurMs,
+                                 const uint64_t segNumberEnd,
+                                 PLAYLIST::CSegContainer& timeline,
+                                 const uint64_t nowMs);
+
+  void UpdateTotalTime();
+
   // The lower start number of segments
   uint64_t m_segmentsLowerStartNumber{0};
 
@@ -117,9 +125,14 @@ protected:
   uint32_t m_periodCurrentSeq{0};
 
   uint64_t m_timeShiftBufferDepth{0}; // MPD Timeshift buffer attribute value, in ms
+  uint64_t m_tsbLimited{0}; // Timeshift buffer for templated representations (max value limited), in ms
+
   uint64_t m_mediaPresDuration{0}; // MPD Media presentation duration attribute value, in ms (may be not provided)
 
   uint64_t m_minimumUpdatePeriod{PLAYLIST::NO_VALUE}; // in seconds, NO_VALUE if not set
   std::optional<int64_t> m_clockOffset; // Clock offset in ms, based on UTCTiming element
+
+  // The time point when the last live "insert segment update" has been called
+  mutable std::chrono::time_point<std::chrono::steady_clock> m_insertLiveSegUpdate{};
 };
 } // namespace adaptive

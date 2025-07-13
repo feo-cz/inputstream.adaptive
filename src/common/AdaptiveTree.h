@@ -180,14 +180,11 @@ public:
    * \param period Current period
    * \param adpSet Current adaptation set
    * \param repr Current representation
-   * \param pos Current segment position
    */
-  virtual bool InsertLiveSegment(PLAYLIST::CPeriod* period,
+  virtual void InsertLiveSegment(PLAYLIST::CPeriod* period,
                                  PLAYLIST::CAdaptationSet* adpSet,
-                                 PLAYLIST::CRepresentation* repr,
-                                 size_t pos)
+                                 PLAYLIST::CRepresentation* repr)
   {
-    return false;
   }
 
   /*!
