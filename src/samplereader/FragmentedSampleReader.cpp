@@ -255,6 +255,7 @@ bool CFragmentedSampleReader::GetInformation(kodi::addon::InputstreamInfo& info)
   if (m_codecHandler->CheckExtraData(
       extraData, (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED) != 0))
   {
+    m_codecHandler->m_extraData.SetData(extraData.data(), static_cast<AP4_Size>(extraData.size()));
     info.SetExtraData(extraData);
     isChanged = true;
   }
