@@ -106,7 +106,7 @@ public:
   /*! \brief Get the total time in ms of the stream
    *  \return The total time in ms of the stream
    */
-  uint64_t GetTotalTimeMs() const { return m_adaptiveTree->m_totalTime; };
+  uint64_t GetTotalTimeMs() const;
 
   /*! \brief Get the elapsed time in ms of the stream including all chapters
    *  \return The elapsed time in ms of the stream including all chapters

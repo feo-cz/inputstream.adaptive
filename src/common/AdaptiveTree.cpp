@@ -105,7 +105,7 @@ namespace adaptive
   void AdaptiveTree::FreeSegments(CRepresentation* repr)
   {
     repr->Timeline().Clear();
-    repr->current_segment_ = nullptr;
+    repr->current_segment_.reset();
   }
 
   void AdaptiveTree::OnDataArrived(uint64_t segNum,
@@ -144,20 +144,16 @@ namespace adaptive
 
   bool AdaptiveTree::IsLastSegment(const PLAYLIST::CPeriod* segPeriod,
                                    const PLAYLIST::CRepresentation* segRep,
-                                   const PLAYLIST::CSegment* segment) const
+                                   std::optional<PLAYLIST::CSegment> segment) const
   {
     if (segRep->Timeline().IsEmpty())
       return true;
 
-    if (!segment || !segPeriod || !segRep)
+    if (!segment.has_value() || !segPeriod || !segRep)
       return false;
 
     if (IsLive())
     {
-      // Assume that if the period is the last, it never ends until segments can no longer be downloaded
-      if (m_periods.back().get() == segPeriod)
-        return false;
-
       if (segPeriod->GetDuration() > 0 && segPeriod->GetStart() != NO_VALUE)
       {
         const uint64_t pDurMs = segPeriod->GetDuration() * 1000 / segPeriod->GetTimescale();
@@ -173,8 +169,8 @@ namespace adaptive
     }
     else
     {
-      const CSegment* lastSeg = segRep->Timeline().GetBack();
-      return segment == lastSeg;
+      const CSegment& lastSeg = *segRep->Timeline().GetBack();
+      return segment->IsSame(lastSeg);
     }
     return false;
   }

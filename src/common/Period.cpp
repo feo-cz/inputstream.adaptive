@@ -42,3 +42,17 @@ void PLAYLIST::CPeriod::AddAdaptationSet(std::unique_ptr<CAdaptationSet>& adapta
 {
   m_adaptationSets.push_back(std::move(adaptationSet));
 }
+
+bool PLAYLIST::CPeriod::IsInRange(uint64_t ptsMs) const
+{
+  const uint64_t periodDurMs = m_duration * 1000 / m_timescale;
+
+  uint64_t periodEndMs{NO_PTS_VALUE};
+  if (periodDurMs != 0)
+  {
+    const uint64_t start = m_start == NO_VALUE ? 0 : m_start;
+    periodEndMs = start + periodDurMs;
+  }
+
+  return periodEndMs == NO_PTS_VALUE || periodEndMs > ptsMs;
+}

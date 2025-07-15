@@ -705,7 +705,7 @@ void CSession::EnableStream(CStream* stream, bool enable)
 {
   if (enable)
   {
-    if (!m_timingStream)
+    if (!m_timingStream || stream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO)
       m_timingStream = stream;
 
     stream->m_isEnabled = true;
@@ -717,6 +717,15 @@ void CSession::EnableStream(CStream* stream, bool enable)
 
     stream->Disable();
   }
+}
+
+uint64_t SESSION::CSession::GetTotalTimeMs() const
+{
+  // In live streaming do not take into account the live delay duration, because its not seekable
+  if (m_adaptiveTree->IsLive() && m_adaptiveTree->m_totalTime > m_adaptiveTree->m_liveDelay * 1000)
+    return m_adaptiveTree->m_totalTime - m_adaptiveTree->m_liveDelay * 1000;
+  else
+    return m_adaptiveTree->m_totalTime;
 }
 
 uint64_t SESSION::CSession::PTSToElapsed(uint64_t pts)
@@ -877,7 +886,7 @@ bool SESSION::CSession::SeekTime(double seekTime, unsigned int streamId, bool pr
 
   for (; pi != m_adaptiveTree->m_periods.cend(); pi++)
   {
-    chapterTime += double((*pi)->GetDuration()) / (*pi)->GetTimescale();
+    chapterTime += double((*pi)->GetTlDuration()) / (*pi)->GetTimescale();
     if (chapterTime > seekTime)
       break;
   }
@@ -885,7 +894,7 @@ bool SESSION::CSession::SeekTime(double seekTime, unsigned int streamId, bool pr
   if (pi == m_adaptiveTree->m_periods.cend())
     --pi;
 
-  chapterTime -= double((*pi)->GetDuration()) / (*pi)->GetTimescale();
+  chapterTime -= double((*pi)->GetTlDuration()) / (*pi)->GetTimescale();
 
   if ((*pi).get() != m_adaptiveTree->m_currentPeriod)
   {
@@ -1125,7 +1134,7 @@ int64_t SESSION::CSession::GetChapterPos(int ch) const
 
   for (; ch; --ch)
   {
-    sum += (m_adaptiveTree->m_periods[ch - 1]->GetDuration() * STREAM_TIME_BASE) /
+    sum += (m_adaptiveTree->m_periods[ch - 1]->GetTlDuration() * STREAM_TIME_BASE) /
            m_adaptiveTree->m_periods[ch - 1]->GetTimescale();
   }
 
@@ -1140,7 +1149,7 @@ uint64_t SESSION::CSession::GetChapterStartTime() const
     if (p.get() == m_adaptiveTree->m_currentPeriod)
       break;
     else
-      start_time += (p->GetDuration() * STREAM_TIME_BASE) / p->GetTimescale();
+      start_time += (p->GetTlDuration() * STREAM_TIME_BASE) / p->GetTimescale();
   }
   return start_time;
 }

@@ -80,7 +80,7 @@ enum class EVENT_TYPE
     *   the buffer
     * \param newSegment The new segment
     */
-    void ResetCurrentSegment(const PLAYLIST::CSegment* newSegment);
+    void ResetCurrentSegment(const PLAYLIST::CSegment& newSegment);
 
     // Return the AP4_Track::Type based on current adaptation stream type
     int GetTrackType() const;
@@ -119,7 +119,7 @@ enum class EVENT_TYPE
     PLAYLIST::CPeriod* getPeriod() { return current_period_; };
     PLAYLIST::CAdaptationSet* getAdaptationSet() { return current_adp_; };
     PLAYLIST::CRepresentation* getRepresentation() { return current_rep_; };
-    size_t getSegmentPos();
+
     uint64_t GetCurrentPTSOffset() { return currentPTSOffset_; };
     uint64_t GetAbsolutePTSOffset() { return absolutePTSOffset_; };
     bool waitingForSegment() const;
@@ -211,7 +211,7 @@ enum class EVENT_TYPE
                          const PLAYLIST::CSegment& seg,
                          DownloadInfo& downloadInfo);
 
-    void ResetSegment(const PLAYLIST::CSegment* segment);
+    void ResetSegment(const PLAYLIST::CSegment& segment);
     void ResetActiveBuffer(bool oneValid);
     /*!
      * \brief Wait for download in progress is completed, then stop the worker

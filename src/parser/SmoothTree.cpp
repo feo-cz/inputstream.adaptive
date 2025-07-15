@@ -79,13 +79,16 @@ bool adaptive::CSmoothTree::ParseManifest(const std::string& data)
   // Default frequency 10000000 (10Khz)
   period->SetTimescale(XML::GetAttribUint32(nodeSSM, "TimeScale", 10000000));
 
-  period->SetDuration(XML::GetAttribUint64(nodeSSM, "Duration"));
-
   if (STRING::CompareNoCase(XML::GetAttrib(nodeSSM, "IsLive"), "true"))
   {
     m_isLive = true;
     available_time_ = stream_start_;
   }
+
+  if (!m_isLive)
+    period->SetDuration(XML::GetAttribUint64(nodeSSM, "Duration"));
+
+  period->SetTlDuration(XML::GetAttribUint64(nodeSSM, "Duration"));
 
   m_totalTime = period->GetDuration() * 1000 / period->GetTimescale();
 

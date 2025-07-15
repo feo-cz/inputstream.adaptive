@@ -9,6 +9,8 @@
 #include "Segment.h"
 #include "utils/log.h"
 
+#include <ranges>
+
 using namespace PLAYLIST;
 
 const CSegment* PLAYLIST::CSegContainer::Get(size_t pos) const
@@ -41,17 +43,17 @@ const CSegment* PLAYLIST::CSegContainer::GetFront() const
   return &m_segments.front();
 }
 
-const CSegment* PLAYLIST::CSegContainer::GetNext(const CSegment* seg) const
+const CSegment* PLAYLIST::CSegContainer::GetNext(const CSegment& seg) const
 {
-  if (!seg || seg->IsInitialization())
+  if (seg.IsInitialization())
     return GetFront();
 
   // If available, find the segment by number, this is because some
   // live services provide inconsistent timestamps between manifest updates
   // which will make it ineffective to find the next segment
-  if (seg->m_number != SEGMENT_NO_NUMBER)
+  if (seg.m_number != SEGMENT_NO_NUMBER)
   {
-    const uint64_t number = seg->m_number;
+    const uint64_t number = seg.m_number;
 
     for (const CSegment& segment : m_segments)
     {
@@ -61,11 +63,42 @@ const CSegment* PLAYLIST::CSegContainer::GetNext(const CSegment* seg) const
   }
   else
   {
-    const uint64_t startPTS = seg->startPTS_;
+    const uint64_t startPTS = seg.startPTS_;
 
     for (const CSegment& segment : m_segments)
     {
       if (segment.startPTS_ > startPTS)
+        return &segment;
+    }
+  }
+  return nullptr;
+}
+
+const CSegment* PLAYLIST::CSegContainer::GetPrevious(const CSegment& seg) const
+{
+  if (seg.IsInitialization())
+    return GetFront();
+
+  // If available, find the segment by number, this is because some
+  // live services provide inconsistent timestamps between manifest updates
+  // which will make it ineffective to find the next segment
+  if (seg.m_number != SEGMENT_NO_NUMBER)
+  {
+    const uint64_t number = seg.m_number;
+
+    for (const CSegment& segment : m_segments | std::views::reverse)
+    {
+      if (segment.m_number < number)
+        return &segment;
+    }
+  }
+  else
+  {
+    const uint64_t startPTS = seg.startPTS_;
+
+    for (const CSegment& segment : m_segments | std::views::reverse)
+    {
+      if (segment.startPTS_ < startPTS)
         return &segment;
     }
   }
@@ -103,11 +136,11 @@ const CSegment* PLAYLIST::CSegContainer::Find(const CSegment& seg) const
   return nullptr;
 }
 
-const size_t PLAYLIST::CSegContainer::GetPos(const CSegment* seg) const
+const size_t PLAYLIST::CSegContainer::GetPos(const CSegment& seg) const
 {
   for (size_t i = 0; i < m_segments.size(); ++i)
   {
-    if (&m_segments[i] == seg)
+    if (m_segments[i].IsSame(seg))
       return i;
   }
 
@@ -141,3 +174,40 @@ void PLAYLIST::CSegContainer::Clear()
   m_duration = 0;
 }
 
+void PLAYLIST::CSegContainer::PruneToTime(uint64_t pts)
+{
+  while (!m_segments.empty())
+  {
+    const CSegment& segFront = m_segments.front();
+    if (segFront.startPTS_ < pts)
+    {
+      // LOG::LogF(LOGDEBUG, "Prune segment (Start PTS: %llu, number: %llu)", segFront.startPTS_,
+      //           segFront.m_number);
+
+      const uint64_t dur = segFront.m_endPts - segFront.startPTS_;
+
+      // pop_front ensure to not invalidate other segments references
+      m_segments.pop_front();
+
+      if (dur < m_duration)
+        m_duration -= dur;
+      else
+        m_duration = 0;
+
+      if (m_appendCount > 0)
+        --m_appendCount;
+    }
+    else
+    {
+      // Assumed segments are sorted by PTS, so stop here
+      break;
+    }
+  }
+}
+
+bool PLAYLIST::CSegment::IsSame(const CSegment& other) const
+{
+  return m_isInitialization == other.m_isInitialization && startPTS_ == other.startPTS_ &&
+         m_endPts == other.m_endPts && m_time == other.m_time && m_number == other.m_number &&
+         range_begin_ == other.range_begin_ && range_end_ == other.range_end_;
+}
