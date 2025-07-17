@@ -8,10 +8,12 @@
 
 #include "WebVTTCodecHandler.h"
 
+#include <array>
+
 namespace
 {
-constexpr AP4_Byte EXTRADATA_FILE[4] = {'f', 'i', 'l', 'e'};
-constexpr AP4_Byte EXTRADATA_FMP4[4] = {'f', 'm', 'p', '4'};
+constexpr std::array<uint8_t, 4> EXTRADATA_FILE = {'f', 'i', 'l', 'e'};
+constexpr std::array<uint8_t, 4> EXTRADATA_FMP4 = {'f', 'm', 'p', '4'};
 } // namespace
 
 WebVTTCodecHandler::WebVTTCodecHandler(AP4_SampleDescription* sd, bool asFile)
@@ -21,12 +23,12 @@ WebVTTCodecHandler::WebVTTCodecHandler(AP4_SampleDescription* sd, bool asFile)
   if (asFile)
   {
     // Inform Kodi subtitle parser that we process the data as single file
-    m_extraData.SetData(reinterpret_cast<const AP4_Byte*>(&EXTRADATA_FILE), 4);
+    m_extraData.assign(EXTRADATA_FILE.cbegin(), EXTRADATA_FILE.cend());
   }
   else if (sd) // WebVTT ISOBMFF format type (ISO/IEC 14496-30:2014)
   {
     // Inform Kodi subtitle parser that we process data as ISOBMFF format type
-    m_extraData.SetData(reinterpret_cast<const AP4_Byte*>(&EXTRADATA_FMP4), 4);
+    m_extraData.assign(EXTRADATA_FMP4.cbegin(), EXTRADATA_FMP4.cend());
   }
 };
 

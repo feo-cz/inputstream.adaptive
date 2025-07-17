@@ -18,7 +18,10 @@ VP9CodecHandler::VP9CodecHandler(AP4_SampleDescription* sd) : CodecHandler(sd)
   {
     AP4_VpccAtom* vpcc(AP4_DYNAMIC_CAST(AP4_VpccAtom, atom));
     if (vpcc)
-      m_extraData.SetData(vpcc->GetData().GetData(), vpcc->GetData().GetDataSize());
+    {
+      const AP4_DataBuffer& vpccData = vpcc->GetData();
+      m_extraData.assign(vpccData.GetData(), vpccData.GetData() + vpccData.GetDataSize());
+    }
   }
 }
 

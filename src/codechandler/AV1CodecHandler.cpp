@@ -36,7 +36,7 @@ AV1CodecHandler::AV1CodecHandler(AP4_SampleDescription* sd)
       }
 
       const AP4_DataBuffer& obus{av1c->GetConfigObus()};
-      m_extraData.SetData(obus.GetData(), obus.GetDataSize());
+      m_extraData.assign(obus.GetData(), obus.GetData() + obus.GetDataSize());
     }
   }
 }

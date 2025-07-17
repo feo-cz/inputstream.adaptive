@@ -212,12 +212,11 @@ void CSubtitleSampleReader::Reset(bool bEOS)
 
 bool CSubtitleSampleReader::GetInformation(kodi::addon::InputstreamInfo& info)
 {
-  if (m_codecHandler->m_extraData.GetDataSize() &&
-      !info.CompareExtraData(m_codecHandler->m_extraData.GetData(),
-                             m_codecHandler->m_extraData.GetDataSize()))
+  if (!m_codecHandler->m_extraData.empty() &&
+      !info.CompareExtraData(m_codecHandler->m_extraData.data(),
+                             m_codecHandler->m_extraData.size()))
   {
-    info.SetExtraData(m_codecHandler->m_extraData.GetData(),
-                      m_codecHandler->m_extraData.GetDataSize());
+    info.SetExtraData(m_codecHandler->m_extraData);
     return true;
   }
   return false;

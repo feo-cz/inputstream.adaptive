@@ -242,12 +242,11 @@ bool CFragmentedSampleReader::GetInformation(kodi::addon::InputstreamInfo& info)
   // Note: when a manifest provides extradata, it will already be set to InputstreamInfo
 
   bool isChanged{false};
-  if (m_bSampleDescChanged && m_codecHandler->m_extraData.GetDataSize() &&
-      !info.CompareExtraData(m_codecHandler->m_extraData.GetData(),
-                             m_codecHandler->m_extraData.GetDataSize()))
+  if (m_bSampleDescChanged && !m_codecHandler->m_extraData.empty() &&
+      !info.CompareExtraData(m_codecHandler->m_extraData.data(),
+                             m_codecHandler->m_extraData.size()))
   {
-    info.SetExtraData(m_codecHandler->m_extraData.GetData(),
-                      m_codecHandler->m_extraData.GetDataSize());
+    info.SetExtraData(m_codecHandler->m_extraData);
     isChanged = true;
   }
 
@@ -255,7 +254,7 @@ bool CFragmentedSampleReader::GetInformation(kodi::addon::InputstreamInfo& info)
   if (m_codecHandler->CheckExtraData(
       extraData, (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED) != 0))
   {
-    m_codecHandler->m_extraData.SetData(extraData.data(), static_cast<AP4_Size>(extraData.size()));
+    m_codecHandler->m_extraData = extraData;
     info.SetExtraData(extraData);
     isChanged = true;
   }
@@ -365,17 +364,12 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
       m_sampleDescIndex = tfhd->GetSampleDescriptionIndex();
       UpdateSampleDescription();
 
-      //! @todo: mix of types AP4_DataBuffer vs std::vector<uint8_t>
-      //! bento4 AP4_DataBuffer is not really needed, to change it required also decrypters cleanups
-      AP4_DataBuffer& chExtradata = m_codecHandler->m_extraData;
-      std::vector<uint8_t> extradata(chExtradata.GetData(),
-                                     chExtradata.GetData() + chExtradata.GetDataSize());
+      std::vector<uint8_t> extradata = m_codecHandler->m_extraData;
       if (m_codecHandler->CheckExtraData(
               extradata,
               (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED) != 0))
       {
-        m_codecHandler->m_extraData.SetData(extradata.data(),
-                                            static_cast<AP4_Size>(extradata.size()));
+        m_codecHandler->m_extraData = extradata;
       }
     }
 
