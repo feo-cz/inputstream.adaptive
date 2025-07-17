@@ -10,6 +10,7 @@
 
 #include "utils/CryptoUtils.h"
 
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -41,7 +42,7 @@ public:
   virtual AP4_Result SetFragmentInfo(AP4_UI32 poolId,
                                      const std::vector<uint8_t>& keyId,
                                      const AP4_UI08 nalLengthSize,
-                                     AP4_DataBuffer& annexbSpsPps,
+                                     const std::vector<uint8_t>& annexbSpsPps,
                                      AP4_UI32 flags,
                                      CryptoInfo cryptoInfo) = 0;
 

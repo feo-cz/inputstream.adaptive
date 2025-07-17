@@ -109,7 +109,7 @@ void CClearKeyCencSingleSampleDecrypter::RemovePool(AP4_UI32 poolId)
 AP4_Result CClearKeyCencSingleSampleDecrypter::SetFragmentInfo(AP4_UI32 poolId,
                                                                const std::vector<uint8_t>& keyId,
                                                                const AP4_UI08 nalLengthSize,
-                                                               AP4_DataBuffer& annexbSpsPps,
+                                                               const std::vector<uint8_t>& annexbSpsPps,
                                                                AP4_UI32 flags,
                                                                CryptoInfo cryptoInfo)
 {

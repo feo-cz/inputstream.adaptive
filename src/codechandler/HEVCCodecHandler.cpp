@@ -18,8 +18,9 @@ HEVCCodecHandler::HEVCCodecHandler(AP4_SampleDescription* sd) : CodecHandler(sd)
   if (AP4_HevcSampleDescription* hevcSampleDescription =
           AP4_DYNAMIC_CAST(AP4_HevcSampleDescription, m_sampleDescription))
   {
-    m_extraData.SetData(hevcSampleDescription->GetRawBytes().GetData(),
-                        hevcSampleDescription->GetRawBytes().GetDataSize());
+    const AP4_DataBuffer& rawBytes = hevcSampleDescription->GetRawBytes();
+    m_extraData.assign(rawBytes.GetData(), rawBytes.GetData() + rawBytes.GetDataSize());
+
     m_naluLengthSize = hevcSampleDescription->GetNaluLengthSize();
   }
 }

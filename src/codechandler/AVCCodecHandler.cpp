@@ -29,8 +29,9 @@ AVCCodecHandler::AVCCodecHandler(AP4_SampleDescription* sd)
   if (AP4_AvcSampleDescription* avcSampleDescription =
           AP4_DYNAMIC_CAST(AP4_AvcSampleDescription, m_sampleDescription))
   {
-    m_extraData.SetData(avcSampleDescription->GetRawBytes().GetData(),
-                        avcSampleDescription->GetRawBytes().GetDataSize());
+    const AP4_DataBuffer& rawBytes = avcSampleDescription->GetRawBytes();
+    m_extraData.assign(rawBytes.GetData(), rawBytes.GetData() + rawBytes.GetDataSize());
+
     m_countPictureSetIds = avcSampleDescription->GetPictureParameters().ItemCount();
     m_naluLengthSize = avcSampleDescription->GetNaluLengthSize();
     m_needSliceInfo = (m_countPictureSetIds > 1 || width == 0 || height == 0);

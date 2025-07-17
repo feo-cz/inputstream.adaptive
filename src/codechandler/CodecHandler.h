@@ -17,6 +17,9 @@
 #include <kodi/addon-instance/Inputstream.h>
 #endif
 
+#include <cstdint>
+#include <vector>
+
 class ATTR_DLL_LOCAL CodecHandler
 {
 public:
@@ -55,7 +58,7 @@ public:
   virtual void Reset(){};
 
   AP4_SampleDescription* m_sampleDescription;
-  AP4_DataBuffer m_extraData;
+  std::vector<uint8_t> m_extraData;
   AP4_UI08 m_naluLengthSize;
   AP4_UI08 m_pictureId;
   AP4_UI08 m_pictureIdPrev;

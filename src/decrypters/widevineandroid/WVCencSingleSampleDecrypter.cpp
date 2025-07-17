@@ -467,7 +467,7 @@ bool CWVCencSingleSampleDecrypterA::SendSessionMessage(const std::vector<uint8_t
 AP4_Result CWVCencSingleSampleDecrypterA::SetFragmentInfo(AP4_UI32 poolId,
                                                           const std::vector<uint8_t>& keyId,
                                                           const AP4_UI08 nalLengthSize,
-                                                          AP4_DataBuffer& annexbSpsPps,
+                                                          const std::vector<uint8_t>& annexbSpsPps,
                                                           AP4_UI32 flags,
                                                           CryptoInfo cryptoInfo)
 {
@@ -476,7 +476,7 @@ AP4_Result CWVCencSingleSampleDecrypterA::SetFragmentInfo(AP4_UI32 poolId,
 
   m_fragmentPool[poolId].m_key = keyId;
   m_fragmentPool[poolId].m_nalLengthSize = nalLengthSize;
-  m_fragmentPool[poolId].m_annexbSpsPps.SetData(annexbSpsPps.GetData(), annexbSpsPps.GetDataSize());
+  m_fragmentPool[poolId].m_annexbSpsPps = annexbSpsPps;
   m_fragmentPool[poolId].m_decrypterFlags = flags;
 
   if (m_isKeyUpdateRequested)
@@ -574,18 +574,18 @@ AP4_Result CWVCencSingleSampleDecrypterA::DecryptSampleData(AP4_UI32 poolId,
         };
 
         //look if we have to inject sps / pps
-        if (fragInfo.m_annexbSpsPps.GetDataSize() && (*packetIn & 0x1F) != 9 /*AVC_NAL_AUD*/)
+        if (!fragInfo.m_annexbSpsPps.empty() && (*packetIn & 0x1F) != 9 /*AVC_NAL_AUD*/)
         {
-          dataOut.AppendData(fragInfo.m_annexbSpsPps.GetData(),
-                             fragInfo.m_annexbSpsPps.GetDataSize());
+          dataOut.AppendData(fragInfo.m_annexbSpsPps.data(),
+                             static_cast<AP4_Size>(fragInfo.m_annexbSpsPps.size()));
           if (iv)
           {
             // Update the byte containing the data size of current subsample referred to clear bytes array
             AP4_UI16* clrb_out = reinterpret_cast<AP4_UI16*>(dataOut.UseData() + clrDataBytePos);
-            *clrb_out += fragInfo.m_annexbSpsPps.GetDataSize();
+            *clrb_out += fragInfo.m_annexbSpsPps.size();
           }
           // configSize = fragInfo.m_annexbSpsPps.GetDataSize();
-          fragInfo.m_annexbSpsPps.SetDataSize(0);
+          fragInfo.m_annexbSpsPps.clear();
         }
 
         //Annex-B Start pos
@@ -643,7 +643,7 @@ AP4_Result CWVCencSingleSampleDecrypterA::DecryptSampleData(AP4_UI32 poolId,
     else
     {
       dataOut.AppendData(dataIn.GetData(), dataIn.GetDataSize());
-      fragInfo.m_annexbSpsPps.SetDataSize(0);
+      fragInfo.m_annexbSpsPps.clear();
     }
   }
   else

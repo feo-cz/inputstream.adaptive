@@ -49,7 +49,7 @@ public:
   virtual AP4_Result SetFragmentInfo(AP4_UI32 poolId,
                                      const std::vector<uint8_t>& keyId,
                                      const AP4_UI08 nalLengthSize,
-                                     AP4_DataBuffer& annexbSpsPps,
+                                     const std::vector<uint8_t>& annexbSpsPps,
                                      AP4_UI32 flags,
                                      CryptoInfo cryptoInfo) override;
   virtual AP4_UI32 AddPool() override;
@@ -113,7 +113,7 @@ private:
     std::vector<uint8_t> m_key;
     AP4_UI08 m_nalLengthSize;
     AP4_UI16 m_decrypterFlags;
-    AP4_DataBuffer m_annexbSpsPps;
+    std::vector<uint8_t> m_annexbSpsPps;
     CryptoInfo m_cryptoInfo;
   };
   std::vector<FINFO> m_fragmentPool;

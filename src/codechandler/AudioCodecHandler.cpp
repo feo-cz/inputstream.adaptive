@@ -21,7 +21,9 @@ AudioCodecHandler::AudioCodecHandler(AP4_SampleDescription* sd) : CodecHandler(s
     // Get extradata for types like aac
     AP4_MpegSampleDescription* mpegSd =
         AP4_DYNAMIC_CAST(AP4_MpegSampleDescription, m_sampleDescription);
-    m_extraData.SetData(mpegSd->GetDecoderInfo().GetData(), mpegSd->GetDecoderInfo().GetDataSize());
+
+    const AP4_DataBuffer& decInfo = mpegSd->GetDecoderInfo();
+    m_extraData.assign(decInfo.GetData(), decInfo.GetData() + decInfo.GetDataSize());
   }
 }
 
