@@ -689,7 +689,7 @@ bool SESSION::CSession::PrepareStream(CStream* stream, uint64_t startPts)
 
   stream->SetReader(std::move(reader));
 
-  if (reprContainerType == ContainerType::TS)
+  if (reprContainerType == ContainerType::TS || reprContainerType == ContainerType::ADTS)
   {
     // With TS streams the elapsed time would be calculated incorrectly as during the tree refresh,
     // nextSegment would be deleted by the FreeSegments/newsegments swap. Do this now before the tree refresh.
