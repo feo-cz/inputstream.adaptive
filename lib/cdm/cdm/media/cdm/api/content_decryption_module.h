@@ -25,7 +25,11 @@ typedef __int64 int64_t;
 // The version number must be rolled when the exported functions are updated!
 // If the CDM and the adapter use different versions of these functions, the
 // adapter will fail to load or crash!
-#define CDM_MODULE_VERSION 4
+#ifdef TARGET_WEBOS
+  #define CDM_MODULE_VERSION 10
+#else
+  #define CDM_MODULE_VERSION 4
+#endif
 
 // Build the versioned entrypoint name.
 // The extra macros are necessary to expand version to an actual value.
@@ -796,8 +800,14 @@ class CDM_CLASS_API ContentDecryptionModule_10 {
   // Returns kDecryptError if any other error happened.
   // If the return value is not kSuccess, |decrypted_buffer| should be ignored
   // by the caller.
+#ifdef TARGET_WEBOS
+  virtual Status Decrypt(const InputBuffer_2& encrypted_buffer,
+                         DecryptedBlock* decrypted_buffer,
+                         StreamType stream_type) = 0;
+#else
   virtual Status Decrypt(const InputBuffer_2& encrypted_buffer,
                          DecryptedBlock* decrypted_buffer) = 0;
+#endif
 
   // Initializes the CDM audio decoder with |audio_decoder_config|. This
   // function must be called before DecryptAndDecodeSamples() is called.
@@ -1016,8 +1026,14 @@ class CDM_CLASS_API ContentDecryptionModule_11 {
   // Returns kDecryptError if any other error happened.
   // If the return value is not kSuccess, |decrypted_buffer| should be ignored
   // by the caller.
+#ifdef TARGET_WEBOS
+  virtual Status Decrypt(const InputBuffer_2& encrypted_buffer,
+                         DecryptedBlock* decrypted_buffer,
+                         StreamType stream_type) = 0;
+#else
   virtual Status Decrypt(const InputBuffer_2& encrypted_buffer,
                          DecryptedBlock* decrypted_buffer) = 0;
+#endif
 
   // Initializes the CDM audio decoder with |audio_decoder_config|. This
   // function must be called before DecryptAndDecodeSamples() is called.
