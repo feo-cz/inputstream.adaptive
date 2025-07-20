@@ -389,7 +389,9 @@ void AdaptiveStream::worker()
 
       lckdl.lock();
 
-      if (!isSegmentDownloaded)
+      // Stop the playback if the data cant be downloaded
+      // is not the case for subtitles where in the case of missing files they can be ignored
+      if (!isSegmentDownloaded && current_adp_->GetStreamType() != StreamType::SUBTITLE)
       {
         std::lock_guard<std::mutex> lckrw(thread_data_->mutex_rw_);
         // Download cancelled or cannot download the file
