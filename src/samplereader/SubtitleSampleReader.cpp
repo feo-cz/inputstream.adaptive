@@ -135,6 +135,8 @@ bool CSubtitleSampleReader::IsReady()
 
 AP4_Result CSubtitleSampleReader::ReadSample()
 {
+  m_sampleData.SetDataSize(0);
+
   if (m_codecHandler->ReadNextSample(m_sample,
                                      m_sampleData)) // Read the sample data from a file url
   {
@@ -147,6 +149,12 @@ AP4_Result CSubtitleSampleReader::ReadSample()
     std::vector<uint8_t> buffer;
     if (m_adByteStream->ReadFull(buffer))
     {
+      if (buffer.empty()) // No data, more likely due to download error
+      {
+        LOG::LogF(LOGWARNING, "No buffer segment data from subtitle stream");
+        return AP4_ERROR_READ_FAILED;
+      }
+
       auto rep = m_adStream->getRepresentation();
       if (rep)
       {
