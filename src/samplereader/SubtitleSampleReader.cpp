@@ -120,7 +120,7 @@ AP4_Result CSubtitleSampleReader::Start(bool& bStarted)
     return AP4_SUCCESS;
 
   m_started = true;
-  return AP4_SUCCESS;
+  return ReadSample();
 }
 
 bool CSubtitleSampleReader::IsReady()
