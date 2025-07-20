@@ -826,9 +826,9 @@ bool SESSION::CSession::GetNextSample(ISampleReader*& sampleReader)
         waiting = stream.get();
         break;
       }
-      else if (streamReader->IsReady() && !streamReader->EOS())
+      else if (!streamReader->EOS())
       {
-        if (AP4_SUCCEEDED(streamReader->Start(isStarted)))
+        if (AP4_SUCCEEDED(streamReader->Start(isStarted)) && streamReader->IsReady())
         {
           if (!res || streamReader->DTSorPTSManifest() < res->GetReader()->DTSorPTSManifest())
           {
