@@ -366,14 +366,8 @@ void AdaptiveStream::worker()
 
       //! @todo: for live content we should calculate max attempts and sleep timing
       //! based on segment duration / playlist updates timing
-      size_t maxAttempts = m_tree->IsLive() ? 10 : 6;
+      size_t maxAttempts = m_tree->IsLive() ? 6 : 3;
       std::chrono::milliseconds msSleep = m_tree->IsLive() ? 1000ms : 500ms;
-
-      //! @todo: Some streaming software offers subtitle tracks with missing fragments, usually live tv
-      //! When a programme is broadcasted that has subtitles, subtitles fragments are offered,
-      //! Ensure we continue with the next segment after one retry on errors
-      if (current_adp_->GetStreamType() == StreamType::SUBTITLE && m_tree->IsLive())
-        maxAttempts = 2;
 
       size_t downloadAttempts = 1;
       bool isSegmentDownloaded = false;
@@ -395,7 +389,9 @@ void AdaptiveStream::worker()
 
       lckdl.lock();
 
-      if (!isSegmentDownloaded)
+      // Stop the playback if the data cant be downloaded
+      // is not the case for subtitles where in the case of missing files they can be ignored
+      if (!isSegmentDownloaded && current_adp_->GetStreamType() != StreamType::SUBTITLE)
       {
         std::lock_guard<std::mutex> lckrw(thread_data_->mutex_rw_);
         // Download cancelled or cannot download the file

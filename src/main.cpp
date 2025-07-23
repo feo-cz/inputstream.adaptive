@@ -355,7 +355,7 @@ DEMUX_PACKET* CInputStreamAdaptive::DemuxRead(void)
 
       if (srHaveData)
       {
-        m_lastPts = sr->PTS();
+        m_lastPts = sr->DTSorPTSManifest();
         p->dts = static_cast<double>(sr->DTS());
         p->pts = static_cast<double>(sr->PTS());
         p->duration = static_cast<double>(sr->GetDuration());

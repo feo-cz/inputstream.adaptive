@@ -689,7 +689,7 @@ bool SESSION::CSession::PrepareStream(CStream* stream, uint64_t startPts)
 
   stream->SetReader(std::move(reader));
 
-  if (reprContainerType == ContainerType::TS)
+  if (reprContainerType == ContainerType::TS || reprContainerType == ContainerType::ADTS)
   {
     // With TS streams the elapsed time would be calculated incorrectly as during the tree refresh,
     // nextSegment would be deleted by the FreeSegments/newsegments swap. Do this now before the tree refresh.
@@ -826,17 +826,11 @@ bool SESSION::CSession::GetNextSample(ISampleReader*& sampleReader)
         waiting = stream.get();
         break;
       }
-      else if (streamReader->IsReady() && !streamReader->EOS())
+      else if (!streamReader->EOS())
       {
-        if (AP4_SUCCEEDED(streamReader->Start(isStarted)))
+        if (AP4_SUCCEEDED(streamReader->Start(isStarted)) && streamReader->IsReady())
         {
-          //!@ todo: DTSorPTS comparison is wrong
-          //! currently we are compare audio/video/subtitles
-          //! for audio/video the pts/dts come from demuxer, but subtitles use pts from manifest
-          //! these values not always are comparable because pts/dts that come from demuxer packet data
-          //! can be different and makes this package selection ineffective
-          //! see also workaround on CSubtitleSampleReader::ReadSample
-          if (!res || streamReader->DTSorPTS() < res->GetReader()->DTSorPTS())
+          if (!res || streamReader->DTSorPTSManifest() < res->GetReader()->DTSorPTSManifest())
           {
             if (stream->m_adStream.waitingForSegment())
             {

@@ -120,8 +120,8 @@ enum class EVENT_TYPE
     PLAYLIST::CAdaptationSet* getAdaptationSet() { return current_adp_; };
     PLAYLIST::CRepresentation* getRepresentation() { return current_rep_; };
 
-    uint64_t GetCurrentPTSOffset() { return currentPTSOffset_; };
-    uint64_t GetAbsolutePTSOffset() { return absolutePTSOffset_; };
+    uint64_t GetCurrentPTSOffset() const { return currentPTSOffset_; }
+    uint64_t GetAbsolutePTSOffset() const { return absolutePTSOffset_; }
     bool waitingForSegment() const;
     void FixateInitialization(bool on);
     void SetSegmentFileOffset(uint64_t offset) { m_segmentFileOffset = offset; };

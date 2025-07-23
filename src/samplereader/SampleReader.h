@@ -71,6 +71,16 @@ public:
   virtual void SetPTSDiff(uint64_t pts) {}
 
   /*!
+   * \brief Get the DTS or PTS of current packet, in manifest timing format
+   *        (since packet DTS/PTS can be different from manifest PTS, and sliced).
+   * \return The DTS/PTS in manifest timing format, scaled in STREAM_TIME_BASE.
+   */
+  virtual uint64_t DTSorPTSManifest() const {
+    int64_t value = static_cast<int64_t>(DTSorPTS()) - GetPTSDiff();
+    return value < 0 ? 0 : static_cast<uint64_t>(value);
+  };
+
+  /*!
    * \brief Read info about fragment on current segment (fMP4)
    * \param duration[OUT] Set the duration of current media sample
    * \return True if the fragment info was successfully retrieved, otherwise false

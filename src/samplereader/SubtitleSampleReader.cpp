@@ -120,7 +120,7 @@ AP4_Result CSubtitleSampleReader::Start(bool& bStarted)
     return AP4_SUCCESS;
 
   m_started = true;
-  return AP4_SUCCESS;
+  return ReadSample();
 }
 
 bool CSubtitleSampleReader::IsReady()
@@ -135,6 +135,8 @@ bool CSubtitleSampleReader::IsReady()
 
 AP4_Result CSubtitleSampleReader::ReadSample()
 {
+  m_sampleData.SetDataSize(0);
+
   if (m_codecHandler->ReadNextSample(m_sample,
                                      m_sampleData)) // Read the sample data from a file url
   {
@@ -147,6 +149,12 @@ AP4_Result CSubtitleSampleReader::ReadSample()
     std::vector<uint8_t> buffer;
     if (m_adByteStream->ReadFull(buffer))
     {
+      if (buffer.empty()) // No data, more likely due to download error
+      {
+        LOG::LogF(LOGWARNING, "No buffer segment data from subtitle stream");
+        return AP4_ERROR_READ_FAILED;
+      }
+
       auto rep = m_adStream->getRepresentation();
       if (rep)
       {
@@ -159,18 +167,7 @@ AP4_Result CSubtitleSampleReader::ReadSample()
           AP4_UI32 duration =
               static_cast<AP4_UI32>((segDur * STREAM_TIME_BASE) / rep->GetTimescale());
 
-          uint64_t startPts = currentSegment->startPTS_;
-
-          //! @todo: startPTS workaround! pts has been taken by substracting the period start
-          //! this just to have a lower pts value, but the real problem is in CSession::GetNextSample
-          //! that that makes an incorrect comparison of DTSorPTS
-          if (CSrvBroker::GetResources().GetTree().GetTreeType() == adaptive::TreeType::HLS)
-          {
-            const uint64_t pStart = m_adStream->getPeriod()->GetStart() * rep->GetTimescale() / 1000;
-            startPts -= pStart;
-          }
-
-          AP4_UI64 pts = (startPts * STREAM_TIME_BASE) / rep->GetTimescale();
+          const AP4_UI64 pts = (currentSegment->startPTS_ * STREAM_TIME_BASE) / rep->GetTimescale();
 
           m_codecHandler->Transform(pts, duration, segData, 1000);
           if (m_codecHandler->ReadNextSample(m_sample, m_sampleData))
