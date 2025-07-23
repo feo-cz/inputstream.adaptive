@@ -1,3 +1,11 @@
+v22.2.6 (2025-07-23)
+- [Dash] Improvements to timeshift buffer live streams
+- [Dash] On live streaming fixed video seek back to live
+- [Dash] On live streaming GUI time bar is now updated appropriately
+- [HLS] Fix broken and missing subtitles when enabled/disabled
+- Fix black screen video with some android devices
+- Subtitles will be restored even when a segment cannot be downloaded
+
 v22.2.5 (2025-07-06)
 - Implemented support to play Fairplay with ClearKey (MP4 container only)
 - [Dash] Fix playback when a manifest contains unsupported streams
