@@ -429,7 +429,8 @@ void CdmAdapter::TimerExpired(void* context)
 }
 
 cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
-  cdm::DecryptedBlock* decrypted_buffer)
+                                cdm::DecryptedBlock* decrypted_buffer,
+                                cdm::StreamType streamType)
 {
   //We need this wait here for fast systems, during buffering
   //widewine stopps if some seconds (5??) are fetched too fast
@@ -444,17 +445,13 @@ cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
     ret = cdm12_->Decrypt(encrypted_buffer, decrypted_buffer);
   else if (cdm11_)
 #ifdef TARGET_WEBOS
-    // we set this to kStreamTypeAudio, as this bypasses automatic SVP header/meta data injection
-    // this is lost in RepackSubsampleData
-    ret = cdm11_->Decrypt(encrypted_buffer, decrypted_buffer, cdm::StreamType::kStreamTypeAudio);
+    ret = cdm11_->Decrypt(encrypted_buffer, decrypted_buffer, streamType);
 #else
     ret = cdm11_->Decrypt(encrypted_buffer, decrypted_buffer);
 #endif
   else if (cdm10_)
 #ifdef TARGET_WEBOS
-    // we set this to kStreamTypeAudio, as this bypasses automatic SVP header/meta data injection
-    // this is lost in RepackSubsampleData
-    ret = cdm10_->Decrypt(encrypted_buffer, decrypted_buffer, cdm::StreamType::kStreamTypeAudio);
+    ret = cdm10_->Decrypt(encrypted_buffer, decrypted_buffer, streamType);
 #else
     ret = cdm10_->Decrypt(encrypted_buffer, decrypted_buffer);
 #endif

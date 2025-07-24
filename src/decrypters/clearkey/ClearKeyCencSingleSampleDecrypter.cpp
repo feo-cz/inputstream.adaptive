@@ -150,7 +150,8 @@ AP4_Result CClearKeyCencSingleSampleDecrypter::DecryptSampleData(
     const AP4_UI08* iv,
     unsigned int subsampleCount,
     const AP4_UI16* bytesOfCleartextData,
-    const AP4_UI32* bytesOfEncryptedData)
+    const AP4_UI32* bytesOfEncryptedData,
+    DRM::DRMMediaType streamType)
 {
   if (m_pool.empty())
   {

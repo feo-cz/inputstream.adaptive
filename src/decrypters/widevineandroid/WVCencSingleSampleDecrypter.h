@@ -58,7 +58,8 @@ public:
       const AP4_UI16* bytesOfCleartextData,
 
       // array of <subsample_count> integers. NULL if subsample_count is 0
-      const AP4_UI32* bytesOfEncryptedData) override;
+      const AP4_UI32* bytesOfEncryptedData,
+      DRM::DRMMediaType streamType) override;
 
   void GetCapabilities(const std::vector<uint8_t>& keyId, DRM::DecrypterCapabilites& caps);
 

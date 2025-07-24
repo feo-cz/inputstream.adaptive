@@ -26,7 +26,8 @@ public:
 
   virtual void GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
                                const std::vector<uint8_t>& keyid,
-                               DRM::DecrypterCapabilites& caps) override
+                               DRM::DecrypterCapabilites& caps,
+                               DRMMediaType mediaType) override
   {
   }
   virtual std::optional<bool> HasLicenseKey(

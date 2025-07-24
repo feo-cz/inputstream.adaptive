@@ -36,7 +36,9 @@ public:
                                CryptoMode cryptoMode);
   virtual ~CWVCencSingleSampleDecrypter();
 
-  void GetCapabilities(const std::vector<uint8_t>& keyId, DecrypterCapabilites& caps);
+  void GetCapabilities(const std::vector<uint8_t>& keyId,
+                       DecrypterCapabilites& caps,
+                       DRMMediaType mediaType);
   virtual std::string GetSessionId() override;
   void CloseSessionId();
   AP4_DataBuffer GetChallengeData();
@@ -70,7 +72,9 @@ public:
       const AP4_UI16* bytesOfCleartextData,
 
       // array of <subsample_count> integers. NULL if subsample_count is 0
-      const AP4_UI32* bytesOfEncryptedData) override;
+      const AP4_UI32* bytesOfEncryptedData,
+
+      DRM::DRMMediaType streamType) override;
 
   bool OpenVideoDecoder(const VIDEOCODEC_INITDATA* initData);
   VIDEOCODEC_RETVAL DecryptAndDecodeVideo(kodi::addon::CInstanceVideoCodec* codecInstance,

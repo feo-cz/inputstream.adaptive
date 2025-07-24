@@ -43,7 +43,8 @@ public:
                                        const AP4_UI08* iv,
                                        unsigned int subsampleCount,
                                        const AP4_UI16* bytesOfCleartextData,
-                                       const AP4_UI32* bytesOfEncryptedData) override;
+                                       const AP4_UI32* bytesOfEncryptedData,
+                                       DRM::DRMMediaType streamType) override;
   void SetDefaultKeyId(const std::vector<uint8_t>& keyId) override{};
   void AddKeyId(const std::vector<uint8_t>& keyId) override{};
   bool HasKeys() { return !m_kidPairs.empty(); }

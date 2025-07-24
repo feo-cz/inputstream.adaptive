@@ -6,6 +6,7 @@
  *  See LICENSES/README.md for more information.
  */
 
+#include "decrypters/DrmEngineDefines.h"
 #include "decrypters/IDecrypter.h"
 
 class CWVCdmAdapter;
@@ -29,7 +30,8 @@ public:
 
   virtual void GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
                                const std::vector<uint8_t>& keyId,
-                               DRM::DecrypterCapabilites& caps) override;
+                               DRM::DecrypterCapabilites& caps,
+                               DRM::DRMMediaType mediaType) override;
   virtual std::optional<bool> HasLicenseKey(
       std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
       const std::vector<uint8_t>& keyId) override;

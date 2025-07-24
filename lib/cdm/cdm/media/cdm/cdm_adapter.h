@@ -122,7 +122,8 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>,
 	void TimerExpired(void* context);
 
 	cdm::Status Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
-		cdm::DecryptedBlock* decrypted_buffer);
+                      cdm::DecryptedBlock* decrypted_buffer,
+                      cdm::StreamType streamType = cdm::StreamType::kStreamTypeVideo);
 
   cdm::Status InitializeAudioDecoder(
 		const cdm::AudioDecoderConfig_2& audio_decoder_config);

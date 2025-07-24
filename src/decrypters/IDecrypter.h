@@ -112,7 +112,8 @@ public:
    */
   virtual void GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
                                const std::vector<uint8_t>& keyId,
-                               DecrypterCapabilites& caps) = 0;
+                               DecrypterCapabilites& caps,
+                               DRMMediaType mediaType) = 0;
 
   /*
    * \brief Check if the supplied KID has a license in the decrypter,

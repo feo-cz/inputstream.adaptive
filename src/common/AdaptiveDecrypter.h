@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "decrypters/DrmEngineDefines.h"
 #include "utils/CryptoUtils.h"
 
 #include <cstdint>
@@ -52,7 +53,8 @@ public:
                                        const AP4_UI08* iv,
                                        unsigned int subsampleCount,
                                        const AP4_UI16* bytesOfCleartextData,
-                                       const AP4_UI32* bytesOfEncryptedData) = 0;
+                                       const AP4_UI32* bytesOfEncryptedData,
+                                       DRM::DRMMediaType streamType) = 0;
 
   virtual AP4_UI32 AddPool() { return 0; }
   virtual void RemovePool(AP4_UI32 poolId) {}

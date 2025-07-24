@@ -128,6 +128,10 @@ AP4_Result CFragmentedSampleReader::ReadSample()
   if (!m_codecHandler)
     return AP4_FAILURE;
 
+  DRM::DRMMediaType streamType = DRM::DRMMediaType::VIDEO;
+  if (m_track->GetType() == AP4_Track::Type::TYPE_AUDIO)
+    streamType = DRM::DRMMediaType::AUDIO;
+
   AP4_Result result;
   if (!m_codecHandler->ReadNextSample(m_sample, m_sampleData))
   {
@@ -175,7 +179,8 @@ AP4_Result CFragmentedSampleReader::ReadSample()
     {
       m_sampleData.Reserve(m_encrypted.GetDataSize());
       if (AP4_FAILED(result =
-                         m_decrypter->DecryptSampleData(m_poolId, m_encrypted, m_sampleData, NULL)))
+                         m_decrypter->DecryptSampleData(m_poolId, m_encrypted, m_sampleData,
+                                                        NULL, streamType)))
       {
         LOG::Log(LOGERROR, "Decrypt Sample returns failure!");
         if (++m_failCount > 50)
@@ -197,7 +202,7 @@ AP4_Result CFragmentedSampleReader::ReadSample()
     {
       m_sampleData.Reserve(m_encrypted.GetDataSize());
       m_singleSampleDecryptor->DecryptSampleData(m_poolId, m_encrypted, m_sampleData, nullptr, 0,
-                                                 nullptr, nullptr);
+                                                 nullptr, nullptr, streamType);
     }
 
     if (m_codecHandler->Transform(m_sample.GetDts(), m_sample.GetDuration(), m_sampleData,

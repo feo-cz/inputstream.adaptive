@@ -511,7 +511,8 @@ AP4_Result CWVCencSingleSampleDecrypterA::DecryptSampleData(AP4_UI32 poolId,
                                                            const AP4_UI08* iv,
                                                            unsigned int subsampleCount,
                                                            const AP4_UI16* bytesOfCleartextData,
-                                                           const AP4_UI32* bytesOfEncryptedData)
+                                                           const AP4_UI32* bytesOfEncryptedData,
+                                                           DRM::DRMMediaType streamType)
 {
   if (!m_cdmAdapter->GetCDM())
     return AP4_ERROR_INVALID_STATE;

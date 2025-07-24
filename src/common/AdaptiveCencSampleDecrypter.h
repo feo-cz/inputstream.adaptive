@@ -7,6 +7,7 @@
  */
 
 #include "AdaptiveDecrypter.h"
+#include "decrypters/DrmEngineDefines.h"
 
 #include <memory>
 
@@ -22,7 +23,8 @@ public:
   virtual AP4_Result DecryptSampleData(AP4_UI32 poolid,
                                        AP4_DataBuffer& data_in,
                                        AP4_DataBuffer& data_out,
-                                       const AP4_UI08* iv);
+                                       const AP4_UI08* iv,
+                                       DRM::DRMMediaType streamType);
 
 protected:
   std::shared_ptr<Adaptive_CencSingleSampleDecrypter> m_decrypter;

@@ -29,6 +29,22 @@
 
 using namespace UTILS;
 
+namespace
+{
+cdm::StreamType ToCdmStreamType(DRM::DRMMediaType stream_type)
+{
+  switch (stream_type)
+  {
+    case DRM::DRMMediaType::AUDIO:
+      return cdm::StreamType::kStreamTypeAudio;
+    case DRM::DRMMediaType::VIDEO:
+      return cdm::StreamType::kStreamTypeVideo;
+  }
+
+  return cdm::StreamType::kStreamTypeVideo;
+}
+} // unnamed namespace
+
 void CWVCencSingleSampleDecrypter::SetSession(const std::string sessionId,
                                               const uint8_t* data,
                                               const size_t dataSize)
@@ -105,7 +121,8 @@ CWVCencSingleSampleDecrypter::~CWVCencSingleSampleDecrypter()
 }
 
 void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& keyId,
-                                                   DecrypterCapabilites& caps)
+                                                   DecrypterCapabilites& caps,
+                                                   DRMMediaType mediaType)
 {
   caps = {0, m_hdcpVersion, m_hdcpLimit};
 
@@ -127,7 +144,7 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
 
   if (!caps.hdcpLimit)
     caps.hdcpLimit = m_resolutionLimit;
-
+  
   if ((caps.flags & DecrypterCapabilites::SSD_SUPPORTS_DECODING) != 0)
   {
     AP4_UI32 poolId(AddPool());
@@ -142,11 +159,13 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
     const AP4_UI08 iv[] = {1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0};
     in.SetBuffer(testData, 12);
     in.SetDataSize(12);
+
     try
     {
       encryptedBytes[0] = 12;
       clearBytes[0] = 0;
-      if (DecryptSampleData(poolId, in, out, iv, 1, clearBytes, encryptedBytes) != AP4_SUCCESS)
+      if (DecryptSampleData(poolId, in, out, iv, 1, clearBytes, encryptedBytes, mediaType) !=
+          AP4_SUCCESS)
       {
         LOG::LogF(LOGDEBUG, "Single decrypt failed, secure path only");
         caps.flags |=
@@ -495,7 +514,8 @@ AP4_Result CWVCencSingleSampleDecrypter::DecryptSampleData(AP4_UI32 poolId,
                                                            const AP4_UI08* iv,
                                                            unsigned int subsampleCount,
                                                            const AP4_UI16* bytesOfCleartextData,
-                                                           const AP4_UI32* bytesOfEncryptedData)
+                                                           const AP4_UI32* bytesOfEncryptedData,
+                                                           DRM::DRMMediaType streamType)
 {
   if (!m_cdmAdapter->GetCDM())
   {
@@ -727,7 +747,7 @@ AP4_Result CWVCencSingleSampleDecrypter::DecryptSampleData(AP4_UI32 poolId,
     cdmOut.SetDecryptedBuffer(&buf);
 
     CheckLicenseRenewal();
-    ret = m_cdmAdapter->GetCDM()->Decrypt(cdmIn, &cdmOut);
+    ret = m_cdmAdapter->GetCDM()->Decrypt(cdmIn, &cdmOut, ToCdmStreamType(streamType));
 
     if (ret == cdm::Status::kSuccess)
     {
