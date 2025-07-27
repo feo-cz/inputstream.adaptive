@@ -217,24 +217,27 @@ bool adaptive::CDashTree::ParseManifest(const std::string& data)
   if (!m_clockOffset.has_value())
     m_clockOffset = ResolveUTCTiming(nodeMPD);
 
-  // If TSB is not set but availabilityStartTime, use the last one as TSB
-  // since all segments from availabilityStartTime are available
-  if (m_timeShiftBufferDepth == 0 && available_time_ > 0)
+  if (m_isLive)
   {
-    const uint64_t now = stream_start_ + *m_clockOffset;
-    m_timeShiftBufferDepth = now - available_time_;
+    // If TSB is not set but availabilityStartTime, use the last one as TSB
+    // since all segments from availabilityStartTime are available
+    if (m_timeShiftBufferDepth == 0 && available_time_ > 0)
+    {
+      const uint64_t now = stream_start_ + *m_clockOffset;
+      m_timeShiftBufferDepth = now - available_time_;
+    }
+
+    // Templated representations can have very large TSB
+    // so limit it to avoid excessive memory consumption
+    m_tsbLimited = 14400000; // Default 4 hours
+
+    auto& manifestCfg = CSrvBroker::GetKodiProps().GetManifestConfig();
+    if (manifestCfg.timeShiftBufferLimit.has_value())
+      m_tsbLimited = *manifestCfg.timeShiftBufferLimit * 1000;
+
+    if (m_timeShiftBufferDepth < m_tsbLimited)
+      m_tsbLimited = m_timeShiftBufferDepth;
   }
-
-  // Templated representations can have very large TSB
-  // so limit it to avoid excessive memory consumption
-  m_tsbLimited = 14400000; // Default 4 hours
-
-  auto& manifestCfg = CSrvBroker::GetKodiProps().GetManifestConfig();
-  if (manifestCfg.timeShiftBufferLimit.has_value())
-    m_tsbLimited = *manifestCfg.timeShiftBufferLimit * 1000;
-
-  if (m_timeShiftBufferDepth < m_tsbLimited)
-    m_tsbLimited = m_timeShiftBufferDepth;
 
   // Parse <MPD> <BaseURL> tag (just first, multi BaseURL not supported yet)
   std::string mpdUrl = base_url_;
