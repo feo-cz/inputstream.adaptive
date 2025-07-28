@@ -19,6 +19,10 @@ find_package(pugixml REQUIRED)
 find_package(Bento4 REQUIRED)
 find_package(NlohmannJSON REQUIRED)
 
+if(CMAKE_CXX_COMPILER MATCHES "arm-webos")
+  add_compile_definitions(TARGET_WEBOS=1)
+endif()
+
 if(WIN32)
   if(MSVC)
     # Allow build for WindowsStore with Visual Studio

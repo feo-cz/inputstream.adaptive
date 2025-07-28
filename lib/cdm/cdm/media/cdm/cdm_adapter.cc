@@ -228,9 +228,11 @@ bool CdmAdapter::Initialize()
 #endif  // defined(OS_WIN)
 
   init_cdm_func();
-
+  
+#ifndef TARGET_WEBOS
   cdm12_ = static_cast<cdm::ContentDecryptionModule_12*>(create_cdm_func(
       12, key_system_.data(), static_cast<uint32_t>(key_system_.size()), GetCdmHost, this));
+#endif
 
   if (!cdm12_)
   {
@@ -441,9 +443,21 @@ cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
   if (cdm12_)
     ret = cdm12_->Decrypt(encrypted_buffer, decrypted_buffer);
   else if (cdm11_)
+#ifdef TARGET_WEBOS
+    // we set this to kStreamTypeAudio, as this bypasses automatic SVP header/meta data injection
+    // this is lost in RepackSubsampleData
+    ret = cdm11_->Decrypt(encrypted_buffer, decrypted_buffer, cdm::StreamType::kStreamTypeAudio);
+#else
     ret = cdm11_->Decrypt(encrypted_buffer, decrypted_buffer);
+#endif
   else if (cdm10_)
+#ifdef TARGET_WEBOS
+    // we set this to kStreamTypeAudio, as this bypasses automatic SVP header/meta data injection
+    // this is lost in RepackSubsampleData
+    ret = cdm10_->Decrypt(encrypted_buffer, decrypted_buffer, cdm::StreamType::kStreamTypeAudio);
+#else
     ret = cdm10_->Decrypt(encrypted_buffer, decrypted_buffer);
+#endif
 
   active_buffer_ = 0;
   return ret;

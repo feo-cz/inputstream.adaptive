@@ -17,6 +17,11 @@
 #include "utils/GUIUtils.h"
 #include "utils/log.h"
 
+#include <array>
+#include <filesystem>
+#include <ranges>
+#include <string_view>
+
 using namespace UTILS;
 
 namespace
@@ -25,6 +30,9 @@ namespace
 constexpr const char* LIBRARY_FILENAME = "widevinecdm.dll";
 #elif TARGET_DARWIN
 constexpr const char* LIBRARY_FILENAME = "libwidevinecdm.dylib";
+#elif TARGET_WEBOS
+constexpr std::array<std::string_view, 2> candidatePaths = {"/usr/lib/libwidevine-wrapper.so",
+                                                            "/usr/lib/libwvcdm_shared.so"};
 #else
 constexpr const char* LIBRARY_FILENAME = "libwidevinecdm.so";
 #endif
@@ -79,7 +87,23 @@ SResult CWVCdmAdapter::Initialize(const DRM::Config& config, CWVDecrypter* host)
     LOG::LogF(LOGERROR, "Widevine CDM library path not specified");
     return SResultCode::ERROR;
   }
-  std::string cdmPath = FILESYS::PathCombine(m_host->GetLibraryPath(), LIBRARY_FILENAME);
+  std::string cdmPath;
+#ifdef TARGET_WEBOS
+  auto it = std::ranges::find_if(candidatePaths, [](std::string_view sv)
+                                 { return std::filesystem::exists(std::filesystem::path{sv}); });
+
+  if (it != candidatePaths.end())
+  {
+    cdmPath = std::string(*it);
+  }
+  else
+  {
+    LOG::LogF(LOGERROR, "Widevine CDM library not found");
+    return SResultCode::ERROR;
+  }
+#else
+  cdmPath = FILESYS::PathCombine(m_host->GetLibraryPath(), LIBRARY_FILENAME);
+#endif
 
   // The license url come from license_key kodi property
   // we have to kept only the url without the parameters specified after pipe "|" char
