@@ -1,3 +1,7 @@
+v22.2.7 (2025-07-28)
+- Implemented webOS Widevine support (L3 only, no secure decoder)
+- [DashTree] Fix VOD regression where playback dont start
+
 v22.2.6 (2025-07-23)
 - [Dash] Improvements to timeshift buffer live streams
 - [Dash] On live streaming fixed video seek back to live
