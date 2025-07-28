@@ -12,23 +12,17 @@ jobs:
         os: [ubuntu-latest]
         ZIP_NAME_SUFFIX: [webos]
     steps:
-    - name: Install system cmake
-      run: |
-        sudo apt-get update
-        sudo apt-get install cmake
-        echo "System CMake installed at: $(which cmake)"
-        cmake --version
     - name: Download webOS NDK
       uses: robinraju/release-downloader@v1.11
       with:
         repository: "openlgtv/buildroot-nc4"
         latest: true
-        fileName: "linux-intel-webos-sdk.tar.gz"
+        fileName: "arm-webos-linux-gnueabi_sdk-buildroot-x86_64.tar.gz"
         out-file-path: "/tmp"
     - name: Extract webOS NDK
       working-directory: /tmp
       run: |
-        tar xzf linux-intel-webos-sdk.tar.gz
+        tar xzf arm-webos-linux-gnueabi_sdk-buildroot-x86_64.tar.gz
         ./arm-webos-linux-gnueabi_sdk-buildroot/relocate-sdk.sh
     - name: Checkout Kodi repo
       uses: actions/checkout@v4
@@ -51,7 +45,7 @@ jobs:
       run: |
         cd ${app_id}
         mkdir -p build && cd build
-        /usr/bin/cmake -DADDONS_TO_BUILD=${app_id} -DADDON_SRC_PREFIX=../.. \
+        cmake -DADDONS_TO_BUILD=${app_id} -DADDON_SRC_PREFIX=../.. \
               -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/xbmc/addons \
               -DPACKAGE_ZIP=1 ${{ github.workspace }}/xbmc/cmake/addons
     - name: Build
