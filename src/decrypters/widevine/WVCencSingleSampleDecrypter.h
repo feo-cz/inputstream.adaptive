@@ -141,6 +141,14 @@ private:
                 const uint8_t* iv,
                 const FINFO& fragInfo,
                 const std::vector<cdm::SubsampleEntry>& subsamples);
+  AP4_Result ConvertToAnnexBandInject(AP4_DataBuffer& dataIn,
+                                      AP4_DataBuffer& dataOut,
+                                      unsigned int subsampleCount,
+                                      FINFO& fragInfo,
+                                      const AP4_UI08* iv,
+                                      const AP4_UI16* bytesOfCleartextData,
+                                      const AP4_UI32* bytesOfEncryptedData);
+
   uint32_t m_promiseId;
   bool m_isDrained;
 
