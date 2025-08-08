@@ -87,14 +87,25 @@ CWVCencSingleSampleDecrypter::CWVCencSingleSampleDecrypter(
     UTILS::FILESYS::SaveFile(debugFilePath, {m_pssh.cbegin(), m_pssh.cend()}, true);
   }
 
-  m_cdmAdapter->GetCDM()->CreateSessionAndGenerateRequest(
-      m_promiseId++, cdm::SessionType::kTemporary, cdm::InitDataType::kCenc, m_pssh.data(),
-      static_cast<uint32_t>(m_pssh.size()));
+  const uint32_t pid = m_promiseId++;
 
-  //! @todo: loop with thread sleep should be removed, use callbacks
-  int retrycount = 0;
-  while (m_strSession.empty() && ++retrycount < 100)
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  // prepare the promise before calling into CDM
+  std::future<std::string> sessionFut = m_cdmAdapter->GetCDM()->PrepareSessionFuture(pid);
+
+  m_cdmAdapter->GetCDM()->CreateSessionAndGenerateRequest(pid, cdm::SessionType::kTemporary,
+                                                          cdm::InitDataType::kCenc, m_pssh.data(),
+                                                          static_cast<uint32_t>(m_pssh.size()));
+
+  // block until CDM resolves or rejects the promise
+  try
+  {
+    m_strSession = sessionFut.get(); // throws if CDM rejected
+  }
+  catch (const std::exception& e)
+  {
+    LOG::LogF(LOGERROR, "Session creation failed: %s", e.what());
+    return;
+  }
 
   if (m_strSession.empty())
   {

@@ -613,10 +613,32 @@ void CdmAdapter::OnResolvePromise(uint32_t promise_id)
 {
 }
 
-void CdmAdapter::OnResolveNewSessionPromise(uint32_t promise_id,
-                      const char* session_id,
-                      uint32_t session_id_size)
+std::future<std::string> CdmAdapter::PrepareSessionFuture(uint32_t promiseId)
 {
+  std::lock_guard<std::mutex> lock(m_sessionMx);
+  std::promise<std::string> promise;
+  auto future = promise.get_future();
+  m_sessionPromises[promiseId] = std::move(promise);
+  return future;
+}
+
+void CdmAdapter::OnResolveNewSessionPromise(uint32_t promise_id,
+                                            const char* session_id,
+                                            uint32_t session_id_size)
+{
+  std::string sessionStr(session_id, session_id_size);
+
+  std::lock_guard<std::mutex> lock(m_sessionMx);
+  auto it = m_sessionPromises.find(promise_id);
+  if (it != m_sessionPromises.end())
+  {
+    it->second.set_value(sessionStr);
+    m_sessionPromises.erase(it);
+  }
+  else
+  {
+    Log(LogLevel::ERROR, "Promise ID %u not found", promise_id);
+  }
 }
 
 void CdmAdapter::OnSessionKeysChange(const char* session_id,
@@ -709,9 +731,37 @@ void CdmAdapter::OnResolveKeyStatusPromise(uint32_t promise_id, cdm::KeyStatus_2
 {
 }
 
-void CdmAdapter::OnRejectPromise(uint32_t promise_id, cdm::Exception exception,
-  uint32_t system_code, const char* error_message, uint32_t error_message_size)
+void CdmAdapter::OnRejectPromise(uint32_t promise_id,
+                                 cdm::Exception exception,
+                                 uint32_t system_code,
+                                 const char* error_message,
+                                 uint32_t error_message_size)
 {
+  std::lock_guard<std::mutex> lk(m_sessionMx);
+  auto it = m_sessionPromises.find(promise_id);
+  if (it == m_sessionPromises.end())
+    return;
+
+  try
+  {
+    std::string msg;
+    if (error_message && error_message_size)
+    {
+      msg.assign(error_message, error_message_size);
+    }
+    else
+    {
+      msg = "CDM reject: " + std::to_string(static_cast<int>(exception)) +
+            " sys=" + std::to_string(system_code);
+    }
+
+    it->second.set_exception(std::make_exception_ptr(std::runtime_error(msg)));
+  }
+  catch (...)
+  {
+  }
+
+  m_sessionPromises.erase(it);
 }
 
 void CdmAdapter::OnSessionMessage(const char* session_id, uint32_t session_id_size,

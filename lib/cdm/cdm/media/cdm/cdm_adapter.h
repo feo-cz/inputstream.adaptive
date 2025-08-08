@@ -9,19 +9,20 @@
 #ifndef MEDIA_CDM_CDM_ADAPTER_H_
 #define MEDIA_CDM_CDM_ADAPTER_H_
 
-#include <string>
-#include <vector>
+#include "../../base/compiler_specific.h"
+#include "../../base/macros.h"
+#include "../../base/native_library.h"
+#include "../base/cdm_config.h"
+#include "api/content_decryption_module.h"
+
+#include <atomic>
+#include <future>
 #include <inttypes.h>
 #include <memory>
 #include <mutex>
-#include <atomic>
-#include <future>
-
-#include "../../base/native_library.h"
-#include "../../base/compiler_specific.h"
-#include "../../base/macros.h"
-#include "api/content_decryption_module.h"
-#include "../base/cdm_config.h"
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace media {
 
@@ -221,11 +222,17 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>,
   void OnInitialized(bool success) override;
 
 
+  std::future<std::string> PrepareSessionFuture(uint32_t promiseId);
+
   //Misc
   ~CdmAdapter();
   bool LoadCDM();
   bool Initialize();
   std::string GetVersion() const;
+
+protected:
+  std::mutex m_sessionMx;
+  std::unordered_map<uint32_t, std::promise<std::string>> m_sessionPromises;
 
 private:
   void UnloadCDM();
