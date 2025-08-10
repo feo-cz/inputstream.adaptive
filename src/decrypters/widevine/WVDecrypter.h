@@ -50,8 +50,12 @@ public:
   virtual void ReleaseBuffer(void* instance, void* buffer);
   virtual std::string_view GetLibraryPath() const override { return m_libraryPath; }
 
+#ifdef TARGET_WEBOS
+  virtual bool IsSecureDecoderAudioSupported() override { return true; }
+#else
   //! @todo: Secure path for audio is not implemented
   virtual bool IsSecureDecoderAudioSupported() override { return false; }
+#endif
 
 private:
   std::shared_ptr<CWVCdmAdapter> m_WVCdmAdapter;
