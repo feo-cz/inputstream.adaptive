@@ -221,7 +221,6 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>,
 
   void OnInitialized(bool success) override;
 
-
   std::future<std::string> PrepareSessionFuture(uint32_t promiseId);
 
   //Misc
@@ -269,6 +268,10 @@ private:
   CdmConfig cdm_config_;
 
   cdm::Buffer* active_buffer_{nullptr};
+
+  std::promise<void> m_initPromise;
+  std::future<void> m_initFuture;
+  std::atomic<bool> m_provisioningCompleteOrStarted;
 
   cdm::ContentDecryptionModule_10* cdm10_{nullptr};
   cdm::ContentDecryptionModule_11* cdm11_{nullptr};

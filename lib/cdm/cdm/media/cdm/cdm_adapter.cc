@@ -61,6 +61,8 @@ const char PATH_SEPARATOR = '\\';
 const char PATH_SEPARATOR = '/';
 #endif
 
+constexpr std::chrono::seconds INIT_FUTURE_TIMEOUT_SEC{3};
+
 void* GetCdmHost(int host_interface_version, void* user_data)
 {
   if (!user_data)
@@ -216,6 +218,9 @@ bool CdmAdapter::LoadCDM()
 
 bool CdmAdapter::Initialize()
 {
+  m_initPromise = std::promise<void>{};
+  m_initFuture = m_initPromise.get_future();
+  m_provisioningCompleteOrStarted = false;
   m_isClosingSession = false;
 
   Log(LogLevel::DEBUG, "CDM version: %s", GetVersion().c_str());
@@ -263,6 +268,22 @@ bool CdmAdapter::Initialize()
       cdm10_->Initialize(cdm_config_.allow_distinctive_identifier,
                          cdm_config_.allow_persistent_state, false);
     }
+
+    // Wait for the CDM to be initialized
+    // Add a maximum timeout in case we never hear back!
+    if (m_initFuture.valid() &&
+        m_initFuture.wait_for(INIT_FUTURE_TIMEOUT_SEC) != std::future_status::ready)
+    {
+      Log(LogLevel::ERROR, "CDM initialization timed out");
+      return false;
+    }
+
+    if (!m_provisioningCompleteOrStarted)
+    {
+      Log(LogLevel::ERROR, "CDM initialization failed or not started");
+      return false;
+    }
+
     return true;
   }
 
@@ -786,6 +807,15 @@ void CdmAdapter::ReportMetrics(cdm::MetricName metric_name, uint64_t value)
 
 void CdmAdapter::OnInitialized(bool success)
 {
+  // Notify the client that the CDM is initialized
+  if (success)
+  {
+    m_provisioningCompleteOrStarted = true;
+  }
+
+  // Set the promise value so that execution can continue
+  m_initPromise.set_value();
+
   Log(LogLevel::DEBUG, "CDM is initialized: %s", success ? "true" : "false");
 }
 
