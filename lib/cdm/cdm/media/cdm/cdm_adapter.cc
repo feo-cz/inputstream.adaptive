@@ -256,17 +256,17 @@ bool CdmAdapter::Initialize()
     if (cdm12_)
     {
       cdm12_->Initialize(cdm_config_.allow_distinctive_identifier,
-                         cdm_config_.allow_persistent_state, false);      
+                         cdm_config_.allow_persistent_state, cdm_config_.use_hw_secure_codecs);
     }
     else if (cdm11_)
     {
       cdm11_->Initialize(cdm_config_.allow_distinctive_identifier,
-                         cdm_config_.allow_persistent_state, false);
+                         cdm_config_.allow_persistent_state, cdm_config_.use_hw_secure_codecs);
     }
     else if (cdm10_)
     {
       cdm10_->Initialize(cdm_config_.allow_distinctive_identifier,
-                         cdm_config_.allow_persistent_state, false);
+                         cdm_config_.allow_persistent_state, cdm_config_.use_hw_secure_codecs);
     }
 
     // Wait for the CDM to be initialized

@@ -15,10 +15,12 @@ namespace media {
 // |requestMediaKeySystemAccess|. This is in some sense the Chromium-side
 // counterpart of Blink's WebMediaKeySystemConfiguration.
 struct CdmConfig {
-  CdmConfig(bool distinctive_identifier=false, bool persistent_state=false)
-    :allow_distinctive_identifier(distinctive_identifier)
-    , allow_persistent_state(persistent_state)
-    , use_hw_secure_codecs(false){};
+  CdmConfig(bool distinctive_identifier = false,
+            bool persistent_state = false,
+            bool hw_secure_codecs = false)
+    : allow_distinctive_identifier(distinctive_identifier),
+      allow_persistent_state(persistent_state),
+      use_hw_secure_codecs(hw_secure_codecs) {};
 
   // Allow access to a distinctive identifier.
   bool allow_distinctive_identifier;

@@ -155,7 +155,17 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
 
   if (!caps.hdcpLimit)
     caps.hdcpLimit = m_resolutionLimit;
-  
+
+#ifdef TARGET_WEBOS
+  LOG::LogF(LOGDEBUG,
+            "Overriding settings to: SSD_SECURE PATH | SSD_ANNEXB_REQUIRED | SSD_SECURE_DECODER");
+  caps = {DRM::DecrypterCapabilites::SSD_SECURE_PATH |
+              DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED,
+          DRM::DecrypterCapabilites::SSD_SECURE_DECODER};
+  caps.hdcpVersion = DRM::HDCP_V_MAX;
+  return;
+#endif
+
   if ((caps.flags & DecrypterCapabilites::SSD_SUPPORTS_DECODING) != 0)
   {
     AP4_UI32 poolId(AddPool());
