@@ -147,7 +147,9 @@ private:
                                       FINFO& fragInfo,
                                       const AP4_UI08* iv,
                                       const AP4_UI16* bytesOfCleartextData,
-                                      const AP4_UI32* bytesOfEncryptedData);
+                                      const AP4_UI32* bytesOfEncryptedData,
+                                      bool convertAnnexB,
+                                      std::vector<cdm::SubsampleEntry>& rebuiltSubs);
 
   uint32_t m_promiseId;
   bool m_isDrained;
