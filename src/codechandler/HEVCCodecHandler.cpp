@@ -13,7 +13,8 @@
 
 using namespace UTILS;
 
-HEVCCodecHandler::HEVCCodecHandler(AP4_SampleDescription* sd) : CodecHandler(sd)
+HEVCCodecHandler::HEVCCodecHandler(AP4_SampleDescription* sd, AP4_Track* track)
+  : CodecHandler(sd, track)
 {
   if (AP4_HevcSampleDescription* hevcSampleDescription =
           AP4_DYNAMIC_CAST(AP4_HevcSampleDescription, m_sampleDescription))
@@ -92,5 +93,12 @@ bool HEVCCodecHandler::GetInformation(kodi::addon::InputstreamInfo& info)
       }
     }
   }
+
+  // store dvcc metadata
+  if (auto dvcc = ParseDvcc())
+  {
+    PopulateDvccMetadata(info, dvcc, isChanged);
+  }
+
   return isChanged;
 }

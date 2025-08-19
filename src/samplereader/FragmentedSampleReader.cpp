@@ -520,7 +520,7 @@ void CFragmentedSampleReader::UpdateSampleDescription()
 
   LOG::LogF(LOGDEBUG, "Codec fourcc: %s (%u)", CODEC::FourCCToString(desc->GetFormat()).c_str(),
             desc->GetFormat());
-  
+
   if (AP4_DYNAMIC_CAST(AP4_AudioSampleDescription, desc))
   {
     // Audio sample of any format
@@ -540,7 +540,7 @@ void CFragmentedSampleReader::UpdateSampleDescription()
       case AP4_SAMPLE_FORMAT_HVC1:
       case AP4_SAMPLE_FORMAT_DVHE:
       case AP4_SAMPLE_FORMAT_DVH1:
-        m_codecHandler = new HEVCCodecHandler(desc);
+        m_codecHandler = new HEVCCodecHandler(desc, m_track);
         break;
       case AP4_SAMPLE_FORMAT_STPP:
         m_codecHandler = new TTMLCodecHandler(desc, false);
@@ -552,7 +552,7 @@ void CFragmentedSampleReader::UpdateSampleDescription()
         m_codecHandler = new VP9CodecHandler(desc);
         break;
       case AP4_SAMPLE_FORMAT_AV01:
-        m_codecHandler = new AV1CodecHandler(desc);
+        m_codecHandler = new AV1CodecHandler(desc, m_track);
         break;
       default:
         m_codecHandler = new CodecHandler(desc);

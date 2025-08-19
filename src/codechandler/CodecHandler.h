@@ -23,8 +23,9 @@
 class ATTR_DLL_LOCAL CodecHandler
 {
 public:
-  CodecHandler(AP4_SampleDescription* sd)
-    : m_sampleDescription(sd), m_naluLengthSize(0), m_pictureId(0), m_pictureIdPrev(0xFF){};
+  CodecHandler(AP4_SampleDescription* sd, AP4_Track* track = nullptr)
+    : m_sampleDescription(sd), m_naluLengthSize(0), m_pictureId(0), m_pictureIdPrev(0xFF),
+      m_track(track){};
   virtual ~CodecHandler(){};
 
   virtual void UpdatePPSId(const AP4_DataBuffer& buffer) {}
@@ -57,11 +58,17 @@ public:
   virtual bool TimeSeek(AP4_UI64 seekPos) { return true; };
   virtual void Reset(){};
 
+  AP4_DvccAtom* ParseDvcc();
+  void PopulateDvccMetadata(kodi::addon::InputstreamInfo& info,
+                            AP4_DvccAtom* dvcc,
+                            bool& isChanged);
+
   AP4_SampleDescription* m_sampleDescription;
   std::vector<uint8_t> m_extraData;
   AP4_UI08 m_naluLengthSize;
   AP4_UI08 m_pictureId;
   AP4_UI08 m_pictureIdPrev;
+  AP4_Track* m_track;
 
   protected:
   bool UpdateInfoCodecName(kodi::addon::InputstreamInfo& info, const char* codecName);

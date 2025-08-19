@@ -13,7 +13,7 @@
 class ATTR_DLL_LOCAL AV1CodecHandler : public CodecHandler
 {
 public:
-  AV1CodecHandler(AP4_SampleDescription* sd);
+  AV1CodecHandler(AP4_SampleDescription* sd, AP4_Track* track = nullptr);
 
   bool GetInformation(kodi::addon::InputstreamInfo& info) override;
   STREAMCODEC_PROFILE GetProfile() override { return m_codecProfile; }
