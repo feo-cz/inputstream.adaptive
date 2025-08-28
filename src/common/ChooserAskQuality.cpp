@@ -44,22 +44,19 @@ std::string CovertFpsToString(float value)
 std::string CreateStreamName(const CRepresentation* repr)
 {
   std::string hdrType;
-  const ColorTRC colorTrc = repr->GetColorTRC();
-  if (colorTrc == ColorTRC::SMPTE2084)
+  if (CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVH1) ||
+      CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVHE))
   {
-    if (CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVH1) ||
-        CODEC::Contains(repr->GetCodecs(), CODEC::FOURCC_DVHE))
-    {
-      hdrType = "DV";
-    }
-    else
-    {
-      hdrType = "HDR10";
-    }
+    hdrType = "DV";
   }
-  if (colorTrc == ColorTRC::ARIB_STD_B67)
-    hdrType = "HLG";
-
+  else
+  {
+    const ColorTRC colorTrc = repr->GetColorTRC();
+    if (colorTrc == ColorTRC::SMPTE2084)
+      hdrType = "HDR10";
+    else if (colorTrc == ColorTRC::ARIB_STD_B67)
+      hdrType = "HLG";
+  }
 
   float fps{static_cast<float>(repr->GetFrameRate())};
   if (fps > 0 && repr->GetFrameRateScale() > 0)
