@@ -35,13 +35,13 @@ void AESDecrypter::decrypt(const AP4_UI08* aes_key,
   AP4_CbcStreamCipher cbcStreamCipher{cbc_d_block_cipher};
   cbcStreamCipher.SetIV(aes_iv);
   AP4_Result result = cbcStreamCipher.ProcessBuffer(
-      src, static_cast<AP4_Size>(dataSize), reinterpret_cast<AP4_UI08*>(&dst[0] + dstOffset),
+      src, static_cast<AP4_Size>(dataSize), reinterpret_cast<AP4_UI08*>(&dst[0]),
       reinterpret_cast<AP4_Size*>(&dataSize), lastChunk);
   if (!AP4_SUCCEEDED(result))
   {
     LOG::LogF(LOGERROR, "AES decryption failed: %d", result);
   }
-  dst.resize(dstOffset + dataSize);
+  dst.resize(dataSize);
 }
 
 std::vector<uint8_t> AESDecrypter::convertIV(const std::string& input)

@@ -18,6 +18,7 @@ set(SOURCES
   ReprSelector.cpp
   Segment.cpp
   SegmentBase.cpp
+  SegmentBuffer.cpp
   SegmentList.cpp
   SegTemplate.cpp
 )
@@ -43,6 +44,7 @@ set(HEADERS
   ReprSelector.h
   Segment.h
   SegmentBase.h
+  SegmentBuffer.h
   SegmentList.h
   SegTemplate.h
 )

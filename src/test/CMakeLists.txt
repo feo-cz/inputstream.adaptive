@@ -36,6 +36,7 @@ add_executable(${BINARY}
     ../common/ReprSelector.cpp
     ../common/Segment.cpp
     ../common/SegmentBase.cpp
+    ../common/SegmentBuffer.cpp
     ../common/SegmentList.cpp
     ../common/SegTemplate.cpp
     ../SrvBroker.cpp

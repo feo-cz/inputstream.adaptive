@@ -10,6 +10,7 @@
 
 #include "AdaptiveUtils.h"
 #include "Segment.h"
+#include "SegmentBuffer.h"
 #include "samplereader/SampleReader.h"
 
 #include <atomic>
@@ -65,10 +66,11 @@ enum class EVENT_TYPE
     void Stop();
     void clear();
     /*!
-     * \brief Delete download worker thread and his data,
-     *        downloads must be already stopped with Stop() before call this method.
+     * \brief Dispose resources.
+     *        When this method is called, it is assumed that: AdaptiveStream::Stop has been already called
+     *        and that the relative sample reader is already stopped, to avoid data access violations.
      */
-    void DisposeWorker();
+    void Dispose();
     uint64_t getMaxTimeMs();
 
     void Disable();
@@ -106,15 +108,16 @@ enum class EVENT_TYPE
      */
     bool ReadFullBuffer(std::vector<uint8_t>& buffer);
 
-    uint64_t tell(){ read(0, 0);  return absolute_position_; };
+    bool GetBufferSize(uint64_t& size);
+    uint64_t tell();
+
+    /*!
+     * \brief Seek the stream to the specified data position on the current segment.
+     * \param pos The data position to seek, is the sum of the absolute position and any additional bytes to be seek for
+     * \return True if has success, otherwise false (it should cause EOS in the sample reader demuxer)
+     */
     bool seek(uint64_t const pos);
 
-   /*!
-    * \brief Get the buffer size of the first segment in the buffer
-    * \param size The segment buffer size
-    * \return Return true if the size has been read, otherwise false
-    */
-    bool retrieveCurrentSegmentBufferSize(size_t& size);
     bool seek_time(double seek_seconds, bool preceeding, bool &needReset);
     PLAYLIST::CPeriod* getPeriod() { return current_period_; };
     PLAYLIST::CAdaptationSet* getAdaptationSet() { return current_adp_; };
@@ -143,37 +146,16 @@ enum class EVENT_TYPE
     virtual void SetLastUpdated(const std::chrono::system_clock::time_point tm) {}
     std::chrono::time_point<std::chrono::system_clock> lastUpdated_;
 
-    enum STATE
-    {
-      RUNNING,
-      STOPPED,
-      PAUSED
-    } state_{STOPPED};
-
     // Segment download section
 
-    struct SEGMENTBUFFER
-    {
-      std::vector<uint8_t> buffer;
-      PLAYLIST::CSegment segment;
-      uint64_t segment_number{0};
-      PLAYLIST::CRepresentation* rep{nullptr};
-    };
-    // Be aware! All data related to segments stored in the SEGMENTBUFFER object are static,
-    // these data are totally unrelated to manifest updates that may change the segments timeline,
-    // so if you need to find a segment stored here in the timeline you must use segment number or PTS,
-    // never by position otherwise you could cause misalignments.
-    std::vector<SEGMENTBUFFER*> segment_buffers_;
-
-    void AllocateSegmentBuffers(size_t size);
-    void DeallocateSegmentBuffers();
+    ADP::CSegmentBuffers m_segBuffers;
 
     // Info to execute the download
     struct DownloadInfo
     {
       std::string m_url;
       std::map<std::string, std::string> m_addHeaders; // Additional headers
-      SEGMENTBUFFER* m_segmentBuffer{nullptr}; // Optional, the segment buffer where to store the data
+      ADP::SegmentBuffer* m_segmentBuffer{nullptr}; // Optional, the segment buffer where to store the data
     };
 
     std::string m_streamParams;
@@ -212,16 +194,8 @@ enum class EVENT_TYPE
                          DownloadInfo& downloadInfo);
 
     void ResetSegment(const PLAYLIST::CSegment& segment);
-    void ResetActiveBuffer(bool oneValid);
-    /*!
-     * \brief Wait for download in progress is completed, then stop the worker
-     * \return True if success, otherwise false if meantime the worker status is changed
-     */
-    bool StopWorker(STATE state);
-    /*!
-     * \brief Wait until the worker become ready to manage next downloads
-     */
-    void WaitWorker();
+    void ResetActiveBuffer();
+
     void worker();
 
     int SecondsSinceUpdate() const;
@@ -230,34 +204,49 @@ enum class EVENT_TYPE
 
     struct THREADDATA
     {
-      THREADDATA()
-        : thread_stop_(false)
-      {
-      }
+      THREADDATA() = default;
 
-      void Start(AdaptiveStream *parent)
+      void Initialize(AdaptiveStream *parent)
       {
-        download_thread_ = std::thread(&AdaptiveStream::worker, parent);
-      }
-
-      // \brief Stop the thread loop, make sure that dont enter in wait state again.
-      void Stop()
-      {
-        thread_stop_ = true;
-        signal_dl_.notify_one(); // Unlock possible condition variable signal_dl_ in "wait" state
+        m_downloadThread = std::thread(&AdaptiveStream::worker, parent);
       }
 
       ~THREADDATA()
       {
-        Stop();
-        if (download_thread_.joinable())
-          download_thread_.join();
+        m_isThreadExit = true;
+        cvState.notify_all();
+
+        if (m_downloadThread.joinable())
+          m_downloadThread.join();
       };
 
-      std::mutex mutex_rw_, mutex_dl_;
-      std::condition_variable signal_rw_, signal_dl_;
-      std::thread download_thread_;
-      bool thread_stop_;
+      std::mutex mutexRW; // Mutex for buffer reading/writing
+      std::condition_variable cvRW; // Condition variable for reading/writing in the currently downloading segment buffer
+
+      std::mutex mutexWorker; // Mutex used when the worker is busy processing a download
+      std::condition_variable cvState; // Used to signal a change of ThState
+
+      // \brief Thread state
+      enum class ThState
+      {
+        RUNNING, // Process downloads in queue
+        PAUSED, // Complete the current download, then pause the next downloads in the queue
+        STOPPED, // Cancel the current download, then pause the next downloads in the queue
+      };
+
+      // \brief Determines the current m_state of the worker thread
+      ThState State() const { return m_state; }
+      // \brief Determines whether the thread is about to be stopped permanently
+      bool IsThreadExit() const { return m_isThreadExit; }
+      // \brief Stop downloads, and cancel download in progress (it dont delete buffer queue)
+      void StopDownloads();
+      // \brief Start downloads
+      void StartDownloads();
+
+    private:
+      std::thread m_downloadThread;
+      bool m_isThreadExit{false};
+      std::atomic<ThState> m_state = ThState::STOPPED;
     };
     THREADDATA* thread_data_{nullptr};
 
@@ -277,17 +266,12 @@ enum class EVENT_TYPE
     uint32_t assured_buffer_length_{0};
     // The segment buffer size (segment_buffers_), so the max number of segments that can be downloaded and stored in memory
     uint32_t max_buffer_length_{0};
-    // Number of segments stored in segment buffer (segment_buffers_) queued for downloading, always >= valid_segment_buffers_
-    size_t available_segment_buffers_{0};
-    // Number of segments stored in segment buffer (segment_buffers_) currently in download and downloaded
-    size_t valid_segment_buffers_{0};
 
     std::size_t segment_read_pos_{0};
-    uint64_t absolute_position_{0};
+    uint64_t absolute_position_{0}; // The absolute position is the segment range begin (if available), and will be increased with each reading
     uint64_t currentPTSOffset_{0};
     uint64_t absolutePTSOffset_{0};
 
-    std::atomic<bool> worker_processing_;
     bool m_fixateInitialization{false};
     uint64_t m_segmentFileOffset{0};
 

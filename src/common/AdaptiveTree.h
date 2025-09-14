@@ -168,6 +168,29 @@ public:
   }
 
   /*!
+   * \brief Callback to align a segment from an representation to another,
+   *        this usually occurs on quality change.
+   * \param period Current period
+   * \param adpSet Current adaptation set
+   * \param oldRep The old representation
+   * \param nextRep The other representation
+   * \param seg[IN][OUT] The segment to be aligned,
+   *        it will be updated with a reference of the same segment but contained in the nextRep,
+   *        if fails nullptr will be set.
+   */
+  virtual void OnAlignSegment(PLAYLIST::CPeriod* period,
+                              PLAYLIST::CAdaptationSet* adp,
+                              PLAYLIST::CRepresentation* oldRep,
+                              PLAYLIST::CRepresentation* nextRep,
+                              const PLAYLIST::CSegment*& seg)
+  {
+    if (!seg)
+      return;
+    // Find same segment on the new rep
+    seg = nextRep->Timeline().Find(*seg);
+  }
+
+  /*!
    * \brief Callback done when the period has been changed.
    */
   virtual void OnPeriodChange() {}

@@ -149,7 +149,8 @@ namespace adaptive
     if (segRep->Timeline().IsEmpty())
       return true;
 
-    if (!segment.has_value() || !segPeriod || !segRep)
+    if (!segment.has_value() || segment->startPTS_ == NO_PTS_VALUE ||
+        segment->m_endPts == NO_PTS_VALUE || !segPeriod || !segRep)
       return false;
 
     if (IsLive())

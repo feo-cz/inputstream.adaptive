@@ -15,10 +15,12 @@ CWebmSampleReader::CWebmSampleReader(AP4_ByteStream* input)
 
 bool CWebmSampleReader::Initialize(SESSION::CStream* stream)
 {
+  // The current demuxer implementation cannot determine the EOF when parsing
+  // the initialization segment, so you need to force stop the read operation
   m_adByteStream->FixateInitialization(true);
+
   bool ret = WebmReader::Initialize();
   WebmReader::Reset();
-  m_adByteStream->FixateInitialization(false);
   m_adByteStream->SetSegmentFileOffset(GetCueOffset());
   return ret;
 }

@@ -158,8 +158,8 @@ AP4_Result CSubtitleSampleReader::ReadSample()
       auto rep = m_adStream->getRepresentation();
       if (rep)
       {
-        auto currentSegment = rep->current_segment_;
-        if (currentSegment)
+        auto& currentSegment = rep->current_segment_;
+        if (currentSegment.has_value())
         {
           AP4_DataBuffer segData(buffer.data(), static_cast<AP4_Size>(buffer.size()));
           uint64_t segDur = currentSegment->m_endPts - currentSegment->startPTS_;

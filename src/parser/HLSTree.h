@@ -62,6 +62,12 @@ public:
                               PLAYLIST::CRepresentation* previousRep,
                               PLAYLIST::CRepresentation* currentRep) override;
 
+  virtual void OnAlignSegment(PLAYLIST::CPeriod* period,
+                              PLAYLIST::CAdaptationSet* adp,
+                              PLAYLIST::CRepresentation* previousRep,
+                              PLAYLIST::CRepresentation* newRep,
+                              const PLAYLIST::CSegment*& currSeg) override;
+
   virtual void OnRequestSegments(PLAYLIST::CPeriod* period,
                                  PLAYLIST::CAdaptationSet* adp,
                                  PLAYLIST::CRepresentation* rep) override;

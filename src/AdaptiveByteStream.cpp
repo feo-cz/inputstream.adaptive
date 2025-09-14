@@ -43,6 +43,15 @@ AP4_Result CAdaptiveByteStream::Tell(AP4_Position& position)
 
 AP4_Result CAdaptiveByteStream::GetSize(AP4_LargeSize& size)
 {
+  /*
+  uint64_t retSize{0};
+  if (m_adStream->GetBufferSize(retSize))
+  {
+    size = static_cast<AP4_LargeSize>(retSize);
+    return AP4_SUCCESS;
+  }
+  else
+  */
   return AP4_ERROR_NOT_SUPPORTED;
 }
 

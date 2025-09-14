@@ -974,7 +974,7 @@ void adaptive::CHLSTree::OnDataArrived(uint64_t segNum,
     }
 
     // Decrypter needs preallocated data
-    segBuffer.resize(segBufferSize + srcDataSize);
+    segBuffer.resize(srcDataSize);
 
     m_decrypter->decrypt(aesKey->key.data(), iv,
                          reinterpret_cast<const AP4_UI08*>(srcData), segBuffer, segBufferSize,
@@ -998,6 +998,34 @@ void adaptive::CHLSTree::OnStreamChange(PLAYLIST::CPeriod* period,
   const uint64_t currentSegNumber = previousRep->GetCurrentSegNumber();
 
   ProcessChildManifest(period, adp, currentRep, currentSegNumber);
+}
+
+void adaptive::CHLSTree::OnAlignSegment(PLAYLIST::CPeriod* period,
+                                           PLAYLIST::CAdaptationSet* adp,
+                                           PLAYLIST::CRepresentation* previousRep,
+                                           PLAYLIST::CRepresentation* nextRep,
+                                           const PLAYLIST::CSegment*& seg)
+{
+  if (nextRep->IsIncludedStream())
+    return;
+
+  // Get the current segment position
+  // to allow align/find the same segment on the different playlist (representation)
+  uint64_t segNumber = previousRep->GetSegNumber(*seg);
+
+  if (segNumber == 0 || segNumber < nextRep->GetStartNumber() || segNumber == SEGMENT_NO_NUMBER)
+  {
+    seg = nullptr;
+  }
+  else
+  {
+    if (segNumber >= nextRep->GetStartNumber() + nextRep->Timeline().GetSize())
+    {
+      segNumber = nextRep->GetStartNumber() + nextRep->Timeline().GetSize() - 1;
+    }
+
+    seg = nextRep->Timeline().Get(static_cast<size_t>(segNumber - nextRep->GetStartNumber()));
+  }
 }
 
 void adaptive::CHLSTree::OnRequestSegments(PLAYLIST::CPeriod* period,
