@@ -91,7 +91,6 @@ bool TestAdaptiveStream::DownloadSegment(const DownloadInfo& downloadInfo)
   if (downloadInfo.m_url.empty())
     return false;
 
-  std::vector<uint8_t>& segmentBuffer = downloadInfo.m_segmentBuffer->buffer;
   std::stringstream sampleData("Sixteen bytes!!!");
 
   const size_t bufferSize = 8;
@@ -105,9 +104,7 @@ bool TestAdaptiveStream::DownloadSegment(const DownloadInfo& downloadInfo)
   while (true)
   {
     {
-      std::lock_guard<std::mutex> lckrw(thread_data_->mutex_rw_);
-
-      if (state_ == STOPPED)
+      if (thread_data_->State() == THREADDATA::ThState::STOPPED)
         break;
 
       sampleData.read(reinterpret_cast<char*>(bufferData), bufferSize);
@@ -116,9 +113,14 @@ bool TestAdaptiveStream::DownloadSegment(const DownloadInfo& downloadInfo)
       if (bytesRead == 0) // EOF
         break;
 
-      m_tree->OnDataArrived(downloadInfo.m_segmentBuffer->segment_number,
+      std::vector<uint8_t> bufferOut;
+
+      m_tree->OnDataArrived(downloadInfo.m_segmentBuffer->segment.m_number,
                             downloadInfo.m_segmentBuffer->segment.AESKeyInfo(), m_decrypterIv,
-                            bufferData, bytesRead, segmentBuffer, segmentBuffer.size(), false);
+                            bufferData, bytesRead, bufferOut, bufferOut.size(), false);
+
+      downloadInfo.m_segmentBuffer->AppendBuffer(bufferOut);
+      thread_data_->cvRW.notify_all();
 
       totalByteRead += bytesRead;
     }
@@ -132,7 +134,7 @@ bool TestAdaptiveStream::DownloadSegment(const DownloadInfo& downloadInfo)
 
   testHelper::downloadList.push_back(downloadInfo.m_url);
 
-  thread_data_->signal_rw_.notify_all();
+  thread_data_->cvRW.notify_all();
   return true;
 }
 

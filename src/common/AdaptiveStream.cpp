@@ -31,6 +31,7 @@
 
 using namespace adaptive;
 using namespace std::chrono_literals;
+using namespace ADP;
 using namespace PLAYLIST;
 using namespace UTILS;
 
@@ -61,9 +62,8 @@ AdaptiveStream::AdaptiveStream(AdaptiveTree* tree,
 AdaptiveStream::~AdaptiveStream()
 {
   Stop();
-  DisposeWorker();
+  Dispose();
   clear();
-  DeallocateSegmentBuffers();
 }
 
 void AdaptiveStream::Reset()
@@ -71,25 +71,6 @@ void AdaptiveStream::Reset()
   segment_read_pos_ = 0;
   currentPTSOffset_ = 0;
   absolutePTSOffset_ = 0;
-}
-
-void adaptive::AdaptiveStream::AllocateSegmentBuffers(size_t size)
-{
-  size++;
-
-  while (size-- > 0)
-  {
-    segment_buffers_.emplace_back(new SEGMENTBUFFER());
-  }
-}
-
-void adaptive::AdaptiveStream::DeallocateSegmentBuffers()
-{
-  for (auto itSegBuf = segment_buffers_.begin(); itSegBuf != segment_buffers_.end();)
-  {
-    delete *itSegBuf;
-    itSegBuf = segment_buffers_.erase(itSegBuf);
-  }
 }
 
 bool adaptive::AdaptiveStream::Download(const DownloadInfo& downloadInfo,
@@ -157,22 +138,20 @@ bool adaptive::AdaptiveStream::DownloadImpl(const DownloadInfo& downloadInfo,
           // current structure does not allow for knowing the file has finished for
           // chunked transfers here - IsEOF() will return true while doing chunked transfers
           bool isLastChunk = !isChunked && curl.IsEOF();
-          {
-            std::lock_guard<std::mutex> lckrw(thread_data_->mutex_rw_);
 
-            // The status can be changed after waiting for the lock_guard e.g. video seek/stop
-            if (state_ == STOPPED)
-              break;
+          // The status can be changed after waiting for the lock_guard e.g. video seek/stop
+          if (thread_data_->State() == THREADDATA::ThState::STOPPED)
+            break;
 
-            std::vector<uint8_t>& segmentBuffer = downloadInfo.m_segmentBuffer->buffer;
+          std::vector<uint8_t> bufferOutput;
 
-            m_tree->OnDataArrived(downloadInfo.m_segmentBuffer->segment_number,
-                                  downloadInfo.m_segmentBuffer->segment.AESKeyInfo(),
-                                  m_decrypterIv,
-                                  bufferData.data(), bytesRead, segmentBuffer, segmentBuffer.size(),
-                                  isLastChunk);
-          }
-          thread_data_->signal_rw_.notify_all();
+          m_tree->OnDataArrived(downloadInfo.m_segmentBuffer->segment.m_number,
+                                downloadInfo.m_segmentBuffer->segment.AESKeyInfo(), m_decrypterIv,
+                                bufferData.data(), bytesRead, bufferOutput,
+                                downloadInfo.m_segmentBuffer->BufferSize(), isLastChunk);
+
+          downloadInfo.m_segmentBuffer->AppendBuffer(bufferOutput);
+          thread_data_->cvRW.notify_all();
         }
       }
     }
@@ -191,38 +170,37 @@ bool adaptive::AdaptiveStream::DownloadImpl(const DownloadInfo& downloadInfo,
       if (curl.GetTotalByteRead() == 0)
       {
         LOG::Log(LOGERROR, "[AS-%u] Download failed, no data: %s", clsId, url.c_str());
-        return false;
       }
+      else
+      {
+        size_t totalBytesRead = curl.GetTotalByteRead();
+        double downloadSpeed = curl.GetDownloadSpeed();
 
-      size_t totalBytesRead = curl.GetTotalByteRead();
-      double downloadSpeed = curl.GetDownloadSpeed();
+        // Set current download speed to repr. chooser (to update average).
+        // Small files are usually subtitles and their download speed are inaccurate
+        // by causing side effects in the average bandwidth so we ignore them.
+        static const size_t minSize{512 * 1024}; // 512 Kbyte
+        if (totalBytesRead > minSize)
+          m_tree->GetRepChooser()->SetDownloadSpeed(downloadSpeed);
 
-      // Set current download speed to repr. chooser (to update average).
-      // Small files are usually subtitles and their download speed are inaccurate
-      // by causing side effects in the average bandwidth so we ignore them.
-      static const size_t minSize{512 * 1024}; // 512 Kbyte
-      if (totalBytesRead > minSize)
-        m_tree->GetRepChooser()->SetDownloadSpeed(downloadSpeed);
-
-      LOG::Log(LOGDEBUG, "[AS-%u] Download finished: %s (downloaded %zu byte, speed %0.2lf byte/s)",
-               clsId, url.c_str(), totalBytesRead, downloadSpeed);
-      return true;
+        LOG::Log(LOGDEBUG,
+                 "[AS-%u] Download finished: %s (downloaded %zu byte, speed %0.2lf byte/s)", clsId,
+                 url.c_str(), totalBytesRead, downloadSpeed);
+        return true;
+      }
     }
   }
+
   return false;
 }
 
 bool AdaptiveStream::PrepareNextDownload(DownloadInfo& downloadInfo)
 {
-  // We assume, that we find the next segment to load in the next valid_segment_buffers_
-  if (valid_segment_buffers_ >= available_segment_buffers_)
+  SegmentBuffer* segBuffer = m_segBuffers.GetNextDownload();
+
+  if (!segBuffer)
     return false;
 
-  SEGMENTBUFFER* segBuffer = segment_buffers_[valid_segment_buffers_];
-  ++valid_segment_buffers_;
-
-  // Clear existing data
-  segBuffer->buffer.clear();
   downloadInfo.m_segmentBuffer = segBuffer;
 
   return PrepareDownload(segBuffer->rep, segBuffer->segment, downloadInfo);
@@ -293,76 +271,60 @@ void AdaptiveStream::ResetSegment(const PLAYLIST::CSegment& segment)
   }
 }
 
-void AdaptiveStream::ResetActiveBuffer(bool oneValid)
+void AdaptiveStream::ResetActiveBuffer()
 {
-  valid_segment_buffers_ = oneValid ? 1 : 0;
-  available_segment_buffers_ = valid_segment_buffers_;
-  absolute_position_ = 0;
-  segment_buffers_[0]->buffer.clear();
-  segment_read_pos_ = 0;
-}
-
-bool AdaptiveStream::StopWorker(STATE state)
-{
-  // stop downloading chunks
-  state_ = state;
-  // wait until last reading operation stopped
-  // make sure download section in worker thread is done.
-  std::unique_lock<std::mutex> lckrw(thread_data_->mutex_rw_);
-  while (worker_processing_)
+  thread_data_->StopDownloads();
   {
-    // While we are waiting the state of worker may be changed
-    thread_data_->signal_rw_.wait(lckrw);
+    std::lock_guard<std::mutex> lckWorker(thread_data_->mutexWorker);
+    absolute_position_ = 0;
+    segment_read_pos_ = 0;
+
+    m_segBuffers.Reset();
   }
-
-  // Now if the state set is PAUSED/STOPPED the worker thread should keep the lock to mutex_dl_
-  // and wait for a signal to condition varibale "signal_dl_.wait",
-  // if state will be not changed to RUNNING next downloads will be not performed.
-
-  // Check if the worker state is changed by other situations
-  // e.g. stop playback or download cancelled
-  // that invalidated our status
-  return state_ == state;
-}
-
-void adaptive::AdaptiveStream::WaitWorker()
-{
-  // If the worker is in PAUSED/STOPPED state
-  // we wait here until condition variable "signal_dl_.wait" is executed,
-  // after that the worker will be waiting for a signal to unlock "signal_dl_.wait" (blocking thread)
-  std::lock_guard<std::mutex> lckdl(thread_data_->mutex_dl_);
-  // Make sure that worker continue the loop (avoid signal_dl_.wait block again the thread)
-  // and allow new downloads
-  state_ = RUNNING;
+  thread_data_->StartDownloads();
 }
 
 void AdaptiveStream::worker()
 {
-  std::unique_lock<std::mutex> lckdl(thread_data_->mutex_dl_);
-  worker_processing_ = false;
-  thread_data_->signal_dl_.notify_one();
   do
   {
-    while (!thread_data_->thread_stop_ &&
-           (state_ != RUNNING || valid_segment_buffers_ >= available_segment_buffers_))
+    // Check the thread state to wait in case of PAUSE or STOP
     {
-      thread_data_->signal_dl_.wait(lckdl);
+      std::unique_lock<std::mutex> lckWorker(thread_data_->mutexWorker);
+      thread_data_->cvState.wait(lckWorker,
+                                 [&]
+                                 {
+                                   return thread_data_->State() == THREADDATA::ThState::RUNNING ||
+                                          thread_data_->IsThreadExit();
+                                 });
+
+      if (thread_data_->IsThreadExit())
+        break;
     }
 
-    if (!thread_data_->thread_stop_)
+    // Check if there is a segment to download, or wait for a notification
+    m_segBuffers.WaitForSegment();
+
+    if (!thread_data_->IsThreadExit())
     {
-      worker_processing_ = true;
+      std::lock_guard<std::mutex> lckWorker(thread_data_->mutexWorker);
 
       DownloadInfo downloadInfo;
       if (!PrepareNextDownload(downloadInfo))
       {
-        worker_processing_ = false;
+        if (downloadInfo.m_segmentBuffer)
+        {
+          {
+            std::lock_guard<std::mutex> lckrw(thread_data_->mutexRW);
+            downloadInfo.m_segmentBuffer->ChangeState(BufferState::INVALID);
+            m_segBuffers.NotifyDownloadCompleted();
+          }
+          thread_data_->cvRW.notify_all();
+        }
         continue;
       }
 
-      // tell the main thread that we have processed prepare_download;
-      thread_data_->signal_dl_.notify_one();
-      lckdl.unlock();
+      downloadInfo.m_segmentBuffer->ChangeState(BufferState::DOWNLOADING);
 
       //! @todo: for live content we should calculate max attempts and sleep timing
       //! based on segment duration / playlist updates timing
@@ -374,38 +336,37 @@ void AdaptiveStream::worker()
 
       // Download errors may occur e.g. due to unstable connection, server overloading, ...
       // then we try downloading the segment more times before aborting playback
-      while (state_ != STOPPED)
+      while (thread_data_->State() != THREADDATA::ThState::STOPPED)
       {
         isSegmentDownloaded = DownloadSegment(downloadInfo);
-        if (isSegmentDownloaded || downloadAttempts == maxAttempts || state_ == STOPPED)
+        if (isSegmentDownloaded || downloadAttempts == maxAttempts ||
+            thread_data_->State() == THREADDATA::ThState::STOPPED)
           break;
 
         //! @todo: forcing thread sleep block the thread also while the state_ / thread_stop_ change values
         //! we have to interrupt the sleep when it happens
         std::this_thread::sleep_for(msSleep);
         downloadAttempts++;
-        LOG::Log(LOGWARNING, "[AS-%u] Segment download failed, attempt %zu...", clsId, downloadAttempts);
+        LOG::Log(LOGWARNING, "[AS-%u] Segment download failed, attempt %zu...", clsId,
+                 downloadAttempts);
       }
 
-      lckdl.lock();
+      m_segBuffers.NotifyDownloadCompleted();
+      downloadInfo.m_segmentBuffer->ChangeState(isSegmentDownloaded ? BufferState::DOWNLOADED
+                                                                    : BufferState::INVALID);
 
       // Stop the playback if the data cant be downloaded
       // is not the case for subtitles where in the case of missing files they can be ignored
       if (!isSegmentDownloaded && current_adp_->GetStreamType() != StreamType::SUBTITLE)
       {
-        std::lock_guard<std::mutex> lckrw(thread_data_->mutex_rw_);
         // Download cancelled or cannot download the file
-        state_ = STOPPED;
+        thread_data_->StopDownloads();
       }
 
-      // Signal finished download
-      worker_processing_ = false;
-      thread_data_->signal_rw_.notify_all();
+      thread_data_->cvRW.notify_all();
     }
-  } while (!thread_data_->thread_stop_);
 
-  worker_processing_ = false;
-  lckdl.unlock();
+  } while (!thread_data_->IsThreadExit());
 }
 
 int AdaptiveStream::SecondsSinceUpdate() const
@@ -609,30 +570,26 @@ bool AdaptiveStream::start_stream(const uint64_t startPts)
     max_buffer_length_ = std::ceil((max_buffer_length_ * segTemplate->GetTimescale()) /
                                    static_cast<float>(segTemplate->GetDuration()));
   }
-  */
+
   assured_buffer_length_  = assured_buffer_length_ <4 ? 4:assured_buffer_length_;//for incorrect settings input
   if(max_buffer_length_<=assured_buffer_length_)//for incorrect settings input
     max_buffer_length_=assured_buffer_length_+4u;
 
-  AllocateSegmentBuffers(max_buffer_length_);
+  m_segBuffers.SetMaxSize(max_buffer_length_);
+  */
+
+  m_segBuffers.SetMaxSize(4);
 
   if (!thread_data_)
   {
-    state_ = STOPPED;
     thread_data_ = new THREADDATA();
-    std::unique_lock<std::mutex> lckdl(thread_data_->mutex_dl_);
-    thread_data_->Start(this);
-    // Wait until worker thread is waiting for input
-    thread_data_->signal_dl_.wait(lckdl);
+    thread_data_->Initialize(this);
   }
 
   if (current_rep_->Timeline().IsEmpty())
   {
-    // GenerateSidxSegments assumes mutex_dl locked
-    std::lock_guard<std::mutex> lck(thread_data_->mutex_dl_);
     if (!GenerateSidxSegments(current_rep_))
     {
-      state_ = STOPPED;
       return false;
     }
   }
@@ -692,26 +649,18 @@ bool AdaptiveStream::start_stream(const uint64_t startPts)
         }
       }
     }
-    else if (m_startEvent == EVENT_TYPE::REP_CHANGE) // switching streams, align new stream segment no.
-    {
-      uint64_t segmentId = segment_buffers_[0]->segment_number;
-      if (segmentId >= current_rep_->GetStartNumber() + current_rep_->Timeline().GetSize())
-      {
-        segmentId = current_rep_->GetStartNumber() + current_rep_->Timeline().GetSize() - 1;
-      }
-      current_rep_->current_segment_ = *current_rep_->Timeline().Get(
-          static_cast<size_t>(segmentId - current_rep_->GetStartNumber()));
-    }
     else
     {
       current_rep_->current_segment_.reset(); // start from beginning
     }
   }
 
-  // Reset the event for the next one
-  m_startEvent = EVENT_TYPE::NONE;
+  const CSegment* next_segment{nullptr};
 
-  const CSegment* next_segment = current_rep_->GetNextSegment();
+  if (current_rep_->current_segment_)
+    next_segment = &*current_rep_->current_segment_;
+  else
+    next_segment = current_rep_->Timeline().GetFront();
 
   if (!next_segment && current_adp_->GetStreamType() != StreamType::SUBTITLE)
   {
@@ -721,40 +670,27 @@ bool AdaptiveStream::start_stream(const uint64_t startPts)
     //! because we cant be ensure next segment without wait the appropriate timing...imo its not the right place here.
     //! Can be reproduced with HLS live and by using "Stream selection" setting to "Test" by switching per 1 segment
     absolute_position_ = ~0;
-    state_ = STOPPED;
+    LOG::LogF(LOGERROR, "[AS-%u] No next segment, force stop stream (this is a known issue)",
+              clsId);
     return true;
   }
 
-  state_ = RUNNING;
   absolute_position_ = 0;
 
-  // load the initialization segment
-  if (current_rep_->HasInitSegment())
+  if (current_rep_->HasInitSegment() &&
+      (m_segBuffers.IsEmpty() || !m_segBuffers.Front().segment.IsInitialization()))
   {
-    StopWorker(PAUSED);
-    WaitWorker();
+    SegmentBuffer segBuffer;
+    segBuffer.rep = current_rep_;
+    segBuffer.segment = *current_rep_->GetInitSegment();
+    m_segBuffers.Push(std::move(segBuffer));
 
-    if (available_segment_buffers_)
-      std::rotate(segment_buffers_.rend() - (available_segment_buffers_ + 1),
-                  segment_buffers_.rend() - available_segment_buffers_, segment_buffers_.rend());
-    ++available_segment_buffers_;
-
-    segment_buffers_[0]->segment = *current_rep_->GetInitSegment();
-    segment_buffers_[0]->rep = current_rep_;
-    segment_buffers_[0]->buffer.clear();
-    segment_read_pos_ = 0;
-
-    // Force writing the data into segment_buffers_[0]
-    // Store the # of valid buffers so we can resore later
-    size_t valid_segment_buffers = valid_segment_buffers_;
-    valid_segment_buffers_ = 0;
-
-    DownloadInfo downloadInfo;
-    if (!PrepareNextDownload(downloadInfo) || !DownloadSegment(downloadInfo))
-      state_ = STOPPED;
-
-    valid_segment_buffers_ = valid_segment_buffers + 1;
+    // LOG::LogF(LOGDEBUG, "[AS-%u] BUFFERS QUEUE - Add init segment (representation id %s)", clsId,
+    //           current_rep_->GetId().c_str());
   }
+
+  // Reset the event for the next one
+  m_startEvent = EVENT_TYPE::NONE;
 
   if (!current_rep_->Timeline().Get(0))
   {
@@ -772,30 +708,41 @@ bool AdaptiveStream::start_stream(const uint64_t startPts)
         current_rep_->timescale_int_;
   }
 
-  if (state_ == RUNNING)
-  {
-    current_rep_->SetIsEnabled(true);
-    return true;
-  }
-  return false;
+  thread_data_->StartDownloads();
+  current_rep_->SetIsEnabled(true);
+  return true;
 }
 
 bool AdaptiveStream::ensureSegment()
 {
   // NOTE: Some demuxers may call ensureSegment more times to try make more attempts when it return false.
-  if (state_ != RUNNING)
-    return false;
 
-  // Switch to the next segment, if the current (so segment_buffers_[0]) segment has been read fully by the demuxer.
-  if ((!worker_processing_ || valid_segment_buffers_ > 1) &&
-      segment_read_pos_ >= segment_buffers_[0]->buffer.size())
+  // This method can be called more times so prevent to switch to other segments when stream quality change has been requested
+  if (m_startEvent == EVENT_TYPE::REP_CHANGE)
+    return true;
+
+  // Process a new segment when the previous one has been fully read by checking buffer size.
+  // Note:
+  //  When a stream does not have an initialization segment, m_segBuffers is empty from the beginning.
+  //  When a stream has an initialization segment, m_segBuffers contain the init segment (added by AdaptiveStream::start_stream).
+  if (m_segBuffers.IsEmpty() || (m_segBuffers.Front().BufferSize() != 0 &&
+                                 segment_read_pos_ >= m_segBuffers.Front().BufferSize()))
   {
-    // wait until worker is ready for new segment
-    std::unique_lock<std::mutex> lck(thread_data_->mutex_dl_);
+    if (!m_segBuffers.IsEmpty() && m_segBuffers.Front().State() == BufferState::DOWNLOADING)
+    {
+      // Although the reading position has reached the end, the segment status may not yet be updated
+      // so wait for the mutex release, otherwise segment buffers PopFront will cause incorrect buffer updates
+      std::lock_guard<std::mutex> lckWorker(thread_data_->mutexWorker);
+    }
 
-    // check if it has been stopped in the meantime (e.g. playback stop)
-    if (state_ == STOPPED)
+    if (m_fixateInitialization && !m_segBuffers.IsEmpty() &&
+        m_segBuffers.Front().segment.IsInitialization())
+    {
+      // Force stop operations at initialization segment
+      // This occurs when the demuxer (e.g. webm) is initialized
+      m_fixateInitialization = false;
       return false;
+    }
 
     // lock live segment updates
     std::lock_guard<adaptive::AdaptiveTree::TreeUpdateThread> lckUpdTree(m_tree->GetTreeUpdMutex());
@@ -811,170 +758,164 @@ bool AdaptiveStream::ensureSegment()
       }
     }
 
-    if (m_fixateInitialization)
-      return false;
+    // Remove the consumed segment, to proceed to the next one
+    m_segBuffers.PopFront();
 
-    std::optional<CSegment> nextSegment;
-
-    if (valid_segment_buffers_ > 0)
+    // Check if the stream (representation) quality has been changed
+    if (!m_segBuffers.IsEmpty() && m_segBuffers.Front().rep != current_rep_)
     {
-      // Move the segment at initial position 0 to the end, because consumed
-      std::rotate(segment_buffers_.begin(), segment_buffers_.begin() + 1,
-                  segment_buffers_.begin() + available_segment_buffers_);
-      --valid_segment_buffers_;
-      --available_segment_buffers_;
-      // Adaptive stream has changed quality (and so changed representation)
-      if (segment_buffers_[0]->rep != current_rep_)
-      {
-        current_rep_->SetIsEnabled(false);
-        current_rep_ = segment_buffers_[0]->rep;
-        current_rep_->SetIsEnabled(true);
-        // When stream changed flag is signalled, kodi reopen the stream and AdaptiveStream::start_stream method
-        // will be called also to align the "current segment" for the current representation
-        m_startEvent = EVENT_TYPE::REP_CHANGE;
-      }
-    }
+      const SegmentBuffer& currSegBuff = m_segBuffers.FrontSeg();
+      current_rep_->SetIsEnabled(false);
+      current_rep_ = currSegBuff.rep;
+      current_rep_->current_segment_ = currSegBuff.segment;
+      current_rep_->SetIsEnabled(true);
 
-    if (valid_segment_buffers_ == 0 && available_segment_buffers_ > 0)
-    {
-      LOG::LogF(LOGDEBUG, "[AS-%u] Download not started yet (rep. id \"%s\" period id \"%s\")",
-                clsId, current_rep_->GetId().c_str(), current_period_->GetId().c_str());
-      return false;
+      m_startEvent = EVENT_TYPE::REP_CHANGE;
+
+      // When OnStreamChange is called, the Session::CheckChange will signal kodi to reopen the stream with the changed quality.
+      // If a stream requires an init segment AdaptiveStream::start_stream expects to have the init segment
+      // already in the buffer queue, so at this point m_segBuffers.Front() should already return the init segment
+      if (observer_)
+        observer_->OnStreamChange(this);
     }
 
     // Get the next segment in download/downloaded
-    if (valid_segment_buffers_ > 0)
+    const CSegment* nextSegment{nullptr};
+
+    if (!m_segBuffers.IsEmpty())
     {
-      if (!segment_buffers_[0]->segment.IsInitialization())
+      const SegmentBuffer& currSegBuff = m_segBuffers.Front();
+      if (currSegBuff.State() == BufferState::INVALID || currSegBuff.State() == BufferState::NONE)
       {
-        // Note: In live streaming, the segments stored in the buffers may have expired
-        // because they depends on timeshiftbuffer, so you will not be able to find
-        // the same segment in the timeline (because removed by a manifest update)
-        nextSegment = segment_buffers_[0]->segment;
+        LOG::LogF(LOGWARNING,
+                  "[AS-%u] Not valid buffer segment (status %i, rep. id \"%s\", period id \"%s\")",
+                  clsId, currSegBuff.State(), current_rep_->GetId().c_str(),
+                  current_period_->GetId().c_str());
+        return false;
       }
+      // Note: In live streaming, the segments stored in the buffers may have expired
+      // because they depends on timeshiftbuffer, so you will not be able to find
+      // the same segment in the timeline (because removed by a manifest update)
+      nextSegment = &currSegBuff.segment;
     }
     else
     {
-      const CSegment* nextSeg = current_rep_->GetNextSegment();
-      if (nextSeg)
-        nextSegment = *nextSeg;
+      // if no segment: EOS or needs manifest update
+      nextSegment = current_rep_->GetNextSegment();
     }
 
-    if (nextSegment.has_value())
+    if (nextSegment)
     {
-      currentPTSOffset_ =
-          (nextSegment->startPTS_ * current_rep_->timescale_ext_) / current_rep_->timescale_int_;
+      if (!nextSegment->IsInitialization())
+      {
+        currentPTSOffset_ =
+            (nextSegment->startPTS_ * current_rep_->timescale_ext_) / current_rep_->timescale_int_;
 
-      uint64_t absPtsOffset;
+        uint64_t absPtsOffset;
 
-      if (current_rep_->Timeline().IsEmpty())
-        absPtsOffset = nextSegment->startPTS_;
-      else
-        absPtsOffset = current_rep_->Timeline().Get(0)->startPTS_;
+        if (current_rep_->Timeline().IsEmpty())
+          absPtsOffset = nextSegment->startPTS_;
+        else
+          absPtsOffset = current_rep_->Timeline().GetFront()->startPTS_;
 
-      absolutePTSOffset_ =
-          (absPtsOffset * current_rep_->timescale_ext_) / current_rep_->timescale_int_;
+        absolutePTSOffset_ =
+            (absPtsOffset * current_rep_->timescale_ext_) / current_rep_->timescale_int_;
 
-      current_rep_->current_segment_ = nextSegment;
+        current_rep_->current_segment_ = *nextSegment;
+
+        if (observer_ && nextSegment->startPTS_ != NO_PTS_VALUE)
+        {
+          observer_->OnSegmentChanged(this);
+        }
+      }
+
       ResetSegment(*nextSegment);
 
-      if (observer_ && !nextSegment->IsInitialization() &&
-          nextSegment->startPTS_ != NO_PTS_VALUE)
+      if (m_startEvent == EVENT_TYPE::REP_CHANGE)
+        return false;
+
+      // Determine the segment to add to the queue of buffers
+      const CSegment* queueSegment{nullptr};
+      CRepresentation* newRep{nullptr};
+      if (m_segBuffers.IsEmpty())
       {
-        observer_->OnSegmentChanged(this);
+        newRep = current_rep_;
+        queueSegment = nextSegment;
+      }
+      else
+      {
+        // Continue from last segment added into buffers
+        auto& lastSegBuff = m_segBuffers.BackSeg();
+        newRep = lastSegBuff.rep;
+        queueSegment = lastSegBuff.rep->Timeline().GetNext(lastSegBuff.segment);
       }
 
-      size_t nextSegPos = current_rep_->Timeline().GetPos(*nextSegment);
-      if (nextSegPos == SEGMENT_NO_POS)
-        nextSegPos = 0;
-
-      CRepresentation* newRep = current_rep_;
-      bool isBufferFull = valid_segment_buffers_ >= max_buffer_length_;
-
-      if (!segment_buffers_[0]->segment.IsInitialization() && available_segment_buffers_ > 0 &&
-          !isBufferFull) // Defer until we have some free buffer
+      // Add to the buffers queue the next segment(s)
+      //! @TODO: investigate to live delay it should not put in download not fully available segments
+      while (queueSegment && !m_segBuffers.IsBufferFull())
       {
-        // The representation from the last added segment buffer
-        CRepresentation* prevRep = segment_buffers_[available_segment_buffers_ - 1]->rep;
+        if (!m_segBuffers.IsEmpty())
+        {
+          // The representation from the last added segment buffer
+          CRepresentation* prevRep = newRep;
 
-        bool isLastSegment = nextSegPos + available_segment_buffers_ == current_rep_->Timeline().GetSize() - 1;
-        // Dont change representation if it is the last segment of a period otherwise when it comes
-        // the time to play the last segment in a period, AdaptiveStream wasn't able to insert the
-        // initialization segment (in the case of fMP4) and you would get corrupted or blank video
-        // for the last segment
-        // 
-        //! @todo: isLastSegment could be inconsistent if InsertLiveSegment is used
-        //! must be done a real check to verify if the segment is the last of period
-        if (isLastSegment)
-          newRep = prevRep;
-        else
           newRep = m_tree->GetRepChooser()->GetNextRepresentation(current_adp_, prevRep);
 
-        //! @todo: There is the possibility that stream quality switching happen frequently in very short time,
-        //! so if OnStreamChange is used on a parser, it could overload servers of manifest requests
-        //! a minimum interval should be considered to avoid too switches in a too short period of time
-        if (newRep != prevRep) // Stream quality changed
-        {
-          m_tree->OnStreamChange(current_period_, current_adp_, current_rep_, newRep);
+          //! @todo: There is the possibility that stream quality switching happen frequently in very short time,
+          //! so if OnStreamChange is used on a parser, it could overload servers of manifest requests
+          //! a minimum interval should be considered to avoid too switches in a too short period of time
+          if (newRep != prevRep) // Stream quality changed
+          {
+            // If the representation has been changed, segments may have to be generated (DASH)
+            if (newRep->Timeline().IsEmpty())
+              GenerateSidxSegments(newRep);
 
-          // If the representation has been changed, segments may have to be generated (DASH)
-          if (newRep->Timeline().IsEmpty())
-            GenerateSidxSegments(newRep);
+            m_tree->OnStreamChange(current_period_, current_adp_, prevRep, newRep);
+            // Try aligning the segment to ensure that it exists on the changed representation
+            m_tree->OnAlignSegment(current_period_, current_adp_, prevRep, newRep, queueSegment);
+            // Do not allow quality change with only init segment (if used), ensure at least one segment
+            if (!queueSegment)
+            {
+              LOG::LogF(LOGWARNING,
+                        "[AS-%u] Cannot switch stream quality, no segment available in the next "
+                        "representation id: %s",
+                        clsId, newRep->GetId().c_str());
+              newRep = prevRep;
+              break;
+            }
+
+            if (newRep->HasInitSegment())
+            {
+              // Add to the buffer the initialization segment
+              // it will be loaded when kodi reopen the stream to change quality
+              SegmentBuffer segInitBuffer;
+              segInitBuffer.rep = newRep;
+              segInitBuffer.segment = *newRep->GetInitSegment();
+              m_segBuffers.Push(std::move(segInitBuffer));
+
+              // LOG::LogF(LOGDEBUG,
+              //           "[AS-%u] BUFFERS QUEUE - Add init segment (representation id %s)",
+              //           clsId, newRep->GetId().c_str());
+            }
+          }
         }
-      }
 
-      // Add to the buffer next segment (and the next following segments, if available)
+        SegmentBuffer segBuffer;
+        segBuffer.rep = newRep;
+        segBuffer.segment = *queueSegment;
 
-      const size_t maxPos = newRep->Timeline().GetSize();
-      size_t segPos;
+        // LOG::LogF(LOGDEBUG, "[AS-%u] BUFFERS QUEUE - Add segment (number %llu, PTS %llu)",
+        //           clsId, queueSegment->m_number, queueSegment->startPTS_);
+        m_segBuffers.Push(std::move(segBuffer));
 
-      if (available_segment_buffers_ == 0) // Buffer empty, add the current segment
-        segPos = nextSegPos;
-      else // Continue adding segments that follow the last one added in to the buffer
-      {
-        const CSegment* followSeg = current_rep_->Timeline().GetNext(
-            segment_buffers_[available_segment_buffers_ - 1]->segment);
-        if (followSeg)
-          segPos = current_rep_->Timeline().GetPos(*followSeg);
-        else // No segment, EOS or you need to wait next manifest update
-          segPos = maxPos;
-      }
-
-      //! @todo: this way of adding in download all available segments dont allow
-      //! switching stream quality, so the "representation chooser" is completely excluded
-      //! this can cause a bad initial buffering because the stream dont fit the bandwidth.
-      for (size_t index = available_segment_buffers_; index < max_buffer_length_; ++index)
-      {
-        if (segPos == maxPos) // To avoid out-of-range log prints with Timeline().Get
-          break;
-
-        const CSegment* futureSegment = newRep->Timeline().Get(segPos);
-        if (futureSegment)
-        {
-          segment_buffers_[index]->segment = *futureSegment;
-          segment_buffers_[index]->segment_number = newRep->GetStartNumber() + segPos;
-          segment_buffers_[index]->rep = newRep;
-          ++available_segment_buffers_;
-          ++segPos;
-        }
-      }
-
-      thread_data_->signal_dl_.notify_one();
-      // Make sure that we have at least one segment filling (the worker thread start the download)
-      // Otherwise we lead into a deadlock because first condition is false.
-      if (valid_segment_buffers_ == 0)
-        thread_data_->signal_dl_.wait(lck);
-
-      if (m_startEvent == EVENT_TYPE::REP_CHANGE)
-      {
-        if (observer_)
-          observer_->OnStreamChange(this);
-        return false;
+        // Check if there is a following segment (add it to the queue at next iteration)
+        if (!m_segBuffers.IsBufferFull())
+          queueSegment = newRep->Timeline().GetNext(*queueSegment);
       }
     }
     else if (!m_tree->IsLastSegment(current_period_, current_rep_, current_rep_->current_segment_))
     {
-      if (available_segment_buffers_ == 0 && !current_rep_->IsWaitForSegment())
+      if (m_segBuffers.IsEmpty() && !current_rep_->IsWaitForSegment())
       {
         current_rep_->SetIsWaitForSegment(true);
         LOG::LogF(LOGDEBUG, "[AS-%u] Begin WaitForSegment stream rep. id \"%s\" period id \"%s\"",
@@ -987,32 +928,37 @@ bool AdaptiveStream::ensureSegment()
     {
       return false;
     }
-    else if (available_segment_buffers_ == 0)
+    else if (m_segBuffers.IsEmpty())
     {
       LOG::LogF(LOGDEBUG, "[AS-%u] End of segments", clsId);
-      state_ = STOPPED;
       return false;
     }
   }
   return true;
 }
 
-
 uint32_t AdaptiveStream::read(void* buffer, uint32_t bytesToRead)
 {
-  if (state_ == STOPPED)
-    return 0;
-
-  std::unique_lock<std::mutex> lckrw(thread_data_->mutex_rw_);
-
-  while (ensureSegment() && bytesToRead > 0)
+  if (ensureSegment() && bytesToRead > 0)
   {
-    size_t avail = segment_buffers_[0]->buffer.size() - segment_read_pos_;
-    // Wait until we have all data
-    while (avail < bytesToRead && worker_processing_) //! @todo: worker_processing_ not safe check, if the worker is downloading multiple files
+    if (m_segBuffers.IsEmpty())
+      return 0;
+
+    SegmentBuffer& currSegBuffer = m_segBuffers.Front();
+
+    size_t avail = currSegBuffer.BufferSize() - segment_read_pos_;
+
     {
-      thread_data_->signal_rw_.wait(lckrw);
-      avail = segment_buffers_[0]->buffer.size() - segment_read_pos_;
+      std::unique_lock<std::mutex> lckrw(thread_data_->mutexRW);
+      // Wait until we have all data from the chunked download
+      while (avail < bytesToRead &&
+             (currSegBuffer.State() == BufferState::QUEUED ||
+              currSegBuffer.State() == BufferState::DOWNLOADING) &&
+             thread_data_->State() == THREADDATA::ThState::RUNNING)
+      {
+        thread_data_->cvRW.wait(lckrw);
+        avail = currSegBuffer.BufferSize() - segment_read_pos_;
+      }
     }
 
     if (avail > bytesToRead)
@@ -1023,15 +969,9 @@ uint32_t AdaptiveStream::read(void* buffer, uint32_t bytesToRead)
 
     if (avail == bytesToRead)
     {
-      std::memcpy(buffer, segment_buffers_[0]->buffer.data() + (segment_read_pos_ - avail), avail);
+      currSegBuffer.CopyBufferTo(buffer, segment_read_pos_ - avail, avail);
       return static_cast<uint32_t>(avail);
     }
-
-    // If we call read after the last chunk was read but before worker finishes download, we end up here.
-    if (avail == 0)
-      continue;
-
-    break;
   }
 
   return 0;
@@ -1041,59 +981,95 @@ bool AdaptiveStream::ReadFullBuffer(std::vector<uint8_t>& buffer)
 {
   if (ensureSegment())
   {
-    std::unique_lock<std::mutex> lckrw(thread_data_->mutex_rw_);
-    // Wait until we have all data
-    while (worker_processing_) //! @todo: worker_processing_ not safe check, if the worker is downloading multiple files
+    if (m_segBuffers.IsEmpty())
+      return false;
+
+    SegmentBuffer& currSegBuffer = m_segBuffers.Front();
+
     {
-      thread_data_->signal_rw_.wait(lckrw);
+      std::unique_lock<std::mutex> lckrw(thread_data_->mutexRW);
+      // Wait until we have all data from the chunked download
+      while ((currSegBuffer.State() == BufferState::QUEUED ||
+              currSegBuffer.State() == BufferState::DOWNLOADING) &&
+             thread_data_->State() == THREADDATA::ThState::RUNNING)
+      {
+        thread_data_->cvRW.wait(lckrw);
+      }
     }
 
-    buffer = segment_buffers_[0]->buffer;
+    buffer = currSegBuffer.ReadBuffer();
     // Signal we have read until the last byte
-    segment_read_pos_ = segment_buffers_[0]->buffer.size();
+    segment_read_pos_ = buffer.size();
 
-    return state_ != STOPPED; // The worker set state STOPPED when the download fails
+    if (currSegBuffer.State() == BufferState::DOWNLOADING)
+    {
+      // Wait for the mutex release, to ensure that the segment status is updated
+      std::lock_guard<std::mutex> lckWorker(thread_data_->mutexWorker);
+    }
+    return currSegBuffer.State() == BufferState::DOWNLOADED;
   }
 
   return false;
+}
+
+bool adaptive::AdaptiveStream::GetBufferSize(uint64_t& size)
+{
+  // Unused method (see CAdaptiveByteStream::GetSize) intended for FragmentedSampleReader clarification:
+  // On this sample reader we force the MP4 demuxer in a somewhat hacky sequential read, so,
+  // we assume that the stream is like a single big file from start to end, rather than splitted to segments.
+  // To do this we do not provide the buffer segment size to force unknown size state in the MP4 demuxer.
+  // This behaviour cause some particular behaviours on MP4 demuxer callback methods such as:
+  //  AdaptiveStream::seek/read can be called to request data exceeding the actual size of the buffer
+  //  AdaptiveStream::tell can get the absolute position from different segments
+  // These methods will be called continuously without any way of knowing when the segment data actually ends
+  // and so AdaptiveStream::ensureSegment take care to continue the stream in a sequential way.
+  // Despite this, when the AdaptiveStream::read or AdaptiveStream::seek methods return false,
+  // they will generally cause EOS, so if there is no stream quality change signalled
+  // or no further periods, playback will end.
+  return false;
+}
+
+uint64_t AdaptiveStream::tell()
+{
+  // if the current segment has already been read completely,
+  // call "Read" to move on to the next one and so update the absolute position
+  if (!m_fixateInitialization)
+    read(0, 0);
+
+  return absolute_position_;
 }
 
 bool AdaptiveStream::seek(uint64_t const pos)
 {
-  if (state_ == STOPPED)
+  if (m_segBuffers.IsEmpty())
     return false;
 
-  std::unique_lock<std::mutex> lckrw(thread_data_->mutex_rw_);
+  SegmentBuffer& currSegBuffer = m_segBuffers.Front();
 
-  // we seek only in the current segment
-  if (state_ != STOPPED && pos >= absolute_position_ - segment_read_pos_)
+  if (pos > (absolute_position_ - segment_read_pos_) + currSegBuffer.BufferSize())
   {
-    segment_read_pos_ = static_cast<size_t>(pos - (absolute_position_ - segment_read_pos_));
-
-    while (segment_read_pos_ > segment_buffers_[0]->buffer.size() && worker_processing_)
-      thread_data_->signal_rw_.wait(lckrw);
-
-    if (segment_read_pos_ > segment_buffers_[0]->buffer.size())
     {
-      segment_read_pos_ = segment_buffers_[0]->buffer.size();
-      return false;
+      std::unique_lock<std::mutex> lckrw(thread_data_->mutexRW);
+      // Wait until we have all data from the chunked download
+      while (pos > (absolute_position_ - segment_read_pos_) + currSegBuffer.BufferSize() &&
+             (currSegBuffer.State() == BufferState::QUEUED ||
+              currSegBuffer.State() == BufferState::DOWNLOADING) &&
+             thread_data_->State() == THREADDATA::ThState::RUNNING)
+      {
+        thread_data_->cvRW.wait(lckrw);
+      }
     }
-    absolute_position_ = pos;
-    return true;
   }
-  return false;
-}
 
-bool AdaptiveStream::retrieveCurrentSegmentBufferSize(size_t& size)
-{
-  if (state_ == STOPPED)
+  segment_read_pos_ = static_cast<size_t>(pos - (absolute_position_ - segment_read_pos_));
+
+  if (segment_read_pos_ > currSegBuffer.BufferSize())
+  {
+    segment_read_pos_ = currSegBuffer.BufferSize();
     return false;
+  }
 
-  if (!StopWorker(PAUSED))
-    return false;
-
-  size = segment_buffers_[0]->buffer.size();
-  WaitWorker();
+  absolute_position_ = pos;
   return true;
 }
 
@@ -1132,9 +1108,6 @@ void adaptive::AdaptiveStream::Disable()
 
 void AdaptiveStream::ResetCurrentSegment(const PLAYLIST::CSegment& newSegment)
 {
-  StopWorker(STOPPED);
-  WaitWorker();
-
   // EnsureSegment always loads the segment following the one specified as current, then sets the previous one
   const CSegment* prevSeg = current_rep_->Timeline().GetPrevious(newSegment);
   if (prevSeg)
@@ -1143,7 +1116,7 @@ void AdaptiveStream::ResetCurrentSegment(const PLAYLIST::CSegment& newSegment)
     current_rep_->current_segment_.reset();
 
   // TODO: if new segment is already prefetched, don't ResetActiveBuffer;
-  ResetActiveBuffer(false);
+  ResetActiveBuffer();
 }
 
 int adaptive::AdaptiveStream::GetTrackType() const
@@ -1245,10 +1218,20 @@ bool AdaptiveStream::seek_time(double seek_seconds, bool preceeding, bool& needR
       // restart stream if it has 'finished', e.g in the case of subtitles
       // where there may be a few or only one segment for the period and
       // the stream is now in EOS state (all data already passed to Kodi)
-      if (state_ == STOPPED)
-      {
-        ResetCurrentSegment(*newSeg);
-      }
+
+      //! @TODO: Twice downloaded segments, cause of video seek delay
+      //! Steps to reproduce:
+      //!   Play any kind of video, do a video seek
+      //!   on the log after "PosTime" callback print you can see twice downloaded segments
+      //!   a better way to debug is add a new log into AdaptiveStream::ensureSegment to the code related to Push new segments
+      //!   into segment buffers var and so print the segment numbers of the segments added to buffers.
+      //! the problem is also related to CSession::StartReader called by CSession::SeekTime,
+      //! In short the adaptive stream start to download segments seem just to know the "PTS diff"
+      //! and these downloads will be deleted just later without to be read, because CSession::SeekTime call these
+      //! method two times so by starting two times downloads.
+      //! This code has been introduced as part of subtitles fixes from https://github.com/xbmc/inputstream.adaptive/pull/1082
+      ResetCurrentSegment(*newSeg);
+
       absolute_position_ -= segment_read_pos_;
       segment_read_pos_ = 0;
     }
@@ -1262,7 +1245,7 @@ bool AdaptiveStream::seek_time(double seek_seconds, bool preceeding, bool& needR
 
 bool AdaptiveStream::waitingForSegment() const
 {
-  if (m_tree->IsLive() && state_ == RUNNING)
+  if (m_tree->IsLive() && thread_data_->State() == THREADDATA::ThState::RUNNING)
   {
     std::lock_guard<adaptive::AdaptiveTree::TreeUpdateThread> lckUpdTree(m_tree->GetTreeUpdMutex());
 
@@ -1272,14 +1255,14 @@ bool AdaptiveStream::waitingForSegment() const
 
     // Although IsWaitForSegment may be true, do not anticipate the wait for segments
     // if there are still segments in the buffer that can be read and/or downloaded
-    return current_rep_ && current_rep_->IsWaitForSegment() && available_segment_buffers_ == 0;
+    return current_rep_ && current_rep_->IsWaitForSegment() && m_segBuffers.IsEmpty();
   }
   return false;
 }
 
 void AdaptiveStream::FixateInitialization(bool on)
 {
-  m_fixateInitialization = on && current_rep_->HasInitSegment();
+  m_fixateInitialization = on;
 }
 
 bool AdaptiveStream::GenerateSidxSegments(PLAYLIST::CRepresentation* rep)
@@ -1337,7 +1320,7 @@ bool AdaptiveStream::GenerateSidxSegments(PLAYLIST::CRepresentation* rep)
 
   std::vector<uint8_t> sidxBuffer;
   DownloadInfo downloadInfo;
-  // We assume mutex_dl is locked so we can safely call prepare_download
+
   if (PrepareDownload(rep, seg, downloadInfo) && Download(downloadInfo, sidxBuffer) &&
       parseIndexRange(rep, sidxBuffer))
   {
@@ -1351,9 +1334,12 @@ void AdaptiveStream::Stop()
 {
   if (thread_data_)
   {
-    thread_data_->Stop();
-    StopWorker(STOPPED);
+    // Stop downloads
+    thread_data_->StopDownloads();
+    // Wait that worker exit
+    std::lock_guard<std::mutex> lckWorker(thread_data_->mutexWorker);
   }
+
   // Disable representation only after stopped the worker
   // otherwise if read some segments may invalidate this change
   if (current_rep_)
@@ -1366,21 +1352,27 @@ void AdaptiveStream::clear()
   current_rep_ = 0;
 }
 
-void adaptive::AdaptiveStream::DisposeWorker()
+void adaptive::AdaptiveStream::Dispose()
 {
+  m_segBuffers.Reset();
+
+  segment_read_pos_ = 0;
+  absolute_position_ = 0;
+
   if (thread_data_)
   {
-    if (worker_processing_)
-    {
-      LOG::LogF(LOGERROR, "[AS-%u] Cannot delete worker thread, download is in progress.", clsId);
-      return;
-    }
-    if (!thread_data_->thread_stop_)
-    {
-      LOG::LogF(LOGERROR, "[AS-%u] Cannot delete worker thread, loop is still running.", clsId);
-      return;
-    }
     delete thread_data_;
     thread_data_ = nullptr;
   }
+}
+
+void adaptive::AdaptiveStream::THREADDATA::StopDownloads()
+{
+  m_state = ThState::STOPPED;
+}
+
+void adaptive::AdaptiveStream::THREADDATA::StartDownloads()
+{
+  m_state = ThState::RUNNING;
+  cvState.notify_all();
 }

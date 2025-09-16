@@ -214,7 +214,10 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
       stream->m_adStream.Reset();
     }
     else
+    {
+      LOG::Log(LOGDEBUG, "OpenStream(%d): The stream has already been opened", streamid);
       return false;
+    }
   }
 
   stream->m_isEnabled = true;

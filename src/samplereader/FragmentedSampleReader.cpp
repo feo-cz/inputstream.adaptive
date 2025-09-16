@@ -340,6 +340,12 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
     AP4_ContainerAtom* traf =
         AP4_DYNAMIC_CAST(AP4_ContainerAtom, moof->GetChild(AP4_ATOM_TYPE_TRAF, 0));
 
+    if (!traf)
+    {
+      LOG::LogF(LOGERROR, "Cannot get TRAF atom");
+      return AP4_ERROR_NO_SUCH_ITEM;
+    }
+
     AP4_Atom* atom{nullptr};
     unsigned int atom_pos{0};
 

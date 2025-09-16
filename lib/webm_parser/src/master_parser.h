@@ -144,6 +144,7 @@ class MasterParser : public ElementParser {
                                // kFirstReadOfChildId       read  < my_size_
                                // kEndReached               read == my_size_
     kEndReached,               // No transitions from here (must call Init)
+    kEOFReached,               // No transitions from here - End of file
     /* clang-format on */
   };
 

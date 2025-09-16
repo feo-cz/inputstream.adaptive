@@ -15,13 +15,15 @@ void CStream::Disable()
   if (m_isEnabled)
   {
     m_adStream.Disable();
-    // Stop downloads
+    // Stop method stop the downloads, but not the reader.
     m_adStream.Stop();
-    // ReadSample async thread may still working despite stop download signal
+    // The reader is an async thread and may still working to read buffer data,
+    // so wait for it to exit before the AdaptiveStream::Dispose call,
+    // otherwise it will cause data access violation on buffers because still in use
     if (m_streamReader)
       m_streamReader->WaitReadSampleAsyncComplete();
-    // Dispose the thread worker data only after async thread is complete otherwise mutex go to nirvana
-    m_adStream.DisposeWorker();
+
+    m_adStream.Dispose();
 
     Reset();
 

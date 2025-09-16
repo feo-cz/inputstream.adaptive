@@ -107,7 +107,7 @@ Status MasterParser::Feed(Callback* callback, Reader* reader,
             static_cast<std::uint32_t>(local_num_bytes_read);
         if (status.code == Status::kEndOfFile &&
             my_size_ == kUnknownElementSize && local_num_bytes_read == 0) {
-          state_ = State::kEndReached;
+          state_ = State::kEOFReached;
         } else if (!status.ok()) {
           if (local_num_bytes_read > 0) {
             state_ = State::kFinishingReadingChildId;
@@ -262,6 +262,10 @@ Status MasterParser::Feed(Callback* callback, Reader* reader,
 
       case State::kEndReached: {
         return Status(Status::kOkCompleted);
+      }
+      case State::kEOFReached:
+      {
+        return Status(Status::kEndOfFile);
       }
     }
   }
