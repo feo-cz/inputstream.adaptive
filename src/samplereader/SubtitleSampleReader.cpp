@@ -187,10 +187,6 @@ AP4_Result CSubtitleSampleReader::ReadSample()
       // Wait for manifest live update to get next segment
       return AP4_SUCCESS;
     }
-    else
-    {
-      LOG::LogF(LOGERROR, "Failed to get segment data from subtitle stream");
-    }
   }
 
   m_eos = true;
