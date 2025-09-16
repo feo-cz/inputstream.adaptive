@@ -41,8 +41,7 @@ public:
   bool GetInformation(kodi::addon::InputstreamInfo& info) override;
   bool TimeSeek(uint64_t pts, bool preceeding) override;
   void SetPTSOffset(uint64_t offset) override { }
-  int64_t GetPTSDiff() const override { return m_ptsDiff; }
-  void SetPTSDiff(uint64_t pts) override;
+  int64_t GetPTSDiff() const override { return 0; }
   uint32_t GetTimeScale() const override { return 1000; }
   AP4_Size GetSampleDataSize() const override { return m_sampleData.GetDataSize(); }
   const AP4_Byte* GetSampleData() const override { return m_sampleData.GetData(); }
@@ -53,7 +52,6 @@ private:
   bool InitializeFile(std::string url);
 
   uint64_t m_pts{0};
-  int64_t m_ptsDiff{0};
   bool m_eos{false};
   bool m_started{false};
   std::unique_ptr<CodecHandler> m_codecHandler;
