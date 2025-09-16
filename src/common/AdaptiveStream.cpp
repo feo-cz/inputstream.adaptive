@@ -35,11 +35,11 @@ using namespace ADP;
 using namespace PLAYLIST;
 using namespace UTILS;
 
-uint32_t AdaptiveStream::globalClsId = 0;
+uint32_t adaptive::AdaptiveStream::globalClsId = 0;
 
-AdaptiveStream::AdaptiveStream(AdaptiveTree* tree,
-                               PLAYLIST::CAdaptationSet* adp,
-                               PLAYLIST::CRepresentation* initialRepr)
+adaptive::AdaptiveStream::AdaptiveStream(AdaptiveTree* tree,
+                                         PLAYLIST::CAdaptationSet* adp,
+                                         PLAYLIST::CRepresentation* initialRepr)
   : m_tree(tree),
     current_period_(m_tree->m_currentPeriod),
     current_adp_(adp),
@@ -59,14 +59,14 @@ AdaptiveStream::AdaptiveStream(AdaptiveTree* tree,
            adp->GetId().c_str(), StreamTypeToString(adp->GetStreamType()).c_str());
 }
 
-AdaptiveStream::~AdaptiveStream()
+adaptive::AdaptiveStream::~AdaptiveStream()
 {
   Stop();
   Dispose();
   clear();
 }
 
-void AdaptiveStream::Reset()
+void adaptive::AdaptiveStream::Reset()
 {
   segment_read_pos_ = 0;
   currentPTSOffset_ = 0;
@@ -194,7 +194,7 @@ bool adaptive::AdaptiveStream::DownloadImpl(const DownloadInfo& downloadInfo,
   return false;
 }
 
-bool AdaptiveStream::PrepareNextDownload(DownloadInfo& downloadInfo)
+bool adaptive::AdaptiveStream::PrepareNextDownload(DownloadInfo& downloadInfo)
 {
   SegmentBuffer* segBuffer = m_segBuffers.GetNextDownload();
 
@@ -206,9 +206,9 @@ bool AdaptiveStream::PrepareNextDownload(DownloadInfo& downloadInfo)
   return PrepareDownload(segBuffer->rep, segBuffer->segment, downloadInfo);
 }
 
-bool AdaptiveStream::PrepareDownload(const PLAYLIST::CRepresentation* rep,
-                                     const PLAYLIST::CSegment& seg,
-                                     DownloadInfo& downloadInfo)
+bool adaptive::AdaptiveStream::PrepareDownload(const PLAYLIST::CRepresentation* rep,
+                                               const PLAYLIST::CSegment& seg,
+                                               DownloadInfo& downloadInfo)
 {
   std::string streamUrl;
 
@@ -260,7 +260,7 @@ bool AdaptiveStream::PrepareDownload(const PLAYLIST::CRepresentation* rep,
   return true;
 }
 
-void AdaptiveStream::ResetSegment(const PLAYLIST::CSegment& segment)
+void adaptive::AdaptiveStream::ResetSegment(const PLAYLIST::CSegment& segment)
 {
   segment_read_pos_ = 0;
 
@@ -271,7 +271,7 @@ void AdaptiveStream::ResetSegment(const PLAYLIST::CSegment& segment)
   }
 }
 
-void AdaptiveStream::ResetActiveBuffer()
+void adaptive::AdaptiveStream::ResetActiveBuffer()
 {
   thread_data_->StopDownloads();
   {
@@ -284,7 +284,7 @@ void AdaptiveStream::ResetActiveBuffer()
   thread_data_->StartDownloads();
 }
 
-void AdaptiveStream::worker()
+void adaptive::AdaptiveStream::worker()
 {
   do
   {
@@ -369,7 +369,7 @@ void AdaptiveStream::worker()
   } while (!thread_data_->IsThreadExit());
 }
 
-int AdaptiveStream::SecondsSinceUpdate() const
+int adaptive::AdaptiveStream::SecondsSinceUpdate() const
 {
   const std::chrono::time_point<std::chrono::system_clock>& tPoint(
       lastUpdated_ > m_tree->GetLastUpdated() ? lastUpdated_ : m_tree->GetLastUpdated());
@@ -378,7 +378,7 @@ int AdaptiveStream::SecondsSinceUpdate() const
           .count());
 }
 
-void AdaptiveStream::OnTFRFatom(uint64_t ts, uint64_t duration, uint32_t mediaTimescale)
+void adaptive::AdaptiveStream::OnTFRFatom(uint64_t ts, uint64_t duration, uint32_t mediaTimescale)
 {
   m_tree->InsertLiveFragment(current_adp_, current_rep_, ts, duration, mediaTimescale);
 }
@@ -388,8 +388,8 @@ bool adaptive::AdaptiveStream::IsRequiredCreateMovieAtom()
   return m_tree->GetTreeType() == TreeType::SMOOTH_STREAMING;
 }
 
-bool AdaptiveStream::parseIndexRange(PLAYLIST::CRepresentation* rep,
-                                     const std::vector<uint8_t>& buffer)
+bool adaptive::AdaptiveStream::parseIndexRange(PLAYLIST::CRepresentation* rep,
+                                               const std::vector<uint8_t>& buffer)
 {
 #ifndef INPUTSTREAM_TEST_BUILD
   LOG::Log(LOGDEBUG, "[AS-%u] Build segments from SIDX atom...", clsId);
@@ -540,7 +540,7 @@ bool AdaptiveStream::parseIndexRange(PLAYLIST::CRepresentation* rep,
   return false;
 }
 
-bool AdaptiveStream::start_stream(const uint64_t startPts)
+bool adaptive::AdaptiveStream::start_stream(const uint64_t startPts)
 {
   if (!current_rep_ || current_rep_->IsSubtitleFileStream())
     return false;
@@ -713,7 +713,7 @@ bool AdaptiveStream::start_stream(const uint64_t startPts)
   return true;
 }
 
-bool AdaptiveStream::ensureSegment()
+bool adaptive::AdaptiveStream::ensureSegment()
 {
   // NOTE: Some demuxers may call ensureSegment more times to try make more attempts when it return false.
 
@@ -937,7 +937,7 @@ bool AdaptiveStream::ensureSegment()
   return true;
 }
 
-uint32_t AdaptiveStream::read(void* buffer, uint32_t bytesToRead)
+uint32_t adaptive::AdaptiveStream::read(void* buffer, uint32_t bytesToRead)
 {
   if (ensureSegment() && bytesToRead > 0)
   {
@@ -977,7 +977,7 @@ uint32_t AdaptiveStream::read(void* buffer, uint32_t bytesToRead)
   return 0;
 }
 
-bool AdaptiveStream::ReadFullBuffer(std::vector<uint8_t>& buffer)
+bool adaptive::AdaptiveStream::ReadFullBuffer(std::vector<uint8_t>& buffer)
 {
   if (ensureSegment())
   {
@@ -1029,7 +1029,7 @@ bool adaptive::AdaptiveStream::GetBufferSize(uint64_t& size)
   return false;
 }
 
-uint64_t AdaptiveStream::tell()
+uint64_t adaptive::AdaptiveStream::tell()
 {
   // if the current segment has already been read completely,
   // call "Read" to move on to the next one and so update the absolute position
@@ -1039,7 +1039,7 @@ uint64_t AdaptiveStream::tell()
   return absolute_position_;
 }
 
-bool AdaptiveStream::seek(uint64_t const pos)
+bool adaptive::AdaptiveStream::seek(uint64_t const pos)
 {
   if (m_segBuffers.IsEmpty())
     return false;
@@ -1073,7 +1073,7 @@ bool AdaptiveStream::seek(uint64_t const pos)
   return true;
 }
 
-uint64_t AdaptiveStream::getMaxTimeMs()
+uint64_t adaptive::AdaptiveStream::getMaxTimeMs()
 {
   if (current_rep_->Timeline().IsEmpty())
     return 0;
@@ -1106,7 +1106,7 @@ void adaptive::AdaptiveStream::Disable()
   m_startEvent = EVENT_TYPE::STREAM_ENABLE;
 }
 
-void AdaptiveStream::ResetCurrentSegment(const PLAYLIST::CSegment& newSegment)
+void adaptive::AdaptiveStream::ResetCurrentSegment(const PLAYLIST::CSegment& newSegment)
 {
   // EnsureSegment always loads the segment following the one specified as current, then sets the previous one
   const CSegment* prevSeg = current_rep_->Timeline().GetPrevious(newSegment);
@@ -1153,7 +1153,7 @@ PLAYLIST::StreamType adaptive::AdaptiveStream::GetStreamType() const
   return current_adp_->GetStreamType();
 }
 
-bool AdaptiveStream::seek_time(double seek_seconds, bool preceeding, bool& needReset)
+bool adaptive::AdaptiveStream::seek_time(double seek_seconds, bool preceeding, bool& needReset)
 {
   if (!current_rep_)
     return false;
@@ -1243,7 +1243,7 @@ bool AdaptiveStream::seek_time(double seek_seconds, bool preceeding, bool& needR
   return false;
 }
 
-bool AdaptiveStream::waitingForSegment() const
+bool adaptive::AdaptiveStream::waitingForSegment() const
 {
   if (m_tree->IsLive() && thread_data_->State() == THREADDATA::ThState::RUNNING)
   {
@@ -1260,12 +1260,12 @@ bool AdaptiveStream::waitingForSegment() const
   return false;
 }
 
-void AdaptiveStream::FixateInitialization(bool on)
+void adaptive::AdaptiveStream::FixateInitialization(bool on)
 {
   m_fixateInitialization = on;
 }
 
-bool AdaptiveStream::GenerateSidxSegments(PLAYLIST::CRepresentation* rep)
+bool adaptive::AdaptiveStream::GenerateSidxSegments(PLAYLIST::CRepresentation* rep)
 {
   const ContainerType containerType = rep->GetContainerType();
   if (containerType == ContainerType::NOTYPE)
@@ -1330,7 +1330,7 @@ bool AdaptiveStream::GenerateSidxSegments(PLAYLIST::CRepresentation* rep)
   return false;
 }
 
-void AdaptiveStream::Stop()
+void adaptive::AdaptiveStream::Stop()
 {
   if (thread_data_)
   {
@@ -1346,7 +1346,7 @@ void AdaptiveStream::Stop()
     current_rep_->SetIsEnabled(false);
 }
 
-void AdaptiveStream::clear()
+void adaptive::AdaptiveStream::clear()
 {
   current_adp_ = 0;
   current_rep_ = 0;
