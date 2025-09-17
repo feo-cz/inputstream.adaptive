@@ -187,10 +187,6 @@ AP4_Result CSubtitleSampleReader::ReadSample()
       // Wait for manifest live update to get next segment
       return AP4_SUCCESS;
     }
-    else
-    {
-      LOG::LogF(LOGERROR, "Failed to get segment data from subtitle stream");
-    }
   }
 
   m_eos = true;
@@ -204,6 +200,7 @@ void CSubtitleSampleReader::Reset(bool bEOS)
     m_sampleData.SetDataSize(0);
     m_eos = bEOS;
     m_codecHandler->Reset();
+    m_pts = 0;
   }
 }
 
@@ -223,7 +220,6 @@ bool CSubtitleSampleReader::TimeSeek(uint64_t pts, bool preceeding)
 {
   if (dynamic_cast<WebVTTCodecHandler*>(m_codecHandler.get()))
   {
-    m_pts = pts;
     return true;
   }
   else
@@ -232,12 +228,4 @@ bool CSubtitleSampleReader::TimeSeek(uint64_t pts, bool preceeding)
       return AP4_SUCCEEDED(ReadSample());
     return false;
   }
-}
-
-void CSubtitleSampleReader::SetPTSDiff(uint64_t pts)
-{
-  // Its needed set the PTS diff from the timing stream
-  // to allow sync segmented subtitles for cases like
-  // HLS with multiple periods
-  m_ptsDiff = pts;
 }

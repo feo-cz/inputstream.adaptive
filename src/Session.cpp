@@ -966,7 +966,7 @@ bool SESSION::CSession::SeekTime(double seekTime, unsigned int streamId, bool pr
 
       streamReader->SetPTSDiff(ptsDiff);
       
-      double seekSecs{static_cast<double>(seekTimeCorrected - streamReader->GetPTSDiff()) /
+      double seekSecs{static_cast<double>(seekTimeCorrected - ptsDiff) /
                       STREAM_TIME_BASE};
       if (stream->m_adStream.seek_time(seekSecs, preceeding, reset))
       {
