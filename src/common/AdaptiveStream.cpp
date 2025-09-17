@@ -791,6 +791,7 @@ bool adaptive::AdaptiveStream::ensureSegment()
                   "[AS-%u] Not valid buffer segment (status %i, rep. id \"%s\", period id \"%s\")",
                   clsId, currSegBuff.State(), current_rep_->GetId().c_str(),
                   current_period_->GetId().c_str());
+        segment_read_pos_ = 0;
         return false;
       }
       // Note: In live streaming, the segments stored in the buffers may have expired
@@ -1001,12 +1002,17 @@ bool adaptive::AdaptiveStream::ReadFullBuffer(std::vector<uint8_t>& buffer)
     // Signal we have read until the last byte
     segment_read_pos_ = buffer.size();
 
+    // The state is updated after read/write operations
     if (currSegBuffer.State() == BufferState::DOWNLOADING)
     {
-      // Wait for the mutex release, to ensure that the segment status is updated
+      // So wait for the mutex release, to ensure that the segment state is updated
       std::lock_guard<std::mutex> lckWorker(thread_data_->mutexWorker);
     }
-    return currSegBuffer.State() == BufferState::DOWNLOADED;
+
+    if (currSegBuffer.State() == BufferState::INVALID)
+      buffer.clear();
+
+    return true;
   }
 
   return false;
