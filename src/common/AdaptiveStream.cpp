@@ -791,6 +791,7 @@ bool adaptive::AdaptiveStream::ensureSegment()
                   "[AS-%u] Not valid buffer segment (status %i, rep. id \"%s\", period id \"%s\")",
                   clsId, currSegBuff.State(), current_rep_->GetId().c_str(),
                   current_period_->GetId().c_str());
+        segment_read_pos_ = 0;
         return false;
       }
       // Note: In live streaming, the segments stored in the buffers may have expired
