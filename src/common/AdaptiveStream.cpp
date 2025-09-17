@@ -1002,12 +1002,17 @@ bool adaptive::AdaptiveStream::ReadFullBuffer(std::vector<uint8_t>& buffer)
     // Signal we have read until the last byte
     segment_read_pos_ = buffer.size();
 
+    // The state is updated after read/write operations
     if (currSegBuffer.State() == BufferState::DOWNLOADING)
     {
-      // Wait for the mutex release, to ensure that the segment status is updated
+      // So wait for the mutex release, to ensure that the segment state is updated
       std::lock_guard<std::mutex> lckWorker(thread_data_->mutexWorker);
     }
-    return currSegBuffer.State() == BufferState::DOWNLOADED;
+
+    if (currSegBuffer.State() == BufferState::INVALID)
+      buffer.clear();
+
+    return true;
   }
 
   return false;
