@@ -70,7 +70,6 @@ bool CInputStreamAdaptive::GetStreamIds(std::vector<unsigned int>& ids)
   if (!m_session)
     return false;
 
-  CPeriod* period;
   int period_id = m_session->GetPeriodId();
   unsigned int id;
 
@@ -96,7 +95,7 @@ bool CInputStreamAdaptive::GetStreamIds(std::vector<unsigned int>& ids)
       }
       if (m_session->IsLive())
       {
-        period = stream->m_adStream.getPeriod();
+        CPeriod* period = stream->m_adStream.getPeriod();
         if (m_session->HasInitialSequence() &&
             period->GetSequence() == m_session->GetInitialSequence())
         {
