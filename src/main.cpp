@@ -70,9 +70,18 @@ bool CInputStreamAdaptive::GetStreamIds(std::vector<unsigned int>& ids)
   if (!m_session)
     return false;
 
+  const unsigned int streamCount = m_session->GetStreamCount();
+  if (streamCount > INPUTSTREAM_MAX_STREAM_COUNT)
+  {
+    LOG::LogF(
+        LOGWARNING,
+        "Exceeded the maximum limit of %i streams. %u streams have been excluded from playback",
+        INPUTSTREAM_MAX_STREAM_COUNT, streamCount - INPUTSTREAM_MAX_STREAM_COUNT);
+  }
+
   int period_id = m_session->GetPeriodId();
 
-  for (unsigned int i(1); i <= INPUTSTREAM_MAX_STREAM_COUNT && i <= m_session->GetStreamCount();
+  for (unsigned int i(1); i <= INPUTSTREAM_MAX_STREAM_COUNT && i <= streamCount;
        ++i)
   {
     CStream* stream = m_session->GetStream(i);
