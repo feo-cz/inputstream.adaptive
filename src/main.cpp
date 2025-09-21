@@ -67,50 +67,61 @@ bool CInputStreamAdaptive::GetStreamIds(std::vector<unsigned int>& ids)
 {
   LOG::Log(LOGDEBUG, "GetStreamIds()");
 
-  if (m_session)
-  {
-    CPeriod* period;
-    int period_id = m_session->GetPeriodId();
-    unsigned int id;
+  if (!m_session)
+    return false;
 
-    for (unsigned int i(1); i <= INPUTSTREAM_MAX_STREAM_COUNT && i <= m_session->GetStreamCount();
-         ++i)
+  const unsigned int streamCount = m_session->GetStreamCount();
+  if (streamCount > INPUTSTREAM_MAX_STREAM_COUNT)
+  {
+    LOG::LogF(
+        LOGWARNING,
+        "Exceeded the maximum limit of %i streams. %u streams have been excluded from playback",
+        INPUTSTREAM_MAX_STREAM_COUNT, streamCount - INPUTSTREAM_MAX_STREAM_COUNT);
+  }
+
+  int period_id = m_session->GetPeriodId();
+
+  for (unsigned int i(1); i <= INPUTSTREAM_MAX_STREAM_COUNT && i <= streamCount;
+       ++i)
+  {
+    CStream* stream = m_session->GetStream(i);
+    if (!stream)
     {
-      CStream* stream = m_session->GetStream(i);
-      if (!stream)
+      LOG::LogF(LOGERROR, "Cannot get the stream from sid %u", i);
+      continue;
+    }
+
+    if (stream->m_isValid &&
+        (m_session->GetMediaTypeMask() &
+         static_cast<uint8_t>(1) << static_cast<int>(stream->m_adStream.GetStreamType())))
+    {
+      if (m_session->GetMediaTypeMask() != 0xFF)
       {
-        LOG::LogF(LOGERROR, "Cannot get the stream from sid %u", i);
-        continue;
+        const CRepresentation* rep = stream->m_adStream.getRepresentation();
+        if (rep->IsIncludedStream())
+          continue;
       }
 
-      if (stream->m_isValid && (m_session->GetMediaTypeMask() &
-                                static_cast<uint8_t>(1) << static_cast<int>(stream->m_adStream.GetStreamType())))
+      unsigned int streamId;
+
+      if (m_session->IsLive())
       {
-        if (m_session->GetMediaTypeMask() != 0xFF)
+        CPeriod* period = stream->m_adStream.getPeriod();
+        if (m_session->HasInitialSequence() &&
+            period->GetSequence() == m_session->GetInitialSequence())
         {
-          const CRepresentation* rep = stream->m_adStream.getRepresentation();
-          if (rep->IsIncludedStream())
-            continue;
-        }
-        if (m_session->IsLive())
-        {
-          period = stream->m_adStream.getPeriod();
-          if (m_session->HasInitialSequence() &&
-              period->GetSequence() == m_session->GetInitialSequence())
-          {
-            id = i + 1000;
-          }
-          else
-          {
-            id = i + (period->GetSequence() + 1) * 1000;
-          }
+          streamId = i + 1000;
         }
         else
         {
-          id = i + period_id * 1000;
+          streamId = i + (period->GetSequence() + 1) * 1000;
         }
-        ids.emplace_back(id);
       }
+      else
+      {
+        streamId = i + period_id * 1000;
+      }
+      ids.emplace_back(streamId);
     }
   }
 
