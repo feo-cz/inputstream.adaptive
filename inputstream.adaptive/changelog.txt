@@ -1,3 +1,12 @@
+v22.2.8 (2025-09-21)
+- Refactor segment buffer management code
+- Improved video seek performances
+- Improved multithreading data access on segment buffers
+- Less delay on stream quality switching
+- Fix occasional small buffering/stuttering that occurred after starting video or seeking
+- Fix webm adaptive stream quality switching
+- Fix case of broken subtitles on video seek
+
 v22.2.7 (2025-07-28)
 - Implemented webOS Widevine support (L3 only, no secure decoder)
 - [DashTree] Fix VOD regression where playback dont start
