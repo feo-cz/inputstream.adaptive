@@ -1330,8 +1330,7 @@ bool adaptive::CHLSTree::ParseRenditon(const Rendition& r,
 
   if (!r.m_characteristics.empty())
   {
-    if (STRING::Contains(r.m_characteristics, "public.accessibility.transcribes-spoken-dialog") ||
-        STRING::Contains(r.m_characteristics, "public.accessibility.describes-music-and-sound") ||
+    if (STRING::Contains(r.m_characteristics, "public.accessibility.describes-music-and-sound") ||
         STRING::Contains(r.m_characteristics, "public.accessibility.describes-video"))
     {
       adpSet->SetIsImpaired(true);
