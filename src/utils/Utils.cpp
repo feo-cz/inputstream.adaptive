@@ -227,9 +227,10 @@ std::vector<uint8_t> UTILS::AvcToAnnexb(const std::vector<uint8_t>& avcc)
   size_t pos = 4; // Skip the first 4 bytes
   // The NALU length unit size is encoded in the 2 least significant bits of the byte
   // 00 -> 1 byte, 01 -> 2 bytes, 10 or 11 -> 4 bytes
-  const int naluLenUnitSize = (avcc[pos]) & 0x3 + 1;
+  const int naluLenUnitSize = (avcc[pos] & 0x3) + 1;
+
   pos++;
-  const int spsCount = (avcc[pos]) & 0x1F; // SPS count is encoded in the 5 least significant bits of the byte
+  const int spsCount = avcc[pos] & 0x1F; // SPS count is encoded in the 5 least significant bits of the byte
   pos++;
 
   // Copy SPS NALUs
@@ -276,23 +277,30 @@ std::vector<uint8_t> UTILS::AvcToAnnexb(const std::vector<uint8_t>& avcc)
   // Copy the remaining NALUs
   while (pos < avcc.size())
   {
-    size_t naluLen = 0;
-    for (int i = 0; i < naluLenUnitSize; i++)
-    {
-      if (pos >= avcc.size())
-        break;
-      naluLen = (naluLen << 8) + avcc[pos++];
-    }
-    if (pos + naluLen <= avcc.size())
-    {
-      annexB.insert(annexB.end(), {0x00, 0x00, 0x00, 0x01});
-      annexB.insert(annexB.end(), avcc.begin() + pos, avcc.begin() + pos + naluLen);
-      pos += naluLen;
-    }
-    else // not enough data? ignore it
+    if (pos + naluLenUnitSize > avcc.size())
       break;
-  }
 
+    size_t naluLen = 0;
+
+    for (int i = 0; i < naluLenUnitSize; ++i)
+    {
+      naluLen = (naluLen << 8) | static_cast<size_t>(avcc[pos++]);
+    }
+
+    if (naluLen == 0) // no NAL
+      continue;
+
+    if (pos + naluLen > avcc.size())
+    {
+      LOG::LogF(LOGDEBUG, "Truncated NALU of len %zu, at pos %zu, remaining data %zu", naluLen, pos,
+                avcc.size() - pos);
+      break;
+    }
+
+    annexB.insert(annexB.end(), {0x00, 0x00, 0x00, 0x01});
+    annexB.insert(annexB.end(), avcc.begin() + pos, avcc.begin() + pos + naluLen);
+    pos += naluLen;
+  }
   return annexB;
 }
 
