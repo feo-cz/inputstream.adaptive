@@ -1,3 +1,8 @@
+v22.2.9 (2025-09-29)
+- [HLS] Fix case of misdetection of impaired subtitles
+- Fix no picture on MP4 videos with mixed encrypted/unencrypted contents
+- Fix a regression crash on playback start with some MP4 AVC streams
+
 v22.2.8 (2025-09-21)
 - Refactor segment buffer management code
 - Improved video seek performances
