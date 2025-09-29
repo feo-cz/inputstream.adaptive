@@ -1,3 +1,6 @@
+v21.5.16 (2025-09-29)
+- Fix no picture on MP4 videos with mixed encrypted/unencrypted contents
+
 v21.5.15 (2025-07-06)
 - Fix playback with IP with port number
 
