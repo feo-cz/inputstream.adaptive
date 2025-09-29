@@ -10,10 +10,12 @@
 
 #include "../common/AdaptiveTreeFactory.h"
 #include "../common/SegTemplate.h"
+#include "../utils/Base64Utils.h"
 #include "../utils/DigestMD5Utils.h"
 #include "../utils/StringUtils.h"
 #include "../utils/UrlUtils.h"
 #include "../utils/XMLUtils.h"
+#include "../utils/Utils.h"
 
 #include <gtest/gtest.h>
 
@@ -300,4 +302,17 @@ TEST_F(UtilsTest, UrlEncodeDecode)
 
   EXPECT_EQ(encoded, "abc123-._!()~%26%25%C3%A8%C3%B9");
   EXPECT_EQ(STRING::URLDecode(encoded), strTest);
+}
+
+TEST_F(UtilsTest, AVCC_Conversions)
+{
+  // AVCCs encoded base64
+
+  // Test 1: Has some extra bytes at the end of NALUs
+  const std::string test1AvccB64 = "AWQAIAMBACgnZAAgrQByMBQBbsBEAAADAAQAAAMAy5AAASbMAAAuD/+97gPhAIJwAQAEKP+8sP34+AA=";
+  const std::vector<uint8_t> test1annexB = AvcToAnnexb(BASE64::Decode(test1AvccB64));
+  EXPECT_EQ(BASE64::Encode(test1annexB), "AAAAASdkACCtAHIwFAFuwEQAAAMABAAAAwDLkAABJswAAC4P/73uA+EAgnAAAAABKP+8sA==");
+  const std::vector<uint8_t> test1Avcc = AnnexbToAvc(test1annexB);
+  // Due to ignored extra bytes the reconversion cannot match test1AvccB64
+  EXPECT_EQ(BASE64::Encode(test1Avcc), "AWQAIP/hACgnZAAgrQByMBQBbsBEAAADAAQAAAMAy5AAASbMAAAuD/+97gPhAIJwAQAEKP+8sA==");
 }
