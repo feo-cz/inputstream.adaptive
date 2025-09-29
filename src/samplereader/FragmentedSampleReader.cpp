@@ -429,6 +429,11 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
         LOG::LogF(LOGERROR, "Protection scheme %u not implemented.", schemeType);
       }
     }
+    else
+    {
+      // Reset for unencrypted content
+      m_readerCryptoInfo = CryptoInfo();
+    }
   }
 SUCCESS:
   if (m_singleSampleDecryptor && m_codecHandler)
