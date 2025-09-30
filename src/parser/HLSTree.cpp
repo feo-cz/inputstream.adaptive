@@ -240,7 +240,8 @@ void adaptive::CHLSTree::FixMediaSequence(std::stringstream& streamData,
   uint64_t segNumber = lastSeg->m_number;
 
   std::streampos streamInitPos = streamData.tellg();
-  uint64_t dateTime{0};
+  uint64_t currentDateTime{0};
+  uint64_t currentSegDurMs{0};
   uint64_t totalSegs{0};
   bool isSegFound{false};
 
@@ -253,18 +254,25 @@ void adaptive::CHLSTree::FixMediaSequence(std::stringstream& streamData,
 
     if (tagName == "#EXT-X-PROGRAM-DATE-TIME")
     {
-      dateTime = static_cast<uint64_t>(XML::ParseDate(tagValue.c_str(), 0) * 1000);
+      currentDateTime = static_cast<uint64_t>(XML::ParseDate(tagValue.c_str(), 0) * 1000);
     }
     else if (tagName == "#EXTINF")
     {
-      if (dateTime >= segStartPts)
+      currentSegDurMs = static_cast<uint64_t>(STRING::ToFloat(tagValue) * 1000);
+    }
+    else if (!line.empty() && line[0] != '#') // Segment url
+    {
+      if (currentDateTime >= segStartPts)
       {
         isSegFound = true;
         break;
       }
 
-      dateTime += static_cast<uint64_t>(STRING::ToFloat(tagValue) * 1000);
+      currentDateTime += currentSegDurMs;
       ++totalSegs;
+
+      // Reset for next segment
+      currentSegDurMs = 0;
     }
   }
 
@@ -293,7 +301,8 @@ void adaptive::CHLSTree::FixMediaSequence(std::stringstream& streamData,
 void adaptive::CHLSTree::FixDiscSequence(std::stringstream& streamData, uint32_t& discSeqNumber)
 {
   std::streampos streamInitPos = streamData.tellg();
-  uint64_t dateTime{0};
+  uint64_t currentDateTime{0};
+  uint64_t currentSegDurMs{0};
   uint32_t discSeqNumberFix = discSeqNumber;
   bool isDiscFound{false};
 
@@ -310,22 +319,29 @@ void adaptive::CHLSTree::FixDiscSequence(std::stringstream& streamData, uint32_t
 
     if (tagName == "#EXT-X-PROGRAM-DATE-TIME")
     {
-      dateTime = static_cast<uint64_t>(XML::ParseDate(tagValue.c_str(), 0) * 1000);
+      currentDateTime = static_cast<uint64_t>(XML::ParseDate(tagValue.c_str(), 0) * 1000);
     }
     else if (tagName == "#EXTINF")
     {
-      if (periodsStartTime.empty())
-        periodsStartTime.emplace_back(dateTime);
-
-      dateTime += static_cast<uint64_t>(STRING::ToFloat(tagValue) * 1000);
+      currentSegDurMs = static_cast<uint64_t>(STRING::ToFloat(tagValue) * 1000);
     }
     else if (tagName == "#EXT-X-DISCONTINUITY")
     {
-      periodsEndTime.emplace_back(dateTime);
-      periodsStartTime.emplace_back(dateTime);
+      periodsEndTime.emplace_back(currentDateTime);
+      periodsStartTime.emplace_back(currentDateTime);
+    }
+    else if (!line.empty() && line[0] != '#') // Segment url
+    {
+      if (periodsStartTime.empty())
+        periodsStartTime.emplace_back(currentDateTime);
+
+      currentDateTime += currentSegDurMs;
+
+      // Reset for next segment
+      currentSegDurMs = 0;
     }
   }
-  periodsEndTime.emplace_back(dateTime);
+  periodsEndTime.emplace_back(currentDateTime);
 
   // Update with single period
   if (periodsStartTime.size() == 1)
@@ -465,11 +481,12 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
 
   uint64_t programDateTime{NO_VALUE}; // EXT-X-PROGRAM-DATE-TIME in ms or NO_VALUE
   uint64_t currentSegNumber{0};
+  uint64_t currentSegDurMs{0};
 
   uint64_t mediaSequenceNbr{0};
 
   CSegContainer newSegments;
-  std::optional<CSegment> newSegment;
+  std::optional<CSegment> newSegment = CSegment();
 
   // Encryptions used between segments
   std::unordered_map<std::string_view, DRM::DRMInfo> drmInfos; // Key System - DRM info
@@ -567,27 +584,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
     }
     else if (tagName == "#EXTINF" && !isSkipUntilDiscont)
     {
-      const uint64_t durMs = static_cast<uint64_t>(STRING::ToFloat(tagValue) * 1000);
-      uint64_t startPts{0};
-      if (programDateTime != NO_VALUE && period->GetStart() != NO_VALUE)
-      {
-        startPts = programDateTime;
-      }
-      else
-      {
-        const CSegment* lastSeg = newSegments.GetBack();
-        if (lastSeg)
-          startPts = lastSeg->m_endPts;
-      }
-
-      // Make a new segment
-      newSegment = CSegment();
-      newSegment->startPTS_ = startPts;
-      newSegment->m_endPts = startPts + durMs;
-      newSegment->m_number = currentSegNumber++;
-
-      // Reset EXT-X-PROGRAM-DATE-TIME, some playlists do not have this tag on each segment
-      programDateTime = NO_VALUE;
+      currentSegDurMs = static_cast<uint64_t>(STRING::ToFloat(tagValue) * 1000);
     }
     else if (tagName == "#EXT-X-BYTERANGE" && newSegment.has_value())
     {
@@ -603,10 +600,8 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
 
       newSegment->range_end_ += newSegment->range_begin_ - 1;
     }
-    else if (newSegment.has_value() && !line.empty() && line[0] != '#')
+    else if (!line.empty() && line[0] != '#') // Segment url
     {
-      // We fall here after a EXTINF (and possible EXT-X-BYTERANGE in the middle)
-
       if (rep->GetContainerType() == ContainerType::NOTYPE)
       {
         // Try find the container type on the representation according to the file extension
@@ -659,12 +654,33 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
 
       newSegment->url = line;
 
+      uint64_t startPts{0};
+      if (programDateTime != NO_VALUE && period->GetStart() != NO_VALUE)
+      {
+        startPts = programDateTime;
+      }
+      else
+      {
+        const CSegment* lastSeg = newSegments.GetBack();
+        if (lastSeg)
+          startPts = lastSeg->m_endPts;
+      }
+
+      newSegment->startPTS_ = startPts;
+      newSegment->m_endPts = startPts + currentSegDurMs;
+      newSegment->m_number = currentSegNumber++;
+
       // The EXT-X-KEY tag might appear before or after the EXTINF tag
       // so its needed set the encryption info just before add the segment to timeline
       newSegment->AESKeyInfo() = aesKey;
 
       newSegments.Add(*newSegment);
-      newSegment.reset();
+
+      // Reset for the next segment
+      newSegment = CSegment();
+      currentSegDurMs = 0;
+      // Reset programDateTime some playlists do not have EXT-X-PROGRAM-DATE-TIME tag on each segment
+      programDateTime = NO_VALUE;
     }
     else if (tagName == "#EXT-X-DISCONTINUITY-SEQUENCE")
     {
