@@ -577,9 +577,6 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
     else if (tagName == "#EXT-X-PROGRAM-DATE-TIME" && !isSkipUntilDiscont)
     {
       programDateTime = static_cast<uint64_t>(XML::ParseDate(tagValue.c_str(), 0) * 1000);
-      // Set or update the period start, only from the first program date time value
-      if (period->GetStart() == 0 || period->GetStart() == NO_VALUE)
-        period->SetStart(programDateTime);
     }
     else if (tagName == "#EXT-X-TARGETDURATION")
     {
@@ -661,6 +658,10 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
       }
 
       newSegment->url = line;
+
+      // Set or update the period start, only from the first program date time value
+      if (period->GetStart() == 0 || period->GetStart() == NO_VALUE)
+        period->SetStart(programDateTime);
 
       uint64_t startPts{0};
       if (programDateTime != NO_VALUE && period->GetStart() != NO_VALUE)
