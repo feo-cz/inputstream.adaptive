@@ -6,6 +6,7 @@
  *  See LICENSES/README.md for more information.
  */
 
+#include "decrypters/DrmEngineDefines.h"
 #include "decrypters/IDecrypter.h"
 
 class CWVCdmAdapter;
@@ -29,7 +30,8 @@ public:
 
   virtual void GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
                                const std::vector<uint8_t>& keyId,
-                               DRM::DecrypterCapabilites& caps) override;
+                               DRM::DecrypterCapabilites& caps,
+                               DRM::DRMMediaType mediaType) override;
   virtual std::optional<bool> HasLicenseKey(
       std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
       const std::vector<uint8_t>& keyId) override;
@@ -48,8 +50,12 @@ public:
   virtual void ReleaseBuffer(void* instance, void* buffer);
   virtual std::string_view GetLibraryPath() const override { return m_libraryPath; }
 
+#ifdef TARGET_WEBOS
+  virtual bool IsSecureDecoderAudioSupported() override { return true; }
+#else
   //! @todo: Secure path for audio is not implemented
   virtual bool IsSecureDecoderAudioSupported() override { return false; }
+#endif
 
 private:
   std::shared_ptr<CWVCdmAdapter> m_WVCdmAdapter;

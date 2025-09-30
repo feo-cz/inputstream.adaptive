@@ -9,19 +9,20 @@
 #ifndef MEDIA_CDM_CDM_ADAPTER_H_
 #define MEDIA_CDM_CDM_ADAPTER_H_
 
-#include <string>
-#include <vector>
+#include "../../base/compiler_specific.h"
+#include "../../base/macros.h"
+#include "../../base/native_library.h"
+#include "../base/cdm_config.h"
+#include "api/content_decryption_module.h"
+
+#include <atomic>
+#include <future>
 #include <inttypes.h>
 #include <memory>
 #include <mutex>
-#include <atomic>
-#include <future>
-
-#include "../../base/native_library.h"
-#include "../../base/compiler_specific.h"
-#include "../../base/macros.h"
-#include "api/content_decryption_module.h"
-#include "../base/cdm_config.h"
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace media {
 
@@ -122,7 +123,8 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>,
 	void TimerExpired(void* context);
 
 	cdm::Status Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
-		cdm::DecryptedBlock* decrypted_buffer);
+                      cdm::DecryptedBlock* decrypted_buffer,
+                      cdm::StreamType streamType = cdm::StreamType::kStreamTypeVideo);
 
   cdm::Status InitializeAudioDecoder(
 		const cdm::AudioDecoderConfig_2& audio_decoder_config);
@@ -219,12 +221,17 @@ class CdmAdapter : public std::enable_shared_from_this<CdmAdapter>,
 
   void OnInitialized(bool success) override;
 
+  std::future<std::string> PrepareSessionFuture(uint32_t promiseId);
 
   //Misc
   ~CdmAdapter();
   bool LoadCDM();
   bool Initialize();
   std::string GetVersion() const;
+
+protected:
+  std::mutex m_sessionMx;
+  std::unordered_map<uint32_t, std::promise<std::string>> m_sessionPromises;
 
 private:
   void UnloadCDM();
@@ -261,6 +268,10 @@ private:
   CdmConfig cdm_config_;
 
   cdm::Buffer* active_buffer_{nullptr};
+
+  std::promise<void> m_initPromise;
+  std::future<void> m_initFuture;
+  std::atomic<bool> m_provisioningCompleteOrStarted;
 
   cdm::ContentDecryptionModule_10* cdm10_{nullptr};
   cdm::ContentDecryptionModule_11* cdm11_{nullptr};

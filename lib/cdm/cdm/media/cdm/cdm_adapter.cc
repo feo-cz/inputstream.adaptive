@@ -61,6 +61,8 @@ const char PATH_SEPARATOR = '\\';
 const char PATH_SEPARATOR = '/';
 #endif
 
+constexpr std::chrono::seconds INIT_FUTURE_TIMEOUT_SEC{3};
+
 void* GetCdmHost(int host_interface_version, void* user_data)
 {
   if (!user_data)
@@ -216,6 +218,9 @@ bool CdmAdapter::LoadCDM()
 
 bool CdmAdapter::Initialize()
 {
+  m_initPromise = std::promise<void>{};
+  m_initFuture = m_initPromise.get_future();
+  m_provisioningCompleteOrStarted = false;
   m_isClosingSession = false;
 
   Log(LogLevel::DEBUG, "CDM version: %s", GetVersion().c_str());
@@ -251,18 +256,34 @@ bool CdmAdapter::Initialize()
     if (cdm12_)
     {
       cdm12_->Initialize(cdm_config_.allow_distinctive_identifier,
-                         cdm_config_.allow_persistent_state, false);      
+                         cdm_config_.allow_persistent_state, cdm_config_.use_hw_secure_codecs);
     }
     else if (cdm11_)
     {
       cdm11_->Initialize(cdm_config_.allow_distinctive_identifier,
-                         cdm_config_.allow_persistent_state, false);
+                         cdm_config_.allow_persistent_state, cdm_config_.use_hw_secure_codecs);
     }
     else if (cdm10_)
     {
       cdm10_->Initialize(cdm_config_.allow_distinctive_identifier,
-                         cdm_config_.allow_persistent_state, false);
+                         cdm_config_.allow_persistent_state, cdm_config_.use_hw_secure_codecs);
     }
+
+    // Wait for the CDM to be initialized
+    // Add a maximum timeout in case we never hear back!
+    if (m_initFuture.valid() &&
+        m_initFuture.wait_for(INIT_FUTURE_TIMEOUT_SEC) != std::future_status::ready)
+    {
+      Log(LogLevel::ERROR, "CDM initialization timed out");
+      return false;
+    }
+
+    if (!m_provisioningCompleteOrStarted)
+    {
+      Log(LogLevel::ERROR, "CDM initialization failed or not started");
+      return false;
+    }
+
     return true;
   }
 
@@ -429,7 +450,8 @@ void CdmAdapter::TimerExpired(void* context)
 }
 
 cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
-  cdm::DecryptedBlock* decrypted_buffer)
+                                cdm::DecryptedBlock* decrypted_buffer,
+                                cdm::StreamType streamType)
 {
   //We need this wait here for fast systems, during buffering
   //widewine stopps if some seconds (5??) are fetched too fast
@@ -444,17 +466,13 @@ cdm::Status CdmAdapter::Decrypt(const cdm::InputBuffer_2& encrypted_buffer,
     ret = cdm12_->Decrypt(encrypted_buffer, decrypted_buffer);
   else if (cdm11_)
 #ifdef TARGET_WEBOS
-    // we set this to kStreamTypeAudio, as this bypasses automatic SVP header/meta data injection
-    // this is lost in RepackSubsampleData
-    ret = cdm11_->Decrypt(encrypted_buffer, decrypted_buffer, cdm::StreamType::kStreamTypeAudio);
+    ret = cdm11_->Decrypt(encrypted_buffer, decrypted_buffer, streamType);
 #else
     ret = cdm11_->Decrypt(encrypted_buffer, decrypted_buffer);
 #endif
   else if (cdm10_)
 #ifdef TARGET_WEBOS
-    // we set this to kStreamTypeAudio, as this bypasses automatic SVP header/meta data injection
-    // this is lost in RepackSubsampleData
-    ret = cdm10_->Decrypt(encrypted_buffer, decrypted_buffer, cdm::StreamType::kStreamTypeAudio);
+    ret = cdm10_->Decrypt(encrypted_buffer, decrypted_buffer, streamType);
 #else
     ret = cdm10_->Decrypt(encrypted_buffer, decrypted_buffer);
 #endif
@@ -616,10 +634,32 @@ void CdmAdapter::OnResolvePromise(uint32_t promise_id)
 {
 }
 
-void CdmAdapter::OnResolveNewSessionPromise(uint32_t promise_id,
-                      const char* session_id,
-                      uint32_t session_id_size)
+std::future<std::string> CdmAdapter::PrepareSessionFuture(uint32_t promiseId)
 {
+  std::lock_guard<std::mutex> lock(m_sessionMx);
+  std::promise<std::string> promise;
+  auto future = promise.get_future();
+  m_sessionPromises[promiseId] = std::move(promise);
+  return future;
+}
+
+void CdmAdapter::OnResolveNewSessionPromise(uint32_t promise_id,
+                                            const char* session_id,
+                                            uint32_t session_id_size)
+{
+  std::string sessionStr(session_id, session_id_size);
+
+  std::lock_guard<std::mutex> lock(m_sessionMx);
+  auto it = m_sessionPromises.find(promise_id);
+  if (it != m_sessionPromises.end())
+  {
+    it->second.set_value(sessionStr);
+    m_sessionPromises.erase(it);
+  }
+  else
+  {
+    Log(LogLevel::ERROR, "Promise ID %u not found", promise_id);
+  }
 }
 
 void CdmAdapter::OnSessionKeysChange(const char* session_id,
@@ -712,9 +752,37 @@ void CdmAdapter::OnResolveKeyStatusPromise(uint32_t promise_id, cdm::KeyStatus_2
 {
 }
 
-void CdmAdapter::OnRejectPromise(uint32_t promise_id, cdm::Exception exception,
-  uint32_t system_code, const char* error_message, uint32_t error_message_size)
+void CdmAdapter::OnRejectPromise(uint32_t promise_id,
+                                 cdm::Exception exception,
+                                 uint32_t system_code,
+                                 const char* error_message,
+                                 uint32_t error_message_size)
 {
+  std::lock_guard<std::mutex> lk(m_sessionMx);
+  auto it = m_sessionPromises.find(promise_id);
+  if (it == m_sessionPromises.end())
+    return;
+
+  try
+  {
+    std::string msg;
+    if (error_message && error_message_size)
+    {
+      msg.assign(error_message, error_message_size);
+    }
+    else
+    {
+      msg = "CDM reject: " + std::to_string(static_cast<int>(exception)) +
+            " sys=" + std::to_string(system_code);
+    }
+
+    it->second.set_exception(std::make_exception_ptr(std::runtime_error(msg)));
+  }
+  catch (...)
+  {
+  }
+
+  m_sessionPromises.erase(it);
 }
 
 void CdmAdapter::OnSessionMessage(const char* session_id, uint32_t session_id_size,
@@ -739,6 +807,15 @@ void CdmAdapter::ReportMetrics(cdm::MetricName metric_name, uint64_t value)
 
 void CdmAdapter::OnInitialized(bool success)
 {
+  // Notify the client that the CDM is initialized
+  if (success)
+  {
+    m_provisioningCompleteOrStarted = true;
+  }
+
+  // Set the promise value so that execution can continue
+  m_initPromise.set_value();
+
   Log(LogLevel::DEBUG, "CDM is initialized: %s", success ? "true" : "false");
 }
 

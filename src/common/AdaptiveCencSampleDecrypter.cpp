@@ -17,9 +17,10 @@ CAdaptiveCencSampleDecrypter::CAdaptiveCencSampleDecrypter(
 }
 
 AP4_Result CAdaptiveCencSampleDecrypter::DecryptSampleData(AP4_UI32 poolid,
-                                       AP4_DataBuffer& data_in,
-                                       AP4_DataBuffer& data_out,
-                                       const AP4_UI08* iv)
+                                                           AP4_DataBuffer& data_in,
+                                                           AP4_DataBuffer& data_out,
+                                                           const AP4_UI08* iv,
+                                                           DRM::DRMMediaType streamType)
   {
     // increment the sample cursor
     unsigned int sample_cursor = m_SampleCursor++;
@@ -51,5 +52,6 @@ AP4_Result CAdaptiveCencSampleDecrypter::DecryptSampleData(AP4_UI32 poolid,
 
     // decrypt the sample
     return m_decrypter->DecryptSampleData(poolid, data_in, data_out, iv_block, subsample_count,
-                                          bytes_of_cleartext_data, bytes_of_encrypted_data);
+                                          bytes_of_cleartext_data, bytes_of_encrypted_data,
+                                          streamType);
   }

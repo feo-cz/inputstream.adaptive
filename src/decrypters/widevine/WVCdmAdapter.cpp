@@ -88,7 +88,9 @@ SResult CWVCdmAdapter::Initialize(const DRM::Config& config, CWVDecrypter* host)
     return SResultCode::ERROR;
   }
   std::string cdmPath;
+  bool useHwSecureCodecs = false;
 #ifdef TARGET_WEBOS
+  useHwSecureCodecs = true;
   auto it = std::ranges::find_if(candidatePaths, [](std::string_view sv)
                                  { return std::filesystem::exists(std::filesystem::path{sv}); });
 
@@ -118,10 +120,10 @@ SResult CWVCdmAdapter::Initialize(const DRM::Config& config, CWVDecrypter* host)
   basePath = FILESYS::PathCombine(basePath, DRM::GenerateUrlDomainHash(licUrl));
   basePath += FILESYS::SEPARATOR;
 
-  auto cdmAdapter =
-      std::make_shared<media::CdmAdapter>("com.widevine.alpha", cdmPath, basePath,
-                                          media::CdmConfig(false, m_config.isPersistentStorage),
-                                          dynamic_cast<media::CdmAdapterClient*>(this));
+  auto cdmAdapter = std::make_shared<media::CdmAdapter>(
+      "com.widevine.alpha", cdmPath, basePath,
+      media::CdmConfig(false, m_config.isPersistentStorage, useHwSecureCodecs),
+      dynamic_cast<media::CdmAdapterClient*>(this));
 
   if (!cdmAdapter->LoadCDM())
   {
