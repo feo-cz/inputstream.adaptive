@@ -569,6 +569,14 @@ menu_data = {
                 }
             },
         },
+        'HLS Live': {
+            MI_CONFIG: {},
+            'UnifiedStreaming ADS CMAF SCTE-35 [multi-period]': {
+                SI_CONFIG: {
+                    'manifest_url': 'https://dai-gcp-eu-west-1-1.daiconnect.com/live/hls/usp/scte35-stable/.m3u8?filter=%28type!=%22textstream%22%29'
+                }
+            },
+        },
     },
     'Manifest Smooth Streaming': {
         MI_CONFIG: {},
