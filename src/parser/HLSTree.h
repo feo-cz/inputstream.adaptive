@@ -162,7 +162,7 @@ protected:
   bool ProcessChildManifest(PLAYLIST::CPeriod* period,
                             PLAYLIST::CAdaptationSet* adp,
                             PLAYLIST::CRepresentation* rep,
-                            uint64_t currentSegNumber);
+                            uint64_t currentSegNumber = PLAYLIST::SEGMENT_NO_NUMBER);
 
   ParseStatus ParseChildManifest(const std::string& data,
                                  std::string_view sourceUrl,

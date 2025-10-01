@@ -197,7 +197,7 @@ bool adaptive::CHLSTree::PrepareRepresentation(PLAYLIST::CPeriod* period,
   if (!m_isLive && !rep->Timeline().IsEmpty())
     return true;
 
-  if (!ProcessChildManifest(period, adp, rep, SEGMENT_NO_NUMBER))
+  if (!ProcessChildManifest(period, adp, rep))
     return false;
 
   StartUpdateThread();
@@ -425,7 +425,7 @@ void adaptive::CHLSTree::FixDiscSequence(std::stringstream& streamData, uint32_t
 bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
                                               PLAYLIST::CAdaptationSet* adp,
                                               PLAYLIST::CRepresentation* rep,
-                                              uint64_t currentSegNumber)
+                                              uint64_t currentSegNumber /* = PLAYLIST::SEGMENT_NO_NUMBER */)
 {
   ParseStatus status = ParseStatus::INVALID;
   size_t maxInvalidStatus = 3;
@@ -441,6 +441,14 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
 
     if (status == ParseStatus::SUCCESS)
     {
+      // If current segment number is not set, we need to set it in order to sync the current segment between playlist updates
+      // This is done here because ParseChildManifest in the event of discontinuity can clear the current "outdated" period
+      // and so invalidate the current segment
+      if (currentSegNumber == PLAYLIST::SEGMENT_NO_NUMBER && rep->current_segment_.has_value())
+      {
+        currentSegNumber = rep->current_segment_->m_number;
+      }
+
       PrepareSegments(period, adp, rep, currentSegNumber);
     }
     else if (status == ParseStatus::INVALID)
@@ -569,9 +577,6 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
     else if (tagName == "#EXT-X-PROGRAM-DATE-TIME" && !isSkipUntilDiscont)
     {
       programDateTime = static_cast<uint64_t>(XML::ParseDate(tagValue.c_str(), 0) * 1000);
-      // Set or update the period start, only from the first program date time value
-      if (period->GetStart() == 0 || period->GetStart() == NO_VALUE)
-        period->SetStart(programDateTime);
     }
     else if (tagName == "#EXT-X-TARGETDURATION")
     {
@@ -653,6 +658,10 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
       }
 
       newSegment->url = line;
+
+      // Set or update the period start, only from the first program date time value
+      if (period->GetStart() == 0 || period->GetStart() == NO_VALUE)
+        period->SetStart(programDateTime);
 
       uint64_t startPts{0};
       if (programDateTime != NO_VALUE && period->GetStart() != NO_VALUE)
@@ -907,8 +916,21 @@ void adaptive::CHLSTree::PrepareSegments(PLAYLIST::CPeriod* period,
       segNumber = rep->GetStartNumber() + rep->Timeline().GetSize() - 1;
     }
 
-    rep->current_segment_ =
-        *rep->Timeline().Get(static_cast<size_t>(segNumber - rep->GetStartNumber()));
+    const CSegment* alignedSeg =
+        rep->Timeline().Get(static_cast<size_t>(segNumber - rep->GetStartNumber()));
+
+    if (alignedSeg)
+    {
+      rep->current_segment_ = *alignedSeg;
+    }
+    else
+    {
+      LOG::LogF(LOGWARNING,
+                "Cannot align the \"current segment\", segment number %llu not found (timeline "
+                "size %zu)",
+                segNumber - rep->GetStartNumber(), rep->Timeline().GetSize());
+      rep->current_segment_.reset();
+    }
   }
 
   //! @todo: m_currentPeriod != m_periods.back().get() condition should be removed from here
@@ -1051,11 +1073,7 @@ void adaptive::CHLSTree::OnRequestSegments(PLAYLIST::CPeriod* period,
   if (rep->IsIncludedStream())
     return;
 
-  // Save the current segment position before parsing the manifest
-  // to allow find the right segment on updated playlist segments
-  const uint64_t segNumber = rep->GetCurrentSegNumber();
-
-  ProcessChildManifest(period, adp, rep, segNumber);
+  ProcessChildManifest(period, adp, rep);
 }
 
 void adaptive::CHLSTree::OnPeriodChange()
@@ -1100,11 +1118,7 @@ void adaptive::CHLSTree::OnUpdateSegments()
 
   for (auto& [adpSet, repr] : refreshList)
   {
-    // Save the current segment position before parsing the manifest
-    // to allow find the right segment on updated playlist segments
-    const uint64_t segNumber = repr->GetCurrentSegNumber();
-
-    if (!ProcessChildManifest(m_currentPeriod, adpSet, repr, segNumber))
+    if (!ProcessChildManifest(m_currentPeriod, adpSet, repr))
     {
       isInvalidUpdate = true;
     }
