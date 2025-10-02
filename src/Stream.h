@@ -23,7 +23,7 @@ public:
   CStream(adaptive::AdaptiveTree* tree,
           PLAYLIST::CAdaptationSet* adp,
           PLAYLIST::CRepresentation* initialRepr)
-    : m_isEnabled{false}, m_mainId{0}, m_adStream{tree, adp, initialRepr}, m_isValid{true}
+    : m_isEnabled{false}, m_adStream{tree, adp, initialRepr}, m_isValid{true}
   {
   }
 
@@ -79,7 +79,7 @@ public:
   }
 
   bool m_isEnabled;
-  uint16_t m_mainId;
+  unsigned int m_mainStreamIndex{0}; // Used when this stream is "included" to video (main stream)
   adaptive::AdaptiveStream m_adStream;
   kodi::addon::InputstreamInfo m_info;
   bool m_isValid;

@@ -78,14 +78,12 @@ public:
    */
   bool PrepareStream(CStream* stream, uint64_t startPts);
 
-  /*! \brief Get a stream by index (starting at 1)
-   *  \param sid The one-indexed stream id
-   *  \return The stream object if the index exists
+  /*!
+   * \brief Get a stream by index
+   * \param index The stream index
+   * \return The stream object if the index exists
    */
-  CStream* GetStream(unsigned int sid) const
-  {
-    return sid - 1 < m_streams.size() ? m_streams[sid - 1].get() : nullptr;
-  }
+  CStream* GetStream(unsigned int index) const;
 
   /*! \brief Enable or disable a stream
    *  \param stream The stream object to act on
@@ -193,11 +191,6 @@ public:
    */
   int64_t GetChapterPos(int ch) const;
 
-  /*! \brief Get the id or sequence of the current period
-   *  \return The id/sequence of the current chapter/period
-   */
-  int GetPeriodId() const;
-
   /*! \brief Seek to the chapter/period specified
    *  \param ch The index (1 indexed) of chapter/period
    *  \return True if successful, false if invalid
@@ -247,7 +240,25 @@ public:
 
   const DRM::CDRMEngine& GetDRMEngine() const { return m_drmEngine; }
 
+  /*!
+   * \brief Get the stream ID relative to stream index in the current period.
+   * \param streamIndex The stream index
+   */
+  int GetStreamIdFromIndex(int streamIndex) const;
+
+  /*!
+   * \brief Get the stream index relative to stream ID in the current period.
+   * \param streamId The stream ID
+   */
+  unsigned int GetStreamIndexFromId(int streamId) const;
+
 protected:
+  /*!
+   * \brief Get the index of the current period
+   * \return The index of the current chapter/period
+   */
+  int GetPeriodIndex() const;
+
   /*!
    * \brief Determine the AdaptationSet that should be the default to be played,
    *        the behavior is mainly based on codec types
