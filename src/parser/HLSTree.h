@@ -256,8 +256,10 @@ private:
   PLAYLIST::CPeriod* FindDiscontinuityPeriod(const uint32_t seqNumber);
 
   uint8_t m_segmentIntervalSec = 4;
-  bool m_hasDiscontSeq = false;
-  uint32_t m_discontSeq = 0;
+  std::optional<uint32_t> m_discontSeq;
+
+  // Period index incremented to every new period added
+  uint32_t m_periodIndex{1};
 };
 
 } // namespace

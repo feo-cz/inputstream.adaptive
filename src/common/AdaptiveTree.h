@@ -65,8 +65,7 @@ public:
 
   std::string manifest_url_;
   std::string base_url_;
-  
-  std::optional<uint32_t> initial_sequence_; // HLS only
+
   uint64_t m_totalTime{0}; // Total playing time in ms (can include all periods/chapters or timeshift)
   uint64_t stream_start_{0}; // in ms
   uint64_t available_time_{0}; // in ms

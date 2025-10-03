@@ -1150,21 +1150,10 @@ uint64_t SESSION::CSession::GetChapterStartTime() const
 
 int SESSION::CSession::GetPeriodId() const
 {
-  if (m_adaptiveTree)
-  {
-    if (IsLive())
-    {
-      if (m_adaptiveTree->initial_sequence_.has_value() &&
-          m_adaptiveTree->m_currentPeriod->GetSequence() == *m_adaptiveTree->initial_sequence_)
-      {
-        return 1;
-      }
-      return m_adaptiveTree->m_currentPeriod->GetSequence() + 1;
-    }
-    else
-      return GetChapter();
-  }
-  return -1;
+  if (!m_adaptiveTree)
+    return -1;
+
+  return m_adaptiveTree->m_currentPeriod->GetIndex();
 }
 
 bool SESSION::CSession::SeekChapter(int ch)

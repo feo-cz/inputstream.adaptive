@@ -60,6 +60,7 @@ bool adaptive::CSmoothTree::Open(const std::string& url,
 bool adaptive::CSmoothTree::ParseManifest(const std::string& data)
 {
   std::unique_ptr<CPeriod> period = CPeriod::MakeUniquePtr();
+  period->SetIndex(1);
 
   xml_document doc;
   xml_parse_result parseRes = doc.load_buffer(data.c_str(), data.size());

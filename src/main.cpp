@@ -79,7 +79,7 @@ bool CInputStreamAdaptive::GetStreamIds(std::vector<unsigned int>& ids)
         INPUTSTREAM_MAX_STREAM_COUNT, streamCount - INPUTSTREAM_MAX_STREAM_COUNT);
   }
 
-  int period_id = m_session->GetPeriodId();
+  const int period_id = m_session->GetPeriodId();
 
   for (unsigned int i(1); i <= INPUTSTREAM_MAX_STREAM_COUNT && i <= streamCount;
        ++i)
@@ -102,25 +102,8 @@ bool CInputStreamAdaptive::GetStreamIds(std::vector<unsigned int>& ids)
           continue;
       }
 
-      unsigned int streamId;
+      const unsigned int streamId = i + period_id * 1000;
 
-      if (m_session->IsLive())
-      {
-        CPeriod* period = stream->m_adStream.getPeriod();
-        if (m_session->HasInitialSequence() &&
-            period->GetSequence() == m_session->GetInitialSequence())
-        {
-          streamId = i + 1000;
-        }
-        else
-        {
-          streamId = i + (period->GetSequence() + 1) * 1000;
-        }
-      }
-      else
-      {
-        streamId = i + period_id * 1000;
-      }
       ids.emplace_back(streamId);
     }
   }

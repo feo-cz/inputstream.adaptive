@@ -695,15 +695,11 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
     {
       uint32_t discontSeq = STRING::ToUint32(tagValue);
 
-      // Make sure to set the sequence to the initial period
-      if (!initial_sequence_.has_value())
-        period->SetSequence(discontSeq);
-
       if (manifestCfg.hlsFixDiscontSequence && hasProgramDateTime)
         FixDiscSequence(streamData, discontSeq);
 
-      if (!initial_sequence_.has_value())
-        initial_sequence_ = discontSeq;
+      if (!m_discontSeq.has_value()) // This to avoid replace the value on manifest updates
+        period->SetSequence(discontSeq);
 
       // Delete periods linked to old discontinuities
       const uint32_t currPeriodSeq = m_currentPeriod->GetSequence();
@@ -752,7 +748,6 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
         isSkipUntilDiscont = true;
       }
 
-      m_hasDiscontSeq = true;
       m_discontSeq = discontSeq;
     }
     else if (tagName == "#EXT-X-DISCONTINUITY")
@@ -765,7 +760,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
           rep->AddDrmInfo(info.second);
         }
 
-        period->SetSequence(m_discontSeq + discontCount);
+        period->SetSequence(m_discontSeq.value_or(0) + discontCount);
 
         if (adp->GetStreamType() != StreamType::SUBTITLE)
         {
@@ -790,7 +785,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
 
       currentSegNumber = mediaSequenceNbr;
 
-      CPeriod* newPeriod = FindDiscontinuityPeriod(m_discontSeq + discontCount);
+      CPeriod* newPeriod = FindDiscontinuityPeriod(m_discontSeq.value_or(0) + discontCount);
 
       if (!newPeriod) // Create new period
       {
@@ -799,6 +794,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
         // Clone same data structure from previous period (no segment will be copied)
         newPeriodPtr->CopyHLSData(period);
         newPeriod = newPeriodPtr.get();
+        newPeriod->SetIndex(m_periodIndex++);
         m_periods.push_back(std::move(newPeriodPtr));
       }
 
@@ -873,7 +869,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
   rep->Timeline().Swap(newSegments);
   rep->SetStartNumber(mediaSequenceNbr);
 
-  period->SetSequence(m_discontSeq + discontCount);
+  period->SetSequence(m_discontSeq.value_or(0) + discontCount);
 
   if (adp->GetStreamType() != StreamType::SUBTITLE)
   {
@@ -1155,6 +1151,7 @@ bool adaptive::CHLSTree::ParseManifest(const std::string& data)
     //! media playlist parsing code could be reused
 
     std::unique_ptr<CPeriod> period = CPeriod::MakeUniquePtr();
+    period->SetIndex(m_periodIndex++);
     // In case of missing EXT-X-PROGRAM-DATE-TIME set start period to 0
     period->SetStart(0);
     period->SetTimescale(TIMESCALE);
@@ -1511,6 +1508,7 @@ bool adaptive::CHLSTree::ParseMultivariantPlaylist(const std::string& data)
   // Create Period / Adaptation sets / Representations
 
   std::unique_ptr<CPeriod> period = CPeriod::MakeUniquePtr();
+  period->SetIndex(m_periodIndex++);
   // In case of missing EXT-X-PROGRAM-DATE-TIME set start period to 0
   period->SetStart(0);
   period->SetTimescale(TIMESCALE);

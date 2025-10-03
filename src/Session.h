@@ -171,23 +171,6 @@ public:
    */
   uint32_t GetIncludedStreamMask() const;
 
-  /*! \brief Check if there is an initial discontinuity sequence number
-   *  \return True if there is an initial discontinuity sequence number
-   */
-  bool HasInitialSequence() const
-  {
-    return m_adaptiveTree->initial_sequence_.has_value();
-  }
-
-  /*! \brief Get the initial discontinuity sequence number
-   *  \return The sequence number of the first discontinuity sequence
-   *          encountered when playback started
-   */
-  uint32_t GetInitialSequence() const
-  {
-    return m_adaptiveTree->initial_sequence_.has_value() ? *m_adaptiveTree->initial_sequence_ : 0;
-  }
-
   /*! \brief Get the chapter number currently being played
    *  \return 1 indexed vlaue of the current period
    */
