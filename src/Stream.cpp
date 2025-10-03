@@ -40,7 +40,7 @@ void CStream::Reset()
     m_streamReader.reset();
     m_streamFile.reset();
     m_adByteStream.reset();
-    m_mainId = 0;
+    m_mainStreamIndex = 0;
   }
 }
 

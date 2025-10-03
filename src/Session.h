@@ -78,14 +78,12 @@ public:
    */
   bool PrepareStream(CStream* stream, uint64_t startPts);
 
-  /*! \brief Get a stream by index (starting at 1)
-   *  \param sid The one-indexed stream id
-   *  \return The stream object if the index exists
+  /*!
+   * \brief Get a stream by index
+   * \param index The stream index
+   * \return The stream object if the index exists
    */
-  CStream* GetStream(unsigned int sid) const
-  {
-    return sid - 1 < m_streams.size() ? m_streams[sid - 1].get() : nullptr;
-  }
+  CStream* GetStream(unsigned int index) const;
 
   /*! \brief Enable or disable a stream
    *  \param stream The stream object to act on
@@ -171,23 +169,6 @@ public:
    */
   uint32_t GetIncludedStreamMask() const;
 
-  /*! \brief Check if there is an initial discontinuity sequence number
-   *  \return True if there is an initial discontinuity sequence number
-   */
-  bool HasInitialSequence() const
-  {
-    return m_adaptiveTree->initial_sequence_.has_value();
-  }
-
-  /*! \brief Get the initial discontinuity sequence number
-   *  \return The sequence number of the first discontinuity sequence
-   *          encountered when playback started
-   */
-  uint32_t GetInitialSequence() const
-  {
-    return m_adaptiveTree->initial_sequence_.has_value() ? *m_adaptiveTree->initial_sequence_ : 0;
-  }
-
   /*! \brief Get the chapter number currently being played
    *  \return 1 indexed vlaue of the current period
    */
@@ -209,11 +190,6 @@ public:
    *  \return The position in milliseconds of the chapter/period
    */
   int64_t GetChapterPos(int ch) const;
-
-  /*! \brief Get the id or sequence of the current period
-   *  \return The id/sequence of the current chapter/period
-   */
-  int GetPeriodId() const;
 
   /*! \brief Seek to the chapter/period specified
    *  \param ch The index (1 indexed) of chapter/period
@@ -264,7 +240,25 @@ public:
 
   const DRM::CDRMEngine& GetDRMEngine() const { return m_drmEngine; }
 
+  /*!
+   * \brief Get the stream ID relative to stream index in the current period.
+   * \param streamIndex The stream index
+   */
+  int GetStreamIdFromIndex(int streamIndex) const;
+
+  /*!
+   * \brief Get the stream index relative to stream ID in the current period.
+   * \param streamId The stream ID
+   */
+  unsigned int GetStreamIndexFromId(int streamId) const;
+
 protected:
+  /*!
+   * \brief Get the index of the current period
+   * \return The index of the current chapter/period
+   */
+  int GetPeriodIndex() const;
+
   /*!
    * \brief Determine the AdaptationSet that should be the default to be played,
    *        the behavior is mainly based on codec types

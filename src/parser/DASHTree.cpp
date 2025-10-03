@@ -191,7 +191,6 @@ bool adaptive::CDashTree::ParseManifest(const std::string& data)
   }
 
   m_segmentsLowerStartNumber = 0;
-  m_periodCurrentSeq = 0;
 
   xml_node nodeMPD = doc.child("MPD");
   if (!nodeMPD)
@@ -297,7 +296,7 @@ void adaptive::CDashTree::ParseTagPeriod(pugi::xml_node nodePeriod, const std::s
 {
   std::unique_ptr<CPeriod> period = CPeriod::MakeUniquePtr();
 
-  period->SetSequence(m_periodCurrentSeq++);
+  period->SetIndex(m_periodIndex++);
 
   // Parse <Period> attributes
 
@@ -1616,7 +1615,7 @@ void adaptive::CDashTree::OnUpdateSegments()
       LOG::LogF(LOGDEBUG, "Inserting new Period (id=%s, start=%llu)", updPeriod->GetId().c_str(),
                 updPeriod->GetStart());
 
-      updPeriod->SetSequence(m_periodCurrentSeq++);
+      updPeriod->SetIndex(m_periodIndex++);
       m_periods.push_back(std::move(updPeriod));
       continue;
     }

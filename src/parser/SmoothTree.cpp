@@ -59,8 +59,6 @@ bool adaptive::CSmoothTree::Open(const std::string& url,
 
 bool adaptive::CSmoothTree::ParseManifest(const std::string& data)
 {
-  std::unique_ptr<CPeriod> period = CPeriod::MakeUniquePtr();
-
   xml_document doc;
   xml_parse_result parseRes = doc.load_buffer(data.c_str(), data.size());
   if (parseRes.status != status_ok)
@@ -75,6 +73,9 @@ bool adaptive::CSmoothTree::ParseManifest(const std::string& data)
     LOG::LogF(LOGERROR, "Failed to get manifest <SmoothStreamingMedia> tag element.");
     return false;
   }
+
+  std::unique_ptr<CPeriod> period = CPeriod::MakeUniquePtr();
+  period->SetIndex(1);
 
   // Default frequency 10000000 (10Khz)
   period->SetTimescale(XML::GetAttribUint32(nodeSSM, "TimeScale", 10000000));

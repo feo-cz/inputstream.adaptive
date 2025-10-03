@@ -41,7 +41,26 @@ public:
   std::string GetBaseUrl() const { return m_baseUrl; }
   void SetBaseUrl(std::string_view baseUrl) { m_baseUrl = baseUrl; }
 
+  /*!
+   * \brief Get the period index, a sequential number used to distinguish periods.
+   * \return The period index.
+   */
+  uint32_t GetIndex() const { return m_index; }
+
+  /*!
+   * \brief Set the period index.
+   */
+  void SetIndex(uint32_t index) { m_index = index; }
+
+  /*!
+   * \brief Get the sequence number (e.g. discontinuity sequence number on HLS).
+   * \return The sequence number.
+   */
   uint32_t GetSequence() const { return m_sequence; }
+
+  /*!
+   * \brief Set the sequence number (e.g. discontinuity sequence number on HLS).
+   */
   void SetSequence(uint32_t sequence) { m_sequence = sequence; }
 
   /*!
@@ -121,6 +140,7 @@ protected:
   std::string m_baseUrl;
   uint32_t m_timescale{1000};
   uint32_t m_sequence{0};
+  uint32_t m_index{0};
   uint64_t m_start{NO_VALUE};
   uint64_t m_duration{0};
   uint64_t m_tlDuration{0};
