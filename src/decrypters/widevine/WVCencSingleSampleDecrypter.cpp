@@ -43,9 +43,9 @@ cdm::StreamType ToCdmStreamType(DRM::DRMMediaType stream_type)
       return cdm::StreamType::kStreamTypeAudio;
     case DRM::DRMMediaType::VIDEO:
       return cdm::StreamType::kStreamTypeVideo;
+    default:
+      return cdm::StreamType::kStreamTypeVideo;
   }
-
-  return cdm::StreamType::kStreamTypeVideo;
 }
 } // unnamed namespace
 
