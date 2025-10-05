@@ -15,6 +15,8 @@
 #include <bento4/Ap4.h>
 #include <kodi/addon-instance/Inputstream.h>
 
+#include <optional>
+
 namespace SESSION
 {
 class ATTR_DLL_LOCAL CStream
@@ -79,7 +81,7 @@ public:
   }
 
   bool m_isEnabled;
-  unsigned int m_mainStreamIndex{0}; // Used when this stream is "included" to video (main stream)
+  std::optional<unsigned int> m_mainStreamIndex; // Used when this stream is "included" to video (main stream)
   adaptive::AdaptiveStream m_adStream;
   kodi::addon::InputstreamInfo m_info;
   bool m_isValid;

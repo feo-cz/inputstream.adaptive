@@ -143,9 +143,9 @@ bool CInputStreamAdaptive::GetStream(int streamid, kodi::addon::InputstreamInfo&
 
 void CInputStreamAdaptive::UnlinkIncludedStreams(CStream* stream)
 {
-  if (stream->m_mainStreamIndex)
+  if (stream->m_mainStreamIndex.has_value())
   {
-    CStream* mainStream(m_session->GetStream(stream->m_mainStreamIndex));
+    CStream* mainStream(m_session->GetStream(*stream->m_mainStreamIndex));
     if (mainStream->GetReader())
       mainStream->GetReader()->RemoveStreamType(stream->m_info.GetStreamType());
   }
@@ -224,12 +224,17 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
   if (rep->IsIncludedStream())
   {
     CStream* mainStream;
-    stream->m_mainStreamIndex = 0;
-    while ((mainStream = m_session->GetStream(++stream->m_mainStreamIndex)))
+    unsigned int mainStreamIndex{0};
+
+    while ((mainStream = m_session->GetStream(mainStreamIndex++)))
+    {
       if (mainStream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO && mainStream->m_isEnabled)
         break;
+    }
+
     if (mainStream)
     {
+      stream->m_mainStreamIndex = mainStreamIndex;
       ISampleReader* mainReader = mainStream->GetReader();
       if (!mainReader)
       {
@@ -243,8 +248,9 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
     }
     else
     {
-      stream->m_mainStreamIndex = 0;
+      stream->m_mainStreamIndex.reset();
     }
+
     m_IncludedStreams[stream->m_info.GetStreamType()] = streamid;
     return false;
   }
