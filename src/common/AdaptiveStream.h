@@ -206,7 +206,10 @@ enum class EVENT_TYPE
     {
       THREADDATA() = default;
 
-      void Initialize(AdaptiveStream* parent);
+      void Initialize(AdaptiveStream *parent)
+      {
+        m_downloadThread = std::thread(&AdaptiveStream::worker, parent);
+      }
 
       ~THREADDATA()
       {
@@ -226,7 +229,6 @@ enum class EVENT_TYPE
       // \brief Thread state
       enum class ThState
       {
-        NONE, // No state
         RUNNING, // Process downloads in queue
         PAUSED, // Complete the current download, then pause the next downloads in the queue
         STOPPED, // Cancel the current download, then pause the next downloads in the queue
@@ -244,7 +246,7 @@ enum class EVENT_TYPE
     private:
       std::thread m_downloadThread;
       bool m_isThreadExit{false};
-      std::atomic<ThState> m_state = ThState::NONE;
+      std::atomic<ThState> m_state = ThState::STOPPED;
     };
     THREADDATA* thread_data_{nullptr};
 
