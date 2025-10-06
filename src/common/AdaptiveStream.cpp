@@ -286,10 +286,6 @@ void adaptive::AdaptiveStream::ResetActiveBuffer()
 
 void adaptive::AdaptiveStream::worker()
 {
-  // Change the status to STOP and signal main thread that this one is running
-  thread_data_->StopDownloads();
-  thread_data_->cvState.notify_all();
-
   do
   {
     // Check the thread state to wait in case of PAUSE or STOP
@@ -712,7 +708,6 @@ bool adaptive::AdaptiveStream::start_stream(const uint64_t startPts)
         current_rep_->timescale_int_;
   }
 
-  thread_data_->StartDownloads();
   current_rep_->SetIsEnabled(true);
   return true;
 }
@@ -1378,10 +1373,11 @@ void adaptive::AdaptiveStream::Dispose()
 
 void adaptive::AdaptiveStream::THREADDATA::Initialize(AdaptiveStream* parent)
 {
+  // Already set the state to RUNNING will allow the thread
+  // to start immediately without waiting for condition notifications
+  m_state = ThState::RUNNING;
+
   m_downloadThread = std::thread(&AdaptiveStream::worker, parent);
-  // Wait until the thread is actually running
-  std::unique_lock<std::mutex> lckWorker(mutexWorker);
-  cvState.wait(lckWorker, [&] { return State() != THREADDATA::ThState::NONE || IsThreadExit(); });
 }
 
 void adaptive::AdaptiveStream::THREADDATA::StopDownloads()
