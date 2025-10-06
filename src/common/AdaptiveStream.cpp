@@ -708,7 +708,6 @@ bool adaptive::AdaptiveStream::start_stream(const uint64_t startPts)
         current_rep_->timescale_int_;
   }
 
-  thread_data_->StartDownloads();
   current_rep_->SetIsEnabled(true);
   return true;
 }
@@ -1370,6 +1369,15 @@ void adaptive::AdaptiveStream::Dispose()
     delete thread_data_;
     thread_data_ = nullptr;
   }
+}
+
+void adaptive::AdaptiveStream::THREADDATA::Initialize(AdaptiveStream* parent)
+{
+  // Already set the state to RUNNING will allow the thread
+  // to start immediately without waiting for condition notifications
+  m_state = ThState::RUNNING;
+
+  m_downloadThread = std::thread(&AdaptiveStream::worker, parent);
 }
 
 void adaptive::AdaptiveStream::THREADDATA::StopDownloads()

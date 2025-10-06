@@ -206,10 +206,8 @@ enum class EVENT_TYPE
     {
       THREADDATA() = default;
 
-      void Initialize(AdaptiveStream *parent)
-      {
-        m_downloadThread = std::thread(&AdaptiveStream::worker, parent);
-      }
+      // \brief Initialize the thread and start downloads
+      void Initialize(AdaptiveStream* parent);
 
       ~THREADDATA()
       {
