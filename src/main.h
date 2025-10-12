@@ -65,6 +65,8 @@ private:
   std::atomic<uint64_t> m_lastPts{PLAYLIST::NO_PTS_VALUE};
 
   void UnlinkIncludedStreams(SESSION::CStream* stream);
+
+  bool m_checkCoreReopen{false}; // Check if Kodi core will reopen all streams
 };
 
 /*******************************************************/
