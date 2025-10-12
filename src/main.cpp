@@ -165,7 +165,7 @@ void CInputStreamAdaptive::EnableStream(int streamid, bool enable)
 
   CStream* stream{m_session->GetStream(m_session->GetStreamIndexFromId(streamid))};
 
-  if (!enable && stream && stream->m_isEnabled)
+  if (!enable && stream && stream->IsEnabled())
   {
     UnlinkIncludedStreams(stream);
     m_session->EnableStream(stream, false);
@@ -194,7 +194,7 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
   if (!stream)
     return false;
 
-  if (stream->m_isEnabled)
+  if (stream->IsEnabled())
   {
     if (stream->m_adStream.StreamChanged())
     {
@@ -209,7 +209,7 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
     }
   }
 
-  stream->m_isEnabled = true;
+  stream->SetIsEnabled(true);
 
   //! @todo: for live with multiple periods (like HLS DISCONTINUITIES) for subtitle case
   //! when the subtitle has been disabled from video start, and happens a period change,
@@ -228,7 +228,7 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
 
     while ((mainStream = m_session->GetStream(mainStreamIndex++)))
     {
-      if (mainStream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO && mainStream->m_isEnabled)
+      if (mainStream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO && mainStream->IsEnabled())
         break;
     }
 
