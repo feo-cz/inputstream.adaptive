@@ -701,38 +701,41 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
       if (!m_discontSeq.has_value()) // This to avoid replace the value on manifest updates
         period->SetSequence(discontSeq);
 
-      // Delete periods linked to old discontinuities
-      const uint32_t currPeriodSeq = m_currentPeriod->GetSequence();
-
-      for (auto itPeriod = m_periods.begin(); itPeriod != m_periods.end();)
+      if (m_currentPeriod)
       {
-        const uint32_t periodSeq = itPeriod->get()->GetSequence();
-        if (periodSeq < discontSeq)
-        {
-          // Period sequence can be equal to current (is use) sequence when:
-          // 1) If you pause the video and after some time you want to continue the playback,
-          //    but this period become outdated.
-          // 2) Malformed manifest update, corrected by FixDiscSequence force this behavior.
-          // So in order to force switching to the next period/sequence the segments must be deleted
-          if (periodSeq == currPeriodSeq)
-          {
-            auto& pCurrAdp = m_currentPeriod->GetAdaptationSets()[adpSetPos];
-            auto& pCurrRep = pCurrAdp->GetRepresentations()[reprPos];
-            pCurrRep->Timeline().Clear();
-            pCurrRep->current_segment_.reset();
-            LOG::Log(LOGDEBUG, "Clear outdated period of discontinuity %u",
-                     itPeriod->get()->GetSequence());
-          }
-          else
-          {
-            LOG::Log(LOGDEBUG, "Deleted period of discontinuity %u",
-                     itPeriod->get()->GetSequence());
-            itPeriod = m_periods.erase(itPeriod);
-            continue;
-          }
-        }
+        // Delete periods linked to old discontinuities
+        const uint32_t currPeriodSeq = m_currentPeriod->GetSequence();
 
-        itPeriod++;
+        for (auto itPeriod = m_periods.begin(); itPeriod != m_periods.end();)
+        {
+          const uint32_t periodSeq = itPeriod->get()->GetSequence();
+          if (periodSeq < discontSeq)
+          {
+            // Period sequence can be equal to current (is use) sequence when:
+            // 1) If you pause the video and after some time you want to continue the playback,
+            //    but this period become outdated.
+            // 2) Malformed manifest update, corrected by FixDiscSequence force this behavior.
+            // So in order to force switching to the next period/sequence the segments must be deleted
+            if (periodSeq == currPeriodSeq)
+            {
+              auto& pCurrAdp = m_currentPeriod->GetAdaptationSets()[adpSetPos];
+              auto& pCurrRep = pCurrAdp->GetRepresentations()[reprPos];
+              pCurrRep->Timeline().Clear();
+              pCurrRep->current_segment_.reset();
+              LOG::Log(LOGDEBUG, "Clear outdated period of discontinuity %u",
+                       itPeriod->get()->GetSequence());
+            }
+            else
+            {
+              LOG::Log(LOGDEBUG, "Deleted period of discontinuity %u",
+                       itPeriod->get()->GetSequence());
+              itPeriod = m_periods.erase(itPeriod);
+              continue;
+            }
+          }
+
+          itPeriod++;
+        }
       }
 
       period = FindDiscontinuityPeriod(discontSeq);
