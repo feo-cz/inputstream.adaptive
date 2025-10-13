@@ -1169,6 +1169,7 @@ bool adaptive::CHLSTree::ParseManifest(const std::string& data)
 
     repr->SetScaling();
 
+    newAdpSet->AddCodecs(repr->GetCodecs());
     newAdpSet->AddRepresentation(repr);
     period->AddAdaptationSet(newAdpSet);
 
@@ -1784,6 +1785,7 @@ void adaptive::CHLSTree::AddIncludedAudioStream(std::unique_ptr<PLAYLIST::CPerio
 
   repr->SetScaling();
 
+  newAdpSet->AddCodecs(repr->GetCodecs());
   newAdpSet->AddRepresentation(repr);
 
   // Ensure that we dont have already an existing adaptation set with same attributes,
