@@ -165,26 +165,31 @@ void CInputStreamAdaptive::EnableStream(int streamid, bool enable)
 
   CStream* stream{m_session->GetStream(m_session->GetStreamIndexFromId(streamid))};
 
-  if (!enable && stream && stream->m_isEnabled)
+  if (!enable && stream && stream->IsEnabled())
   {
     UnlinkIncludedStreams(stream);
     m_session->EnableStream(stream, false);
   }
 }
 
-// If we change some Kodi stream property we must to return true
-// to allow Kodi demuxer to reset with our changes the stream properties.
+// OpenStream method notes:
+// - This method is called:
+//    - At playback start
+//    - At chapter/period change (DEMUX_SPECIALID_STREAMCHANGE)
+//    - At stream quality change (DEMUX_SPECIALID_STREAMCHANGE) by "adaptive" streaming or from Kodi OSD
+//    - Due to CDVDDemuxClient::ParsePacket (Kodi core) while in playback, see "Kodi core is attempting to reopen the stream" below
+// - The "streamid" requested can be influenced from preferences set in Kodi settings (e.g. language).
+// - If the requested "streamid" fails to open on the Kodi core side (after OpenStream callback, e.g. for missing extradata)
+//   Kodi core will try to (fallback) open another video "streamid", this will happen recursively until success.
+// - The OpenStream method not only opens the stream, but also implicitly enables it
+//     so don't exists a EnableStream callback to explicitly enable the stream after the opening,
+//     EnableStream method is used by VP only to disable the stream
+//     which can happen immediately after opening (e.g. subtitles disabled on playback startup).
+// - If a stream info property has been changed, you need to return "true" on OpenStream
+//   to allow Kodi core to update its internal properties with our changes.
 bool CInputStreamAdaptive::OpenStream(int streamid)
 {
   LOG::Log(LOGDEBUG, "OpenStream(%d)", streamid);
-  // This method can be called when:
-  // - Stream first start
-  // - Chapter/period change
-  // - Automatic stream (representation) quality change (such as adaptive)
-  // - Manual stream (representation) quality change (from OSD)
-  // streamid behaviour:
-  // - The streamid can be influenced by Kodi core based on preferences set in Kodi settings (e.g. language)
-  // - Fallback calls, e.g. if the opened video streamid fails, Kodi core will try to open another video streamid
 
   if (!m_session)
     return false;
@@ -194,28 +199,51 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
   if (!stream)
     return false;
 
-  if (stream->m_isEnabled)
+  if (stream->IsEnabled())
   {
+    // Stream quality changed
     if (stream->m_adStream.StreamChanged())
     {
       UnlinkIncludedStreams(stream);
       stream->Reset();
       stream->m_adStream.Reset();
     }
-    else
+    else // Kodi core is attempting to reopen the stream
     {
-      LOG::Log(LOGDEBUG, "OpenStream(%d): The stream has already been opened", streamid);
-      return false;
+      // If a stream was already opened means that Kodi core is attempting to reopen
+      // ALL streams just for his internal purposes and this callback must be avoided.
+
+      //! @todo: This issue appears to have been introduced with PR https://github.com/xbmc/xbmc/pull/10097
+      //! when "changes" var differs from the stored value, it force to reopen all streams,
+      //! where in the past was reopening only the associated stream.
+      //!
+      //! The request to reopen a stream is unclear,
+      //! there is no reason to open a stream already opened, because the EnableStream(false) callback was never sent
+      //! so the state of the addon is still unchanged.
+      //!
+      //! Looks like that the "changes" var is modified by CDVDDemuxClient::ParsePacket while in playback
+      //! https://github.com/xbmc/xbmc/blob/d1a1d48c3cb3722d39264ffdd8132f755ffecd27/xbmc/cores/VideoPlayer/DVDDemuxers/DVDDemuxClient.cpp#L119
+      //! maybe this is required for some other CDVDInputStream interface(?) but not for CInputStreamAddon, this should be at least optional
+      //! since can easily leads to playback problems such as stuttering because reopening all streams can be an heavy task to do while playback
+      //! moreover for subtitles case this is even more messed up, since they can be disabled... (EnableStream callback)
+
+      // NOTE: you cannot rely on stream->IsEnabled() for all stream types because a playback can start with subtitles disabled
+      // so this leads to a mess between OpenStream and EnableStream callbacks causing abnormal behaviors in the addon components.
+      // As workaround we detect the first stream opened twice times (OpenStream for subtitles type is always last),
+      // then we set m_checkCoreReopen to true in order to skip all the following callbacks to OpenStream,
+      // and when we receive the first DemuxRead callback means that Kodi core has finished all openings,
+      // then we reset m_checkCoreReopen for the next round of OpenStream callbacks
+      m_checkCoreReopen = true;
     }
   }
 
-  stream->m_isEnabled = true;
+  if (m_checkCoreReopen)
+  {
+    LOG::Log(LOGDEBUG, "OpenStream(%d): The stream has already been opened", streamid);
+    return false;
+  }
 
-  //! @todo: for live with multiple periods (like HLS DISCONTINUITIES) for subtitle case
-  //! when the subtitle has been disabled from video start, and happens a period change,
-  //! kodi call OpenStream to the subtitle stream as if it were enabled, and disable it with EnableStream
-  //! just after it, this lead to log error "GenerateSidxSegments: [AS-x] Cannot generate segments from SIDX on repr..."
-  //! need to find a solution to avoid open the stream when previously disabled from previous period
+  stream->SetIsEnabled(true);
 
   CRepresentation* rep = stream->m_adStream.getRepresentation();
 
@@ -228,7 +256,7 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
 
     while ((mainStream = m_session->GetStream(mainStreamIndex++)))
     {
-      if (mainStream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO && mainStream->m_isEnabled)
+      if (mainStream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO && mainStream->IsEnabled())
         break;
     }
 
@@ -297,6 +325,10 @@ DEMUX_PACKET* CInputStreamAdaptive::DemuxRead(void)
     return NULL;
 
   m_session->OnDemuxRead();
+
+  // On Kodi core CDVDDemuxClient::ParsePacket occurs after the DemuxRead callback
+  // since it can cause to reopen all streams, reset the check just before
+  m_checkCoreReopen = false;
 
   if (~m_failedSeekTime)
   {
