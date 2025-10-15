@@ -12,8 +12,8 @@
 
 using namespace UTILS;
 
-AV1CodecHandler::AV1CodecHandler(AP4_SampleDescription* sd)
-  : CodecHandler(sd), m_codecProfile{STREAMCODEC_PROFILE::CodecProfileUnknown}
+AV1CodecHandler::AV1CodecHandler(AP4_SampleDescription* sd, AP4_Track* track)
+  : CodecHandler(sd, track), m_codecProfile{STREAMCODEC_PROFILE::CodecProfileUnknown}
 {
   if (AP4_Atom* atom = m_sampleDescription->GetDetails().GetChild(AP4_ATOM_TYPE_AV1C, 0))
   {
@@ -51,6 +51,12 @@ bool AV1CodecHandler::GetInformation(kodi::addon::InputstreamInfo& info)
   {
     info.SetCodecProfile(m_codecProfile);
     isChanged = true;
+  }
+
+  // store dvcc metadata
+  if (auto dvcc = ParseDvcc())
+  {
+    PopulateDvccMetadata(info, dvcc, isChanged);
   }
 
   return isChanged;
