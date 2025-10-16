@@ -1,3 +1,12 @@
+v22.3.0 (2025-10-16)
+- [webOS] Add support to widevine L1 (until 4k)
+- [webOS] Fix dolby vision support
+- [HLS] Fix timeshift on some live streams that use EXT-X-PROGRAM-DATE-TIME
+- [HLS] Fix possible crashes on live streams with discontinuities
+- Fix to prevent multiple stream openings by Kodi core
+- Fix regression about rare case of playback freeze on start
+- Kodi inputstream API update to version 3.4.0
+
 v22.2.9 (2025-09-29)
 - [HLS] Fix case of misdetection of impaired subtitles
 - Fix no picture on MP4 videos with mixed encrypted/unencrypted contents
