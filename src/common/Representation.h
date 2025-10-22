@@ -168,8 +168,6 @@ public:
     return left->m_bandwidth < right->m_bandwidth;
   }
 
-  size_t expired_segments_{0};
-
   std::optional<CSegment> current_segment_;
 
   bool HasInitSegment() const { return m_initSegment.has_value(); }
