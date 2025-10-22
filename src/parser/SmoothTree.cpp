@@ -429,6 +429,7 @@ void adaptive::CSmoothTree::CreateSegmentTimeline()
   }
 }
 
+/*! @todo: commented for future removal
 bool adaptive::CSmoothTree::InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
                                                PLAYLIST::CRepresentation* repr,
                                                uint64_t fTimestamp,
@@ -478,3 +479,4 @@ bool adaptive::CSmoothTree::InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
 
   return true;
 }
+*/

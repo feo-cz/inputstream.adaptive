@@ -37,11 +37,12 @@ public:
 
   virtual CSmoothTree* Clone() const override { return new CSmoothTree{*this}; }
 
-  virtual bool InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
-                                  PLAYLIST::CRepresentation* repr,
-                                  uint64_t fTimestamp,
-                                  uint64_t fDuration,
-                                  uint32_t fTimescale) override;
+  //! @todo: commented for future removal
+  // virtual bool InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
+  //                                 PLAYLIST::CRepresentation* repr,
+  //                                 uint64_t fTimestamp,
+  //                                 uint64_t fDuration,
+  //                                 uint32_t fTimescale) override;
 
 protected:
   virtual bool ParseManifest(const std::string& data);
