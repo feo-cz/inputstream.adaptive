@@ -20,6 +20,7 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
+    <summary lang="bs_BA">InputStream klijent za adaptivne tokove</summary>
     <summary lang="ca_ES">Client InputStream per a transmissions adaptatives</summary>
     <summary lang="cs_CZ">Klient adaptivních toků protokolu InputStream</summary>
     <summary lang="da_DK">InputStream-klient til adaptive streams</summary>
@@ -43,6 +44,7 @@
     <summary lang="ru_RU">Клиент InputStream для адаптивных потоков</summary>
     <summary lang="sv_SE">InputStream-klient för adaptiva strömmar</summary>
     <summary lang="zh_CN">用于自适应流的 InputStream 客户端</summary>
+    <description lang="bs_BA">InputStream klijent za adaptivne tokove. Podržani su uobičajeni protokoli tokinga kao što su MPEG-DASH, HLS i Microsoft Smooth Streaming.[CR][CR]Dodatak također ima podršku za DRM zaštićene tokove, kao što su Google Widevine, Microsoft PlayReady i drugi.[CR][CR]Za dokumentaciju posjetite: https://github.com/xbmc/inputtok.adaptive</description>
     <description lang="ca_ES">Client InputStream per a transmissions adaptatives</description>
     <description lang="cs_CZ">Klient adaptivních toků protokolu InputStream</description>
     <description lang="da_DK">InputStream-klient til adaptive streams</description>
