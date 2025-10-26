@@ -101,19 +101,16 @@ TEST_F(SmoothTreeTest, CheckAsyncTimelineStartPTS)
   EXPECT_EQ(segTL.GetSize(), 30);
   EXPECT_EQ(segTL.Get(0)->startPTS_, 7058030);
   EXPECT_EQ(segTL.Get(0)->m_time, 3903180167058030);
-  EXPECT_EQ(segTL.Get(0)->m_number, 1);
 
   segTL = period->GetAdaptationSets()[1]->GetRepresentations()[0]->Timeline();
 
   EXPECT_EQ(segTL.GetSize(), 30);
   EXPECT_EQ(segTL.Get(0)->startPTS_, 71363);
   EXPECT_EQ(segTL.Get(0)->m_time, 3903180160071363);
-  EXPECT_EQ(segTL.Get(0)->m_number, 1);
 
   segTL = period->GetAdaptationSets()[3]->GetRepresentations()[0]->Timeline();
 
   EXPECT_EQ(segTL.GetSize(), 29);
   EXPECT_EQ(segTL.Get(0)->startPTS_, 0);
   EXPECT_EQ(segTL.Get(0)->m_time, 3903180160000000);
-  EXPECT_EQ(segTL.Get(0)->m_number, 1);
 }

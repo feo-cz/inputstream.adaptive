@@ -1197,10 +1197,6 @@ bool adaptive::AdaptiveStream::seek_time(double seek_seconds, bool preceeding, b
   if (choosen_seg && current_rep_->Timeline().Get(choosen_seg)->startPTS_ > sec_in_ts)
     --choosen_seg;
 
-  // Never seek into expired segments.....
-  if (choosen_seg < current_rep_->expired_segments_)
-    choosen_seg = current_rep_->expired_segments_;
-
   if (!preceeding && sec_in_ts > current_rep_->Timeline().Get(choosen_seg)->startPTS_ &&
       current_adp_->GetStreamType() == StreamType::VIDEO)
   {

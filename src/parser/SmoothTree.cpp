@@ -8,6 +8,8 @@
 
 #include "SmoothTree.h"
 
+#include "CompKodiProps.h"
+#include "SrvBroker.h"
 #include "decrypters/Helpers.h"
 #include "decrypters/HelperPr.h"
 #include "utils/StringUtils.h"
@@ -16,6 +18,8 @@
 #include "utils/XMLUtils.h"
 #include "utils/log.h"
 #include "pugixml.hpp"
+
+#include <numeric> // accumulate
 
 using namespace adaptive;
 using namespace pugi;
@@ -52,8 +56,6 @@ bool adaptive::CSmoothTree::Open(const std::string& url,
 
   m_currentPeriod = m_periods[0].get();
 
-  CreateSegmentTimeline();
-
   return true;
 }
 
@@ -84,14 +86,35 @@ bool adaptive::CSmoothTree::ParseManifest(const std::string& data)
   {
     m_isLive = true;
     available_time_ = stream_start_;
+    m_updateInterval = 5000;
   }
 
-  if (!m_isLive)
+  m_mediaPresDuration = XML::GetAttribUint64(nodeSSM, "Duration") * 1000 / period->GetTimescale();
+
+  /*! @todo: future rework needed, we currently manage the TSB based on the segments/chunks
+   *!  provided by the manifest that should fall within the duration DVRWindowLength,
+   *!  but the DVRWindowLength can be also 0 or omitted that means infinite TSB,
+   *!  in this case, we should allow for a broader TSB,
+   *!  so segments should be collected until the maximum TSB is covered
+   *!  Currently each parser has its own segment management, more likely a new common
+   *!  interface should be considered to manage segements and TSB
+   */
+  if (m_isLive)
+  {
+    m_dvrWindowLength =
+        XML::GetAttribUint64(nodeSSM, "DVRWindowLength") * 1000 / period->GetTimescale();
+
+    if (m_dvrWindowLength == 0) // Zero means infinite TSB
+    {
+      m_dvrWindowLength = 14400000; // Limit to default 4 hours
+
+      auto& manifestCfg = CSrvBroker::GetKodiProps().GetManifestConfig();
+      if (manifestCfg.timeShiftBufferLimit.has_value())
+        m_dvrWindowLength = *manifestCfg.timeShiftBufferLimit * 1000;
+    }
+  }
+  else
     period->SetDuration(XML::GetAttribUint64(nodeSSM, "Duration"));
-
-  period->SetTlDuration(XML::GetAttribUint64(nodeSSM, "Duration"));
-
-  m_totalTime = period->GetDuration() * 1000 / period->GetTimescale();
 
   // Parse <Protection> tag
   DRM::PRHeaderParser protParser;
@@ -134,9 +157,10 @@ bool adaptive::CSmoothTree::ParseManifest(const std::string& data)
   }
 
   // Parse <StreamIndex> tags
+  std::set<uint64_t> ptsStartList;
   for (xml_node node : nodeSSM.children("StreamIndex"))
   {
-    ParseTagStreamIndex(node, period.get(), drmInfos);
+    ParseTagStreamIndex(node, period.get(), drmInfos, ptsStartList);
   }
 
   if (period->GetAdaptationSets().empty())
@@ -145,14 +169,28 @@ bool adaptive::CSmoothTree::ParseManifest(const std::string& data)
     return false;
   }
 
+  if (ptsStartList.size() > 1)
+  {
+    m_ptsBase = *ptsStartList.begin(); // Select the lower PTS
+    LOG::Log(
+        LOGDEBUG,
+        "StreamIndex tags use async PTS for chunk start, segments will be aligned to PTS: %llu",
+        m_ptsBase);
+  }
+
   m_periods.push_back(std::move(period));
+
+  CreateSegmentTimeline();
+
+  UpdateTotalTime();
 
   return true;
 }
 
 void adaptive::CSmoothTree::ParseTagStreamIndex(pugi::xml_node nodeSI,
                                                 PLAYLIST::CPeriod* period,
-                                                const std::vector<DRM::DRMInfo>& drmInfos)
+                                                const std::vector<DRM::DRMInfo>& drmInfos,
+                                                std::set<uint64_t>& ptsStartList)
 {
   std::unique_ptr<CAdaptationSet> adpSet = CAdaptationSet::MakeUniquePtr(period);
 
@@ -249,6 +287,7 @@ void adaptive::CSmoothTree::ParseTagStreamIndex(pugi::xml_node nodeSI,
       else
       {
         adpSet->SetStartPTS(t);
+        ptsStartList.insert(t);
       }
       previousPts = t;
       hasDuration = true;
@@ -291,9 +330,6 @@ void adaptive::CSmoothTree::ParseTagStreamIndex(pugi::xml_node nodeSI,
   {
     adpSet->AddCodecs(adpSet->GetRepresentations().front()->GetCodecs());
   }
-
-  if (m_ptsBase == NO_PTS_VALUE || adpSet->GetStartPTS() < m_ptsBase)
-    m_ptsBase = adpSet->GetStartPTS();
 
   period->AddAdaptationSet(adpSet);
 }
@@ -409,7 +445,6 @@ void adaptive::CSmoothTree::CreateSegmentTimeline()
       {
         // Adjust PTS with the StreamIndex with lower PTS to sync streams during playback
         uint64_t nextStartPts = adpSet->GetStartPTS() - m_ptsBase;
-        uint64_t index = 1;
 
         for (uint32_t segDuration : adpSet->SegmentTimelineDuration())
         {
@@ -417,18 +452,26 @@ void adaptive::CSmoothTree::CreateSegmentTimeline()
           seg.startPTS_ = nextStartPts;
           seg.m_endPts = seg.startPTS_ + segDuration;
           seg.m_time = nextStartPts + m_ptsBase;
-          seg.m_number = index;
 
           repr->Timeline().Add(seg);
 
           nextStartPts += segDuration;
-          index++;
+        }
+
+        // Update period duration
+        if (adpSet->GetStreamType() == StreamType::VIDEO ||
+            adpSet->GetStreamType() == StreamType::AUDIO)
+        {
+          const uint64_t tlDuration =
+              repr->Timeline().GetDuration() * period->GetTimescale() / repr->GetTimescale();
+          period->SetTlDuration(tlDuration);
         }
       }
     }
   }
 }
 
+/*! @todo: commented for future removal
 bool adaptive::CSmoothTree::InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
                                                PLAYLIST::CRepresentation* repr,
                                                uint64_t fTimestamp,
@@ -437,10 +480,6 @@ bool adaptive::CSmoothTree::InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
 {
   if (!m_isLive)
     return false;
-
-  //! @todo: expired_segments_ should be removed and need to be implemented DVRWindowLength
-  //! then add a better way to delete old segments from the timeline based on timeshift window
-  //! this also requires taking care of the Dash parser
 
   const CSegment* lastSeg = repr->Timeline().GetBack();
   if (!lastSeg)
@@ -456,8 +495,6 @@ bool adaptive::CSmoothTree::InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
 
   if (fStartPts <= lastSeg->startPTS_)
     return false;
-
-  repr->expired_segments_++;
 
   CSegment segCopy = *lastSeg;
   const uint64_t duration =
@@ -477,4 +514,157 @@ bool adaptive::CSmoothTree::InsertLiveFragment(PLAYLIST::CAdaptationSet* adpSet,
   }
 
   return true;
+}
+*/
+
+void adaptive::CSmoothTree::OnUpdateSegments()
+{
+  lastUpdated_ = std::chrono::system_clock::now();
+
+  std::unique_ptr<CSmoothTree> updateTree{std::move(Clone())};
+
+  // Download and open the manifest update
+  CURL::HTTPResponse resp;
+  if (!DownloadManifestUpd(manifest_url_, m_manifestHeaders, {}, resp) ||
+      !updateTree->Open(resp.effectiveUrl, resp.headers, resp.data))
+  {
+    return;
+  }
+
+  // Update the local variables from manifest update
+  auto& period = m_periods[0];
+  auto& updPeriod = updateTree->m_periods[0];
+
+  if (updPeriod->GetAdaptationSets().size() != period->GetAdaptationSets().size())
+  {
+    LOG::LogF(LOGERROR, "Cannot update adaptation sets, the size dont match");
+    return;
+  }
+
+  // Update by index, a manifest with the same structure is expected
+  const auto& updAdpSets = updPeriod->GetAdaptationSets();
+  auto& adpSets = period->GetAdaptationSets();
+
+  for (size_t i = 0; i < updAdpSets.size(); ++i)
+  {
+    auto& updAdpSet = updAdpSets[i];
+    auto& adpSet = adpSets[i];
+
+    if (updAdpSet->GetRepresentations().size() != adpSet->GetRepresentations().size())
+    {
+      LOG::LogF(LOGERROR, "Cannot update representations, the size dont match");
+      break;
+    }
+
+    // Update by index, a manifest with the same structure is expected
+    const auto& updReprs = updAdpSet->GetRepresentations();
+    auto& reprs = adpSet->GetRepresentations();
+
+    for (size_t i = 0; i < updReprs.size(); ++i)
+    {
+      auto& updRepr = updReprs[i];
+      auto& repr = reprs[i];
+
+      if (repr->Timeline().IsEmpty())
+      {
+        LOG::LogF(LOGDEBUG, "SS update - No timeline (repr. id \"%s\")", repr->GetId().c_str());
+        continue;
+      }
+
+      if (!repr->current_segment_.has_value()) // Representation not used for playback yet
+      {
+        repr->Timeline().Swap(updRepr->Timeline());
+
+        LOG::LogF(LOGDEBUG, "SS update - Done (repr. id \"%s\")", updRepr->GetId().c_str());
+        continue;
+      }
+
+      if (repr->Timeline().GetSize() == updRepr->Timeline().GetSize() &&
+          repr->Timeline().Get(0)->startPTS_ == updRepr->Timeline().Get(0)->startPTS_)
+      {
+        LOG::LogF(LOGDEBUG, "SS update - No new segments (repr. id \"%s\")", repr->GetId().c_str());
+        continue;
+      }
+
+      const CSegment* foundSeg{nullptr};
+      const uint64_t segStartPTS = repr->current_segment_->startPTS_;
+
+      for (const CSegment& segment : updRepr->Timeline())
+      {
+        if (segment.startPTS_ == segStartPTS)
+        {
+          foundSeg = &segment;
+          break;
+        }
+        else if (segment.startPTS_ > segStartPTS)
+        {
+          // Can fall here if video is paused and current segment is too old,
+          // or the video provider provide updates that have misaligned PTS on segments,
+          // so small PTS gaps that prevent to find the same segment
+          foundSeg = &segment;
+          LOG::LogF(LOGDEBUG,
+                    "SS update - Misaligned: current seg [PTS %llu] found [PTS %llu] "
+                    "(repr. id \"%s\")",
+                    segStartPTS, segment.startPTS_, repr->GetId().c_str());
+          break;
+        }
+      }
+
+      if (!foundSeg)
+      {
+        LOG::LogF(LOGDEBUG, "SS update - No segment found (repr. id \"%s\")",
+                  repr->GetId().c_str());
+      }
+      else
+      {
+        repr->Timeline().Swap(updRepr->Timeline());
+        repr->current_segment_ = *foundSeg;
+
+        // Update period duration
+        if (adpSet->GetStreamType() == StreamType::VIDEO ||
+            adpSet->GetStreamType() == StreamType::AUDIO)
+        {
+          const uint64_t tlDuration =
+              updRepr->Timeline().GetDuration() * period->GetTimescale() / updRepr->GetTimescale();
+          period->SetTlDuration(tlDuration);
+        }
+
+        LOG::LogF(LOGDEBUG, "SS update - Done (repr. id \"%s\")", updRepr->GetId().c_str());
+      }
+
+      if (repr->IsWaitForSegment() && repr->GetNextSegment())
+      {
+        repr->SetIsWaitForSegment(false);
+        LOG::LogF(LOGDEBUG, "End WaitForSegment repr. id %s", repr->GetId().c_str());
+      }
+    }
+  }
+
+  UpdateTotalTime();
+}
+
+bool adaptive::CSmoothTree::DownloadManifestUpd(
+    const std::string& url,
+    const std::map<std::string, std::string>& reqHeaders,
+    const std::vector<std::string>& respHeaders,
+    UTILS::CURL::HTTPResponse& resp)
+{
+  return CURL::DownloadFile(url, reqHeaders, respHeaders, resp);
+}
+
+void adaptive::CSmoothTree::UpdateTotalTime()
+{
+  uint64_t totalDurMs = m_mediaPresDuration;
+  if (totalDurMs == 0)
+  {
+    totalDurMs =
+        std::accumulate(m_periods.begin(), m_periods.end(), uint64_t{0},
+                        [](uint64_t sum, const std::unique_ptr<CPeriod>& period)
+                        { return sum + period->GetTlDuration() * 1000 / period->GetTimescale(); });
+
+    if (m_dvrWindowLength != 0 && totalDurMs > m_dvrWindowLength)
+      totalDurMs = m_dvrWindowLength;
+  }
+
+  m_totalTime = totalDurMs;
 }
