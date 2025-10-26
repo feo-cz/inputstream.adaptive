@@ -1,3 +1,9 @@
+v22.3.1 (2025-10-26)
+- [SmoothStreaming] Implemented live stream timeshift
+- [SmoothStreaming] Implemented scheduled manifest updates
+- [SmoothStreaming] Fix segments memleak
+- Updated translations
+
 v22.3.0 (2025-10-16)
 - [webOS] Add support to widevine L1 (until 4k)
 - [webOS] Fix dolby vision support
