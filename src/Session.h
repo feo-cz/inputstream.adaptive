@@ -179,9 +179,9 @@ public:
    */
   int GetChapterCount() const;
 
-  /*! \brief Get the type crypto key system in use
-   *  \param ch The index of chapter/period
-   *  \return The id of the period
+  /*! \brief Get the chapter name for the specified chapter number.
+   *  \param ch The chapter number
+   *  \return The chapter name if found, otherwise nullptr
    */
   const char* GetChapterName(int ch) const;
 
