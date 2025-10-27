@@ -1845,9 +1845,12 @@ void adaptive::CDashTree::UpdateTotalTime()
 {
   uint64_t totalDurMs = m_mediaPresDuration;
   if (totalDurMs == 0)
-    totalDurMs = std::accumulate(m_periods.begin(), m_periods.end(), uint64_t{0},
-                                 [](uint64_t sum, const std::unique_ptr<CPeriod>& period)
-                                 { return sum + period->GetTlDuration(); });
+  {
+    totalDurMs =
+        std::accumulate(m_periods.begin(), m_periods.end(), uint64_t{0},
+                        [](uint64_t sum, const std::unique_ptr<CPeriod>& period)
+                        { return sum + period->GetTlDuration() * 1000 / period->GetTimescale(); });
+  }
 
   m_totalTime = totalDurMs;
 }
