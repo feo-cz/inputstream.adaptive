@@ -207,9 +207,9 @@ bool adaptive::CDashTree::ParseManifest(const std::string& data)
   if (!locationUrl.empty())
   {
     if (URL::IsUrlRelative(locationUrl))
-      location_ = URL::Join(URL::GetBaseDomain(base_url_), locationUrl.data());
+      m_locationUrl = URL::Join(URL::GetBaseDomain(base_url_), locationUrl.data());
     else
-      location_ = locationUrl;
+      m_locationUrl = locationUrl;
   }
 
   // Parse <MPD> <UTCTiming> tags
@@ -1552,14 +1552,14 @@ void adaptive::CDashTree::OnUpdateSegments()
   std::string manifestParams = m_manifestUpdParams;
 
   std::string manifestUrl;
-  if (location_.empty())
+  if (m_locationUrl.empty())
   {
     manifestUrl = manifest_url_;
     if (!manifestParams.empty())
       manifestUrl = URL::RemoveParameters(manifestUrl);
   }
   else
-    manifestUrl = location_;
+    manifestUrl = m_locationUrl;
 
   if (manifestParams.find("$START_NUMBER$") != std::string::npos)
   {
@@ -1589,7 +1589,7 @@ void adaptive::CDashTree::OnUpdateSegments()
 
   // Update local members for the next manifest update
   m_manifestRespHeaders = resp.headers;
-  location_ = updateTree->location_;
+  m_locationUrl = updateTree->m_locationUrl;
   m_mediaPresDuration = updateTree->m_mediaPresDuration;
   //! @todo: Live (dynamic) to VOD (static) untested
 

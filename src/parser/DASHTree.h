@@ -128,5 +128,7 @@ protected:
 
   // The time point when the last live "insert segment update" has been called
   mutable std::chrono::time_point<std::chrono::steady_clock> m_insertLiveSegUpdate{};
+
+  std::string m_locationUrl; // Redirect manifest updates
 };
 } // namespace adaptive
