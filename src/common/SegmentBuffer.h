@@ -90,7 +90,7 @@ public:
   CSegmentBuffers() = default;
   ~CSegmentBuffers() = default;
 
-  bool Push(SegmentBuffer&& segBuffer);
+  void Push(SegmentBuffer&& segBuffer);
 
  /*!
   * \brief Returns a reference to the first segment in the buffers container.
