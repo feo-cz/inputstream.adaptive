@@ -31,6 +31,11 @@ using namespace PLAYLIST;
 using namespace SESSION;
 using namespace UTILS;
 
+namespace
+{
+constexpr const char* CHAPTER_NAME_UNKNOWN = "[Unknown]";
+} // unnamed namespace
+
 SESSION::CSession::~CSession()
 {
   LOG::Log(LOGDEBUG, "CSession::~CSession()");
@@ -1130,16 +1135,16 @@ int SESSION::CSession::GetChapterCount() const
   return 0;
 }
 
-std::string SESSION::CSession::GetChapterName(int ch) const
+const char* SESSION::CSession::GetChapterName(int ch) const
 {
   if (m_adaptiveTree)
   {
     --ch;
     if (ch >= 0 && ch < static_cast<int>(m_adaptiveTree->m_periods.size()))
-      return m_adaptiveTree->m_periods[ch]->GetId();
+      return m_adaptiveTree->m_periods[ch]->GetId().c_str();
   }
 
-  return "[Unknown]";
+  return CHAPTER_NAME_UNKNOWN;
 }
 
 int64_t SESSION::CSession::GetChapterPos(int ch) const

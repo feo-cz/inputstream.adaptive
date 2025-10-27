@@ -183,7 +183,7 @@ public:
    *  \param ch The index of chapter/period
    *  \return The id of the period
    */
-  std::string GetChapterName(int ch) const;
+  const char* GetChapterName(int ch) const;
 
   /*! \brief Get the chapter position in milliseconds
    *  \param ch The index (1 indexed) of chapter/period

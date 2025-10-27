@@ -503,14 +503,7 @@ const char* CInputStreamAdaptive::GetChapterName(int ch)
   if (!m_session)
     return nullptr;
 
-  //! @todo: m_chapterName is a workaround fix for compiler
-  //! "warning: returning address of local temporary object"
-  //! we have to store the chapter name locally because the pointer returned is used after
-  //! that Kodi make the GetChapterName callback, so it go out of scope. A way to fix this
-  //! is pass the char pointer by using "strdup", but is needed that when kodi make
-  //! GetChapterName callback also "free" the value after his use.
-  m_chapterName = m_session->GetChapterName(ch);
-  return m_chapterName.c_str();
+  return m_session->GetChapterName(ch);
 }
 
 int64_t CInputStreamAdaptive::GetChapterPos(int ch)
