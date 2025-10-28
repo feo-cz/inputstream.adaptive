@@ -14,7 +14,6 @@
 #include <kodi/AddonBase.h>
 #endif
 
-#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -27,7 +26,7 @@ namespace SETTINGS
 {
 // Generic conversion map from family of resolutions to a common pixel format.
 // If modified, the changes should reflect XML settings and Kodi properties related to resolutions.
-const std::map<std::string, std::pair<int, int>> RES_CONV_LIST{
+const std::unordered_map<std::string, std::pair<int, int>> RES_CONV_LIST{
     {"disabled", {0, 0}}, {"auto", {0, 0}},        {"480p", {640, 480}},
     {"640p", {960, 640}}, {"720p", {1280, 720}},   {"1080p", {1920, 1080}},
     {"2K", {2048, 1080}}, {"1440p", {2560, 1440}}, {"4K", {3840, 2160}}};
