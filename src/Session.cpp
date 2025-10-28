@@ -1124,15 +1124,15 @@ int CSession::GetChapter() const
       }
     }
   }
-  return -1;
+  return 0;
 }
 
 int SESSION::CSession::GetChapterCount() const
 {
-  if (m_adaptiveTree && m_adaptiveTree->m_periods.size() > 1)
-      return static_cast<int>(m_adaptiveTree->m_periods.size());
+  if (!m_adaptiveTree)
+    return 0;
 
-  return 0;
+  return static_cast<int>(m_adaptiveTree->m_periods.size());
 }
 
 const char* SESSION::CSession::GetChapterName(int ch) const
