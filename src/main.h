@@ -88,13 +88,8 @@ public:
   void Reset() override;
 
 private:
-  enum STATE : unsigned int
-  {
-    STATE_WAIT_EXTRADATA = 1
-  };
-
   std::shared_ptr<SESSION::CSession> m_session;
   std::shared_ptr<DRM::IDecrypterDecoder> m_drmDecoder;
-  unsigned int m_state;
+  bool m_waitExtraData{false};
   std::string m_name;
 };

@@ -528,16 +528,13 @@ bool CInputStreamAdaptive::SeekChapter(int ch)
 /*****************************************************************************************************/
 
 CVideoCodecAdaptive::CVideoCodecAdaptive(const kodi::addon::IInstanceInfo& instance)
-  : CInstanceVideoCodec(instance),
-    m_session(nullptr),
-    m_state(0),
-    m_name("inputstream.adaptive.decoder")
+  : CInstanceVideoCodec(instance), m_name("inputstream.adaptive.decoder")
 {
 }
 
 CVideoCodecAdaptive::CVideoCodecAdaptive(const kodi::addon::IInstanceInfo& instance,
                                          CInputStreamAdaptive* parent)
-  : CInstanceVideoCodec(instance), m_session(parent->GetSession()), m_state(0)
+  : CInstanceVideoCodec(instance), m_session(parent->GetSession())
 {
 }
 
@@ -556,13 +553,13 @@ bool CVideoCodecAdaptive::Open(const kodi::addon::VideoCodecInitdata& initData)
     return false;
 
   if ((initData.GetCodecType() == VIDEOCODEC_H264 || initData.GetCodecType() == VIDEOCODEC_AV1) &&
-      !initData.GetExtraDataSize() && !(m_state & STATE_WAIT_EXTRADATA))
+      initData.GetExtraDataSize() == 0 && !m_waitExtraData)
   {
     LOG::Log(LOGINFO, "VideoCodec::Open: Wait ExtraData");
-    m_state |= STATE_WAIT_EXTRADATA;
+    m_waitExtraData = true;
     return true;
   }
-  m_state &= ~STATE_WAIT_EXTRADATA;
+  m_waitExtraData = false;
 
   LOG::Log(LOGINFO, "VideoCodec::Open");
 
