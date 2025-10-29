@@ -180,22 +180,22 @@ public:
   int GetChapterCount() const;
 
   /*! \brief Get the chapter name for the specified chapter number.
-   *  \param ch The chapter number
+   *  \param number The chapter number
    *  \return The chapter name if found, otherwise nullptr
    */
-  const char* GetChapterName(int ch) const;
+  const char* GetChapterName(int number) const;
 
   /*! \brief Get the chapter position in milliseconds
-   *  \param ch The index (1 indexed) of chapter/period
+   *  \param number The chapter number
    *  \return The position in milliseconds of the chapter/period
    */
-  int64_t GetChapterPos(int ch) const;
+  int64_t GetChapterPos(int number) const;
 
   /*! \brief Seek to the chapter/period specified
-   *  \param ch The index (1 indexed) of chapter/period
+   *  \param number The chapter number
    *  \return True if successful, false if invalid
    */
-  bool SeekChapter(int ch);
+  bool SeekChapter(int number);
 
   /*! \brief Get start time of current chapter/period
    *  \return Time in us at start of current chapter/period

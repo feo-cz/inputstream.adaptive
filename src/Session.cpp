@@ -1135,31 +1135,43 @@ int SESSION::CSession::GetChapterCount() const
   return static_cast<int>(m_adaptiveTree->m_periods.size());
 }
 
-const char* SESSION::CSession::GetChapterName(int ch) const
+const char* SESSION::CSession::GetChapterName(int number) const
 {
   // Chapter name is shown on GUI info window
   // Manifests usually dont provide this info
   // so show the period ID for debugging purpose at request
   if (CSrvBroker::GetSettings().IsDebugVerbose() && m_adaptiveTree)
   {
-    --ch;
-    if (ch >= 0 && ch < static_cast<int>(m_adaptiveTree->m_periods.size()))
-      return m_adaptiveTree->m_periods[ch]->GetId().c_str();
+    --number; // To convert chapter number to index
+    if (number >= 0 && number < static_cast<int>(m_adaptiveTree->m_periods.size()))
+      return m_adaptiveTree->m_periods[number]->GetId().c_str();
 
     return CHAPTER_NAME_UNKNOWN;
   }
   return nullptr;
 }
 
-int64_t SESSION::CSession::GetChapterPos(int ch) const
+int64_t SESSION::CSession::GetChapterPos(int number) const
 {
-  int64_t sum{0};
-  --ch;
+  if (!m_adaptiveTree)
+    return 0;
 
-  for (; ch; --ch)
+  --number; // To convert chapter number to index
+
+  //! @todo: Fragile check, accessing to m_periods can potentially cause problems because
+  //! manifest updates can make changes (add/remove) to periods asynchronously.
+  //! An appropriate solution must be found, taking into account that these methods
+  //! can be called many times during playback. This issue must also be checked in
+  //! all other CSession methods on which Kodi core makes callbacks.
+  if (number < 0 || number >= static_cast<int>(m_adaptiveTree->m_periods.size()))
+    return 0;
+
+  int64_t sum{0};
+
+  for (; number; --number)
   {
-    sum += (m_adaptiveTree->m_periods[ch - 1]->GetTlDuration() * STREAM_TIME_BASE) /
-           m_adaptiveTree->m_periods[ch - 1]->GetTimescale();
+    sum += (m_adaptiveTree->m_periods[number - 1]->GetTlDuration() * STREAM_TIME_BASE) /
+           m_adaptiveTree->m_periods[number - 1]->GetTimescale();
   }
 
   return sum / STREAM_TIME_BASE;
@@ -1186,16 +1198,19 @@ int SESSION::CSession::GetPeriodIndex() const
   return m_adaptiveTree->m_currentPeriod->GetIndex();
 }
 
-bool SESSION::CSession::SeekChapter(int ch)
+bool SESSION::CSession::SeekChapter(int number)
 {
+  if (!m_adaptiveTree)
+    return false;
+
   if (m_adaptiveTree->IsChangingPeriod())
     return true;
 
-  --ch;
-  if (ch >= 0 && ch < static_cast<int>(m_adaptiveTree->m_periods.size()) &&
-      m_adaptiveTree->m_periods[ch].get() != m_adaptiveTree->m_currentPeriod)
+  --number; // To convert chapter number to index
+  if (number >= 0 && number < static_cast<int>(m_adaptiveTree->m_periods.size()) &&
+      m_adaptiveTree->m_periods[number].get() != m_adaptiveTree->m_currentPeriod)
   {
-    CPeriod* nextPeriod = m_adaptiveTree->m_periods[ch].get();
+    CPeriod* nextPeriod = m_adaptiveTree->m_periods[number].get();
     m_adaptiveTree->m_nextPeriod = nextPeriod;
     LOG::LogF(LOGDEBUG, "Switching to new Period (id=%s, start=%llu, seq=%u)",
               nextPeriod->GetId().c_str(), nextPeriod->GetStart(), nextPeriod->GetSequence());
