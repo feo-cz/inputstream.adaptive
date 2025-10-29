@@ -73,6 +73,25 @@ bool GetMapValue(const std::map<T, TValue>& map, std::string_view key, TValue& v
 }
 
 /*!
+ * \brief Get map value of the specified key
+ * \param map The map where find the value
+ * \param key The key to find
+ * \param val[OUT] The value that match to the specified key, if found
+ * \return True if found, otherwise false.
+ */
+template<typename T, typename TValue>
+bool GetMapValue(const std::unordered_map<T, TValue>& map, const T& key, TValue& val)
+{
+  auto mapIt = map.find(key);
+  if (mapIt != map.cend())
+  {
+    val = mapIt->second;
+    return true;
+  }
+  return false;
+}
+
+/*!
  * \brief Replace the first string occurrence in a string
  * \param inputStr String to perform the replace
  * \param oldStr String to find

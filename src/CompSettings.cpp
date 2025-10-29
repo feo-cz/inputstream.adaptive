@@ -18,6 +18,18 @@
 using namespace ADP::SETTINGS;
 using namespace UTILS;
 
+bool ADP::SETTINGS::CCompSettings::GetCacheBool(const std::string& key) const
+{
+  std::lock_guard lock(m_settingsMtx);
+  auto it = m_cacheBool.find(key);
+  if (it != m_cacheBool.end())
+    return it->second;
+
+  bool v = kodi::addon::GetSettingBoolean(key);
+  m_cacheBool.emplace(key, v);
+  return v;
+}
+
 StreamSelMode ADP::SETTINGS::CCompSettings::GetStreamSelMode() const
 {
   const std::string mode = kodi::addon::GetSettingString("adaptivestream.streamselection.mode");
@@ -122,15 +134,15 @@ std::string ADP::SETTINGS::CCompSettings::GetDecrypterPath() const
 
 bool ADP::SETTINGS::CCompSettings::IsDebugLicense() const
 {
-  return kodi::addon::GetSettingBoolean("debug.save.license");
+  return GetCacheBool("debug.save.license");
 }
 
 bool ADP::SETTINGS::CCompSettings::IsDebugManifest() const
 {
-  return kodi::addon::GetSettingBoolean("debug.save.manifest");
+  return GetCacheBool("debug.save.manifest");
 }
 
 bool ADP::SETTINGS::CCompSettings::IsDebugVerbose() const
 {
-  return kodi::addon::GetSettingBoolean("debug.verbose");
+  return GetCacheBool("debug.verbose");
 }

@@ -490,12 +490,21 @@ bool CInputStreamAdaptive::IsRealTimeStream()
 #if INPUTSTREAM_VERSION_LEVEL > 1
 int CInputStreamAdaptive::GetChapter()
 {
+  // Provide the current chapter number
+  // chapter numbering starts from 1, specify 0 for no chapter
   return m_session ? m_session->GetChapter() : 0;
 }
 
 int CInputStreamAdaptive::GetChapterCount()
 {
-  return m_session ? m_session->GetChapterCount() : 0;
+  if (m_session)
+  {
+    const int count = m_session->GetChapterCount();
+    if (count > 1)
+      return count;
+  }
+  // Return 0 to prevent Kodi core from handling chapters
+  return 0;
 }
 
 const char* CInputStreamAdaptive::GetChapterName(int ch)
@@ -503,14 +512,7 @@ const char* CInputStreamAdaptive::GetChapterName(int ch)
   if (!m_session)
     return nullptr;
 
-  //! @todo: m_chapterName is a workaround fix for compiler
-  //! "warning: returning address of local temporary object"
-  //! we have to store the chapter name locally because the pointer returned is used after
-  //! that Kodi make the GetChapterName callback, so it go out of scope. A way to fix this
-  //! is pass the char pointer by using "strdup", but is needed that when kodi make
-  //! GetChapterName callback also "free" the value after his use.
-  m_chapterName = m_session->GetChapterName(ch);
-  return m_chapterName.c_str();
+  return m_session->GetChapterName(ch);
 }
 
 int64_t CInputStreamAdaptive::GetChapterPos(int ch)
@@ -526,16 +528,13 @@ bool CInputStreamAdaptive::SeekChapter(int ch)
 /*****************************************************************************************************/
 
 CVideoCodecAdaptive::CVideoCodecAdaptive(const kodi::addon::IInstanceInfo& instance)
-  : CInstanceVideoCodec(instance),
-    m_session(nullptr),
-    m_state(0),
-    m_name("inputstream.adaptive.decoder")
+  : CInstanceVideoCodec(instance), m_name("inputstream.adaptive.decoder")
 {
 }
 
 CVideoCodecAdaptive::CVideoCodecAdaptive(const kodi::addon::IInstanceInfo& instance,
                                          CInputStreamAdaptive* parent)
-  : CInstanceVideoCodec(instance), m_session(parent->GetSession()), m_state(0)
+  : CInstanceVideoCodec(instance), m_session(parent->GetSession())
 {
 }
 
@@ -554,13 +553,13 @@ bool CVideoCodecAdaptive::Open(const kodi::addon::VideoCodecInitdata& initData)
     return false;
 
   if ((initData.GetCodecType() == VIDEOCODEC_H264 || initData.GetCodecType() == VIDEOCODEC_AV1) &&
-      !initData.GetExtraDataSize() && !(m_state & STATE_WAIT_EXTRADATA))
+      initData.GetExtraDataSize() == 0 && !m_waitExtraData)
   {
     LOG::Log(LOGINFO, "VideoCodec::Open: Wait ExtraData");
-    m_state |= STATE_WAIT_EXTRADATA;
+    m_waitExtraData = true;
     return true;
   }
-  m_state &= ~STATE_WAIT_EXTRADATA;
+  m_waitExtraData = false;
 
   LOG::Log(LOGINFO, "VideoCodec::Open");
 

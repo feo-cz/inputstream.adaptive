@@ -72,18 +72,15 @@ size_t ADP::SegmentBuffer::BufferSize() const
   return buffer.size();
 }
 
-bool ADP::CSegmentBuffers::Push(SegmentBuffer&& segBuffer)
+void ADP::CSegmentBuffers::Push(SegmentBuffer&& segBuffer)
 {
   std::lock_guard<std::mutex> lock(m_mutex);
-  //if (m_buffers.size() == m_maxSize)
-  //  return false;
 
   segBuffer.ChangeState(BufferState::QUEUED);
 
   m_buffers.emplace_back(std::move(segBuffer));
 
   m_cvWaitSegment.notify_one(); // Notify "wait for segment" condition
-  return true;
 }
 
 SegmentBuffer& ADP::CSegmentBuffers::Front()
