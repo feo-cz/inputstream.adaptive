@@ -16,8 +16,10 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 namespace ADP
 {
@@ -74,6 +76,13 @@ public:
   bool IsDebugLicense() const;
   bool IsDebugManifest() const;
   bool IsDebugVerbose() const;
+
+  private:
+  // Cached settings for quick access
+  bool GetCacheBool(const std::string& key) const;
+
+  mutable std::mutex m_settingsMtx;
+  mutable std::unordered_map<std::string, bool> m_cacheBool;
 };
 
 } // namespace SETTINGS

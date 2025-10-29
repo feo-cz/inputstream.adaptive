@@ -1137,14 +1137,18 @@ int SESSION::CSession::GetChapterCount() const
 
 const char* SESSION::CSession::GetChapterName(int ch) const
 {
-  if (m_adaptiveTree)
+  // Chapter name is shown on GUI info window
+  // Manifests usually dont provide this info
+  // so show the period ID for debugging purpose at request
+  if (CSrvBroker::GetSettings().IsDebugVerbose() && m_adaptiveTree)
   {
     --ch;
     if (ch >= 0 && ch < static_cast<int>(m_adaptiveTree->m_periods.size()))
       return m_adaptiveTree->m_periods[ch]->GetId().c_str();
-  }
 
-  return CHAPTER_NAME_UNKNOWN;
+    return CHAPTER_NAME_UNKNOWN;
+  }
+  return nullptr;
 }
 
 int64_t SESSION::CSession::GetChapterPos(int ch) const
