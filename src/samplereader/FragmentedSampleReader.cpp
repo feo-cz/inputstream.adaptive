@@ -196,8 +196,13 @@ AP4_Result CFragmentedSampleReader::ReadSample()
       // to help convert packets to annex-b
       // it depends on decrypter implementation
       m_sampleData.Reserve(sampleData.GetDataSize());
-      m_singleSampleDecryptor->DecryptSampleData(m_poolId, sampleData, m_sampleData, nullptr, 0,
-                                                 nullptr, nullptr, streamType);
+      if (AP4_FAILED(
+              result = m_singleSampleDecryptor->DecryptSampleData(
+                  m_poolId, sampleData, m_sampleData, nullptr, 0, nullptr, nullptr, streamType)))
+      {
+        Reset(true);
+        return result;
+      }
     }
     else
     {
