@@ -194,6 +194,8 @@ AP4_Result CFragmentedSampleReader::ReadSample()
       // Should fall here for the specific case of unencrypted content,
       // to help convert packets to annex-b
       // it depends on decrypter implementation
+      //! @todo: it appears to have been implemented in the past for Widevine
+      //!        and may not be suitable for other decryptors
       m_sampleData.Reserve(sampleData.GetDataSize());
       if (AP4_FAILED(result = m_singleSampleDecryptor->DecryptSampleData(
                          m_poolId, sampleData, m_sampleData, nullptr, 0, nullptr, nullptr)))
