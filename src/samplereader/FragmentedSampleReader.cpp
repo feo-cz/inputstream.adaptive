@@ -406,7 +406,7 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
       AP4_ContainerAtom* traf =
           AP4_DYNAMIC_CAST(AP4_ContainerAtom, moof->GetChild(AP4_ATOM_TYPE_TRAF, 0));
 
-      if (!m_protectedDesc || !traf)
+      if (!traf)
         return AP4_ERROR_INVALID_FORMAT;
 
       bool isDefaultProtected{true};
