@@ -44,7 +44,7 @@ CFragmentedSampleReader::~CFragmentedSampleReader()
 {
   if (m_singleSampleDecryptor)
     m_singleSampleDecryptor->RemovePool(m_poolId);
-  delete m_decrypter;
+
   delete m_codecHandler;
 }
 
@@ -55,11 +55,10 @@ bool CFragmentedSampleReader::Initialize(SESSION::CStream* stream)
   AP4_SampleDescription* desc{m_track->GetSampleDescription(0)};
   if (desc->GetType() == AP4_SampleDescription::TYPE_PROTECTED)
   {
-    m_protectedDesc = static_cast<AP4_ProtectedSampleDescription*>(desc);
+    auto protectedDesc = static_cast<AP4_ProtectedSampleDescription*>(desc);
 
     AP4_ContainerAtom* schi;
-    if (m_protectedDesc->GetSchemeInfo() &&
-        (schi = m_protectedDesc->GetSchemeInfo()->GetSchiAtom()))
+    if (protectedDesc->GetSchemeInfo() && (schi = protectedDesc->GetSchemeInfo()->GetSchiAtom()))
     {
       AP4_TencAtom* tenc(AP4_DYNAMIC_CAST(AP4_TencAtom, schi->GetChild(AP4_ATOM_TYPE_TENC, 0)));
       if (tenc && tenc->GetDefaultKid())
@@ -133,15 +132,10 @@ AP4_Result CFragmentedSampleReader::ReadSample()
     streamType = DRM::DRMMediaType::AUDIO;
 
   AP4_Result result;
+  AP4_DataBuffer sampleData;
   if (!m_codecHandler->ReadNextSample(m_sample, m_sampleData))
   {
-    bool useDecryptingDecoder =
-        m_protectedDesc &&
-        (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH) != 0;
-    bool decrypterPresent{m_decrypter != nullptr};
-    if (AP4_FAILED(result = ReadNextSample(m_track->GetId(), m_sample,
-                                           (m_decrypter || useDecryptingDecoder) ? m_encrypted
-                                                                                 : m_sampleData)))
+    if (AP4_FAILED(result = ReadNextSample(m_track->GetId(), m_sample, sampleData)))
     {
       if (result == AP4_ERROR_EOS)
       {
@@ -170,16 +164,14 @@ AP4_Result CFragmentedSampleReader::ReadSample()
     //AP4_AvcFrameParser::ParseFrameForSPS(m_sampleData.GetData(), m_sampleData.GetDataSize(), 4, sps);
 
     //Protection could have changed in ProcessMoof
-    if (!decrypterPresent && m_decrypter != nullptr && !useDecryptingDecoder)
-      m_encrypted.SetData(m_sampleData.GetData(), m_sampleData.GetDataSize());
-    else if (decrypterPresent && m_decrypter == nullptr && !useDecryptingDecoder)
-      m_sampleData.SetData(m_encrypted.GetData(), m_encrypted.GetDataSize());
+    bool useDecryptingDecoder =
+        m_singleSampleDecryptor &&
+        (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH) != 0;
 
     if (m_decrypter)
     {
-      m_sampleData.Reserve(m_encrypted.GetDataSize());
-      if (AP4_FAILED(result =
-                         m_decrypter->DecryptSampleData(m_poolId, m_encrypted, m_sampleData,
+      m_sampleData.Reserve(sampleData.GetDataSize());
+      if (AP4_FAILED(result = m_decrypter->DecryptSampleData(m_poolId, sampleData, m_sampleData,
                                                         NULL, streamType)))
       {
         LOG::Log(LOGERROR, "Decrypt Sample returns failure!");
@@ -200,9 +192,23 @@ AP4_Result CFragmentedSampleReader::ReadSample()
     }
     else if (useDecryptingDecoder)
     {
-      m_sampleData.Reserve(m_encrypted.GetDataSize());
-      m_singleSampleDecryptor->DecryptSampleData(m_poolId, m_encrypted, m_sampleData, nullptr, 0,
-                                                 nullptr, nullptr, streamType);
+      // Should fall here for the specific case of unencrypted content,
+      // to help convert packets to annex-b
+      // it depends on decrypter implementation
+      //! @todo: it appears to have been implemented in the past for Widevine
+      //!        and may not be suitable for other decryptors
+      m_sampleData.Reserve(sampleData.GetDataSize());
+      if (AP4_FAILED(
+              result = m_singleSampleDecryptor->DecryptSampleData(
+                  m_poolId, sampleData, m_sampleData, nullptr, 0, nullptr, nullptr, streamType)))
+      {
+        Reset(true);
+        return result;
+      }
+    }
+    else
+    {
+      m_sampleData.SetData(sampleData.GetData(), sampleData.GetDataSize());
     }
 
     if (m_codecHandler->Transform(m_sample.GetDts(), m_sample.GetDuration(), m_sampleData,
@@ -235,8 +241,7 @@ uint64_t CFragmentedSampleReader::GetDuration() const
 
 bool CFragmentedSampleReader::IsEncrypted() const
 {
-  return (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH) != 0 &&
-         m_decrypter != nullptr;
+  return (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH) != 0 && m_decrypter;
 }
 
 bool CFragmentedSampleReader::GetInformation(kodi::addon::InputstreamInfo& info)
@@ -405,13 +410,10 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
       AP4_CencSampleInfoTable* sample_table{nullptr};
       AP4_UI32 algorithm_id = 0;
 
-      delete m_decrypter;
-      m_decrypter = 0;
-
       AP4_ContainerAtom* traf =
           AP4_DYNAMIC_CAST(AP4_ContainerAtom, moof->GetChild(AP4_ATOM_TYPE_TRAF, 0));
 
-      if (!m_protectedDesc || !traf)
+      if (!traf)
         return AP4_ERROR_INVALID_FORMAT;
 
       bool isDefaultProtected{true};
@@ -446,7 +448,7 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
       if (!m_singleSampleDecryptor)
         return AP4_ERROR_INVALID_PARAMETERS;
 
-      m_decrypter = new CAdaptiveCencSampleDecrypter(m_singleSampleDecryptor, sample_table);
+      m_decrypter = std::make_unique<CAdaptiveCencSampleDecrypter>(m_singleSampleDecryptor, sample_table);
 
       // Inform decrypter of pattern decryption (CBCS)
       AP4_UI32 schemeType = m_protectedDesc->GetSchemeType();
@@ -472,6 +474,7 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
     else
     {
       // Reset for unencrypted content
+      m_decrypter.reset();
       m_readerCryptoInfo = CryptoInfo();
     }
   }
