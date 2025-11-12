@@ -204,37 +204,43 @@ void media::ToCdmInputBuffer(const DEMUX_PACKET* encryptedBuffer,
   inputBuffer->data_size = encryptedBuffer->iSize;
   inputBuffer->timestamp = encryptedBuffer->pts;
 
-  inputBuffer->key_id = encryptedBuffer->cryptoInfo->kid;
-  inputBuffer->key_id_size = 16;
-  inputBuffer->iv = encryptedBuffer->cryptoInfo->iv;
-  inputBuffer->iv_size = 16;
-
-  const uint16_t numSubsamples =
-      encryptedBuffer->cryptoInfo ? encryptedBuffer->cryptoInfo->numSubSamples : 0;
-  if (numSubsamples > 0)
+ if (encryptedBuffer->cryptoInfo)
   {
-    subsamples->reserve(numSubsamples);
-    for (uint16_t i = 0; i < numSubsamples; i++)
+    DEMUX_CRYPTO_INFO* cryptoInfo = encryptedBuffer->cryptoInfo;
+
+    inputBuffer->key_id = cryptoInfo->kid;
+    inputBuffer->key_id_size = 16;
+    inputBuffer->iv = cryptoInfo->iv;
+    inputBuffer->iv_size = 16;
+
+    const uint16_t numSubsamples = cryptoInfo->numSubSamples;
+    if (numSubsamples > 0)
     {
-      subsamples->push_back({encryptedBuffer->cryptoInfo->clearBytes[i],
-                             encryptedBuffer->cryptoInfo->cipherBytes[i]});
+      subsamples->reserve(numSubsamples);
+      for (uint16_t i = 0; i < numSubsamples; i++)
+      {
+        subsamples->push_back({cryptoInfo->clearBytes[i], cryptoInfo->cipherBytes[i]});
+      }
+
+      inputBuffer->num_subsamples = numSubsamples;
+      inputBuffer->subsamples = subsamples->data();
+    }
+    else
+    {
+      inputBuffer->num_subsamples = 0;
+      inputBuffer->subsamples = nullptr;
+    }
+
+    inputBuffer->encryption_scheme =
+        ToCdmEncryptionScheme(static_cast<CryptoMode>(cryptoInfo->mode));
+
+    if (inputBuffer->encryption_scheme != cdm::EncryptionScheme::kUnencrypted)
+    {
+      inputBuffer->pattern = {cryptoInfo->cryptBlocks, cryptoInfo->skipBlocks};
     }
   }
-
-  inputBuffer->subsamples = subsamples->data();
-  inputBuffer->num_subsamples = numSubsamples;
-
-  if (encryptedBuffer->cryptoInfo)
-  {
-    inputBuffer->encryption_scheme =
-        ToCdmEncryptionScheme(static_cast<CryptoMode>(encryptedBuffer->cryptoInfo->mode)); // ??
-  }
   else
-    inputBuffer->encryption_scheme = cdm::EncryptionScheme::kUnencrypted;
-
-  if (inputBuffer->encryption_scheme != cdm::EncryptionScheme::kUnencrypted)
   {
-    inputBuffer->pattern = {encryptedBuffer->cryptoInfo->cryptBlocks,
-                            encryptedBuffer->cryptoInfo->skipBlocks};
+    inputBuffer->encryption_scheme = cdm::EncryptionScheme::kUnencrypted;
   }
 }

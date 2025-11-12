@@ -75,12 +75,11 @@ private:
   uint64_t m_timeBaseExt{0};
   uint64_t m_timeBaseInt{0};
   AP4_Sample m_sample;
-  AP4_DataBuffer m_encrypted;
   AP4_DataBuffer m_sampleData;
   CodecHandler* m_codecHandler{nullptr};
   std::vector<uint8_t> m_defaultKey;
   AP4_ProtectedSampleDescription* m_protectedDesc{nullptr};
   Adaptive_CencSingleSampleDecrypter* m_singleSampleDecryptor{nullptr};
-  CAdaptiveCencSampleDecrypter* m_decrypter{nullptr};
+  std::unique_ptr<CAdaptiveCencSampleDecrypter> m_decrypter;
   CryptoInfo m_readerCryptoInfo{};
 };

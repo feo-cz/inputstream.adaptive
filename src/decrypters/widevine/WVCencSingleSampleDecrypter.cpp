@@ -1067,6 +1067,7 @@ VIDEOCODEC_RETVAL CWVCencSingleSampleDecrypter::DecryptAndDecodeVideo(
   if (sample->cryptoInfo && sample->cryptoInfo->numSubSamples > 0 &&
       (!sample->cryptoInfo->clearBytes || !sample->cryptoInfo->cipherBytes))
   {
+    LOG::LogF(LOGERROR, "Missing crypting clear/cipher bytes info");
     return VC_ERROR;
   }
 
