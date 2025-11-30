@@ -102,11 +102,6 @@ namespace adaptive
              m_isLive ? "live" : "VOD");
   }
 
-  void AdaptiveTree::FreeSegments(CRepresentation* repr)
-  {
-    repr->Timeline().Clear();
-  }
-
   void AdaptiveTree::OnDataArrived(uint64_t segNum,
                                    std::optional<CAesKeyInfo>& aesKey,
                                    uint8_t iv[16],

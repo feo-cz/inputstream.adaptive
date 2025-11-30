@@ -773,7 +773,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
           period->SetTlDuration(periodDuration);
         }
 
-        FreeSegments(rep);
+        rep->Timeline().Clear();
 
         rep->SetStartNumber(mediaSequenceNbr);
 
@@ -868,7 +868,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
     rep->AddDrmInfo(info.second);
   }
 
-  FreeSegments(rep);
+  rep->Timeline().Clear();
   rep->Timeline().Swap(newSegments);
   rep->SetStartNumber(mediaSequenceNbr);
 

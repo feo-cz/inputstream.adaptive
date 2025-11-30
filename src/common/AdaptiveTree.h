@@ -192,8 +192,6 @@ public:
    */
   virtual void OnPeriodChange() {}
 
-  void FreeSegments(PLAYLIST::CRepresentation* repr);
-
   /*!
    * \brief Some types of live manifests do not include segments, so the client must create them,
    *        this method could be used in conjunction with manifest updates.
