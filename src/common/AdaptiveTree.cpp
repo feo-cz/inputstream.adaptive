@@ -105,7 +105,6 @@ namespace adaptive
   void AdaptiveTree::FreeSegments(CRepresentation* repr)
   {
     repr->Timeline().Clear();
-    repr->current_segment_.reset();
   }
 
   void AdaptiveTree::OnDataArrived(uint64_t segNum,

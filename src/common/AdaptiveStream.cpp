@@ -1343,6 +1343,10 @@ void adaptive::AdaptiveStream::Stop()
 void adaptive::AdaptiveStream::clear()
 {
   current_adp_ = 0;
+
+  if (current_rep_)
+    current_rep_->current_segment_.reset();
+
   current_rep_ = 0;
 }
 
