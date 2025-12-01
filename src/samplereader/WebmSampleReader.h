@@ -17,6 +17,8 @@ class ATTR_DLL_LOCAL CWebmSampleReader : public ISampleReader, public WebmReader
 public:
   CWebmSampleReader(AP4_ByteStream* input);
 
+  Type GetType() const override { return Type::WebM; }
+
   bool IsStarted() const override { return m_started; }
   bool EOS() const override { return m_eos; }
   uint64_t DTS() const override { return m_dts; }

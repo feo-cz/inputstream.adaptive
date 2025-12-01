@@ -17,6 +17,8 @@ class ATTR_DLL_LOCAL CTSSampleReader : public ISampleReader, public TSReader
 public:
   CTSSampleReader(AP4_ByteStream* input, uint32_t requiredMask);
 
+  Type GetType() const override { return Type::TS; }
+
   bool Initialize(SESSION::CStream* stream) override;
   void AddStreamType(INPUTSTREAM_TYPE type, int streamId) override;
   void SetStreamType(INPUTSTREAM_TYPE type, int streamId) override;

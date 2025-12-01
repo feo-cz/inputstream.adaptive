@@ -44,7 +44,19 @@ public:
 class ATTR_DLL_LOCAL ISampleReader
 {
 public:
+  enum class Type
+  {
+    FMP4,
+    TS,
+    ADTS,
+    WebM,
+    Subtitles,
+  };
+
   virtual ~ISampleReader() = default;
+
+  virtual Type GetType() const = 0;
+
   virtual bool Initialize(SESSION::CStream* stream) { return true; }
   virtual void SetDecrypter(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> ssd,
                             const DRM::DecrypterCapabilites& dcaps){};
