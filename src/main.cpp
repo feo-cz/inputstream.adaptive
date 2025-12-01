@@ -12,6 +12,7 @@
 #include "CompKodiProps.h"
 #include "SrvBroker.h"
 #include "Stream.h"
+#include "samplereader/TSSampleReader.h"
 #include "utils/GUIUtils.h"
 #include "utils/ThreadPool.h"
 #include "utils/log.h"
@@ -145,9 +146,22 @@ void CInputStreamAdaptive::UnlinkIncludedStreams(CStream* stream)
 {
   if (stream->m_mainStreamIndex.has_value())
   {
-    CStream* mainStream(m_session->GetStream(*stream->m_mainStreamIndex));
-    if (mainStream->GetReader())
-      mainStream->GetReader()->RemoveStreamType(stream->m_info.GetStreamType());
+    CStream* mainStream = m_session->GetStream(*stream->m_mainStreamIndex);
+    if (!mainStream)
+    {
+      LOG::LogF(LOGERROR, "Cannot get main stream from index %u", *stream->m_mainStreamIndex);
+      return;
+    }
+
+    ISampleReader* sReader = mainStream->GetReader();
+    if (sReader)
+    {
+      if (sReader->GetType() == ISampleReader::Type::TS)
+      {
+        auto tsReader = static_cast<CTSSampleReader*>(sReader);
+        tsReader->RemoveStreamType(stream->m_info.GetStreamType());
+      }
+    }
   }
 
   const CRepresentation* rep = stream->m_adStream.getRepresentation();
@@ -270,8 +284,17 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
       }
       else
       {
-        mainReader->AddStreamType(stream->m_info.GetStreamType(), streamid);
-        mainReader->GetInformation(stream->m_info);
+        if (mainReader->GetType() == ISampleReader::Type::TS)
+        {
+          auto tsReader = static_cast<CTSSampleReader*>(mainReader);
+          tsReader->AddStreamType(stream->m_info.GetStreamType(), streamid);
+          tsReader->GetInformation(stream->m_info);
+        }
+        else
+        {
+          LOG::LogF(LOGERROR, "Unsupported included stream for sample reader type: %i",
+                    mainReader->GetType());
+        }
       }
     }
     else
@@ -295,18 +318,27 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
   {
     for (auto& [streamType, id] : m_IncludedStreams)
     {
-      stream->GetReader()->AddStreamType(streamType, id);
-
-      const unsigned int streamIndex = m_session->GetStreamIndexFromId(id);
-
-      CStream* incStream = m_session->GetStream(streamIndex);
-      if (!incStream)
+      ISampleReader* sReader = stream->GetReader();
+      if (sReader)
       {
-        LOG::LogF(LOGERROR, "Cannot get the stream from stream index %u", streamIndex);
-      }
-      else
-      {
-        stream->GetReader()->GetInformation(incStream->m_info);
+        if (sReader->GetType() == ISampleReader::Type::TS)
+        {
+          auto tsReader = static_cast<CTSSampleReader*>(sReader);
+          tsReader->AddStreamType(streamType, id);
+
+          // Update info
+          const unsigned int streamIndex = m_session->GetStreamIndexFromId(id);
+          CStream* incStream = m_session->GetStream(streamIndex);
+          if (incStream)
+            stream->GetReader()->GetInformation(incStream->m_info);
+          else
+            LOG::LogF(LOGERROR, "Cannot get the stream from stream index %u", streamIndex);
+        }
+        else
+        {
+          LOG::LogF(LOGERROR, "Unsupported included stream for sample reader type: %i",
+                    sReader->GetType());
+        }
       }
     }
   }

@@ -20,9 +20,11 @@ public:
   Type GetType() const override { return Type::TS; }
 
   bool Initialize(SESSION::CStream* stream) override;
-  void AddStreamType(INPUTSTREAM_TYPE type, int streamId) override;
-  void SetStreamType(INPUTSTREAM_TYPE type, int streamId) override;
-  bool RemoveStreamType(INPUTSTREAM_TYPE type) override;
+
+  void AddStreamType(INPUTSTREAM_TYPE type, int streamId);
+  void SetStreamType(INPUTSTREAM_TYPE type, int streamId);
+  bool RemoveStreamType(INPUTSTREAM_TYPE type);
+
   bool IsStarted() const override { return m_started; }
   bool EOS() const override { return m_eos; }
   uint64_t DTS() const override { return m_dts; }
