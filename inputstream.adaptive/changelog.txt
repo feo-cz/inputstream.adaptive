@@ -1,3 +1,8 @@
+v22.3.3 (2025-12-02)
+- [HLS] Fix playing live segments in a loop regression
+- Fix possible forced stop of playback with live streaming while seeking
+- Fix possible corrupted PPS/SPS data on TS H264
+
 v22.3.2 (2025-11-13)
 - Fix no picture on MP4 videos with mixed encrypted/unencrypted contents
 
