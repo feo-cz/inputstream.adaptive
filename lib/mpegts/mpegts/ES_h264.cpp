@@ -108,10 +108,10 @@ void ES_h264::Parse(STREAM_PKT* pkt)
         Parse_SPS(unescaped, usize, false);
 
         m_streamData.sps[m_SPSRawId].raw_data_size = p - pOld - codeOffset;
-        if (m_streamData.pps[m_SPSRawId].raw_data_size < sizeof(m_streamData.pps[m_SPSRawId].raw_data))
+        if (m_streamData.sps[m_SPSRawId].raw_data_size < sizeof(m_streamData.sps[m_SPSRawId].raw_data))
           memcpy(m_streamData.sps[m_SPSRawId].raw_data, es_buf + pOld, m_streamData.sps[m_SPSRawId].raw_data_size);
         else
-          m_streamData.pps[m_SPSRawId].raw_data_size = 0;
+          m_streamData.sps[m_SPSRawId].raw_data_size = 0;
         m_SPSRawId = -1, es_extraDataChanged = true;
       }
       pOld = p - 1;
