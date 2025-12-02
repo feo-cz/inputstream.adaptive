@@ -1197,13 +1197,6 @@ bool adaptive::AdaptiveStream::seek_time(double seek_seconds, bool preceeding, b
   if (choosen_seg && current_rep_->Timeline().Get(choosen_seg)->startPTS_ > sec_in_ts)
     --choosen_seg;
 
-  if (!preceeding && sec_in_ts > current_rep_->Timeline().Get(choosen_seg)->startPTS_ &&
-      current_adp_->GetStreamType() == StreamType::VIDEO)
-  {
-    //Assume that we have I-Frames only at segment start
-    ++choosen_seg;
-  }
-
   const std::optional<CSegment> oldSeg = current_rep_->current_segment_;
   const CSegment* newSeg = current_rep_->Timeline().Get(choosen_seg);
 
@@ -1350,6 +1343,10 @@ void adaptive::AdaptiveStream::Stop()
 void adaptive::AdaptiveStream::clear()
 {
   current_adp_ = 0;
+
+  if (current_rep_)
+    current_rep_->current_segment_.reset();
+
   current_rep_ = 0;
 }
 
