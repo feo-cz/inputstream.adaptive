@@ -162,7 +162,7 @@ void ES_h264::Parse(STREAM_PKT* pkt)
             if (m_streamData.pps[i].raw_data_size)
             {
               ed[0] = ed[1] = ed[2] = 0, ed[3] = 1, ed += 4;
-              memcpy(ed, m_streamData.pps[i].raw_data, m_streamData.pps[i].raw_data_size), ed += m_streamData.sps[i].raw_data_size;
+              memcpy(ed, m_streamData.pps[i].raw_data, m_streamData.pps[i].raw_data_size), ed += m_streamData.pps[i].raw_data_size;
               stream_info.extra_data_size += 4 + m_streamData.pps[i].raw_data_size;
             }
           }
