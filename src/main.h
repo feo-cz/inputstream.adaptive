@@ -57,14 +57,11 @@ public:
 
 private:
   std::shared_ptr<SESSION::CSession> m_session;
-  std::map<INPUTSTREAM_TYPE, int> m_IncludedStreams; // stream type - stream id
   int m_failedSeekTime = ~0;
 
   // The last PTS of the segment package fed to kodi.
   // NO_PTS_VALUE only when playback starts or a new period starts
   std::atomic<uint64_t> m_lastPts{PLAYLIST::NO_PTS_VALUE};
-
-  void UnlinkIncludedStreams(SESSION::CStream* stream);
 
   bool m_checkCoreReopen{false}; // Check if Kodi core will reopen all streams
 };

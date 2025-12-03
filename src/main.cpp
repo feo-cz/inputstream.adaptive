@@ -12,7 +12,6 @@
 #include "CompKodiProps.h"
 #include "SrvBroker.h"
 #include "Stream.h"
-#include "samplereader/TSSampleReader.h"
 #include "utils/GUIUtils.h"
 #include "utils/ThreadPool.h"
 #include "utils/log.h"
@@ -82,7 +81,7 @@ bool CInputStreamAdaptive::GetStreamIds(std::vector<unsigned int>& ids)
 
   for (unsigned int i(0); i < INPUTSTREAM_MAX_STREAM_COUNT && i < streamCount; ++i)
   {
-    CStream* stream = m_session->GetStream(i);
+    auto stream = m_session->GetStream(i);
     if (!stream)
     {
       LOG::LogF(LOGERROR, "Cannot get the stream from sid %u", i);
@@ -142,34 +141,6 @@ bool CInputStreamAdaptive::GetStream(int streamid, kodi::addon::InputstreamInfo&
   //! this needs to be fixed in the Kodi core VP
 }
 
-void CInputStreamAdaptive::UnlinkIncludedStreams(CStream* stream)
-{
-  if (stream->m_mainStreamIndex.has_value())
-  {
-    CStream* mainStream = m_session->GetStream(*stream->m_mainStreamIndex);
-    if (!mainStream)
-    {
-      LOG::LogF(LOGERROR, "Cannot get main stream from index %u", *stream->m_mainStreamIndex);
-      return;
-    }
-
-    ISampleReader* sReader = mainStream->GetReader();
-    if (sReader)
-    {
-      if (sReader->GetType() == ISampleReader::Type::TS)
-      {
-        auto tsReader = static_cast<CTSSampleReader*>(sReader);
-        tsReader->RemoveStreamType(stream->m_info.GetStreamType());
-      }
-    }
-  }
-
-  const CRepresentation* rep = stream->m_adStream.getRepresentation();
-
-  if (rep->IsIncludedStream())
-    m_IncludedStreams.erase(stream->m_info.GetStreamType());
-}
-
 void CInputStreamAdaptive::EnableStream(int streamid, bool enable)
 {
   LOG::Log(LOGDEBUG, "EnableStream(%d: %s)", streamid, enable ? "true" : "false");
@@ -177,11 +148,11 @@ void CInputStreamAdaptive::EnableStream(int streamid, bool enable)
   if (!m_session)
     return;
 
-  CStream* stream{m_session->GetStream(m_session->GetStreamIndexFromId(streamid))};
+  auto stream = m_session->GetStream(m_session->GetStreamIndexFromId(streamid));
 
   if (!enable && stream && stream->IsEnabled())
   {
-    UnlinkIncludedStreams(stream);
+    stream->UnlinkStream();
     m_session->EnableStream(stream, false);
   }
 }
@@ -208,17 +179,16 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
   if (!m_session)
     return false;
 
-  CStream* stream(m_session->GetStream(m_session->GetStreamIndexFromId(streamid)));
+  auto stream = m_session->GetStream(m_session->GetStreamIndexFromId(streamid));
 
   if (!stream)
     return false;
 
   if (stream->IsEnabled())
   {
-    // Stream quality changed
+    // Stream quality changed (by "adaptive" streaming, not OSD)
     if (stream->m_adStream.StreamChanged())
     {
-      UnlinkIncludedStreams(stream);
       stream->Reset();
       stream->m_adStream.Reset();
     }
@@ -261,52 +231,33 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
 
   CRepresentation* rep = stream->m_adStream.getRepresentation();
 
-  // If we select a dummy (=inside video) stream, open the video part
-  // Dummy streams will be never enabled, they will only enable / activate audio track.
+  // "included" streams are audio streams embedded into a video stream (multiplexed).
+  // How works:
+  // The manifest parser create a "dummy" (AdaptationSet + Representation) for the audio track,
+  // this dummy stream will be shared between all video representations
+  // so needs to be linked to the video stream currently in use,
+  // and if the video quality changes, must be re-linked with the current video.
+  // The behavior of how works the "dummy" stream changes depending on the type of demuxer used,
+  // in general way in this case the CStream dont use the AdaptiveStream class
+  // but could have a SampleReader that somewhat read the data from the video package.
+  //! @todo: HLS TS with multiple "included" audio streams, not implemented, more likely
+  //!   its needed implement a way to get PIDs of each stream from segment, and map them to the manifest variants
   if (rep->IsIncludedStream())
   {
-    CStream* mainStream;
-    unsigned int mainStreamIndex{0};
+    auto videoStream = m_session->GetCurrentVideoStream();
 
-    while ((mainStream = m_session->GetStream(mainStreamIndex++)))
+    if (!videoStream)
     {
-      if (mainStream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO && mainStream->IsEnabled())
-        break;
+      LOG::LogF(LOGERROR, "Cannot get video stream to link the included stream id: %i",
+                streamid);
+      return false;
     }
 
-    if (mainStream)
-    {
-      stream->m_mainStreamIndex = mainStreamIndex;
-      ISampleReader* mainReader = mainStream->GetReader();
-      if (!mainReader)
-      {
-        LOG::LogF(LOGERROR, "Cannot get the stream sample reader");
-      }
-      else
-      {
-        if (mainReader->GetType() == ISampleReader::Type::TS)
-        {
-          auto tsReader = static_cast<CTSSampleReader*>(mainReader);
-          tsReader->AddStreamType(stream->m_info.GetStreamType(), streamid);
-          tsReader->GetInformation(stream->m_info);
-        }
-        else
-        {
-          LOG::LogF(LOGERROR, "Unsupported included stream for sample reader type: %i",
-                    mainReader->GetType());
-        }
-      }
-    }
-    else
-    {
-      stream->m_mainStreamIndex.reset();
-    }
-
-    m_IncludedStreams[stream->m_info.GetStreamType()] = streamid;
-    return false;
+    stream->LinkStream(videoStream, streamid);
+    return true;
   }
 
-  if (!m_session->PrepareStream(stream, m_lastPts))
+  if (!m_session->PrepareStream(*stream, m_lastPts))
   {
     m_session->EnableStream(stream, false);
     return false;
@@ -314,36 +265,24 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
 
   stream->GetReader()->SetStreamId(stream->m_info.GetStreamType(), streamid);
 
+  // In case of video quality change (OSD)
+  // re-link "included" streams to current opened stream
+  // is assumed that "included" streams are still readable from the new selected stream
   if (stream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO)
   {
-    for (auto& [streamType, id] : m_IncludedStreams)
+    for (unsigned int i{0}; i < m_session->GetStreamCount(); ++i)
     {
-      ISampleReader* sReader = stream->GetReader();
-      if (sReader)
-      {
-        if (sReader->GetType() == ISampleReader::Type::TS)
-        {
-          auto tsReader = static_cast<CTSSampleReader*>(sReader);
-          tsReader->AddStreamType(streamType, id);
+      auto sesStream = m_session->GetStream(i);
+      if (!sesStream || !sesStream->IsEnabled())
+        continue;
 
-          // Update info
-          const unsigned int streamIndex = m_session->GetStreamIndexFromId(id);
-          CStream* incStream = m_session->GetStream(streamIndex);
-          if (incStream)
-            stream->GetReader()->GetInformation(incStream->m_info);
-          else
-            LOG::LogF(LOGERROR, "Cannot get the stream from stream index %u", streamIndex);
-        }
-        else
-        {
-          LOG::LogF(LOGERROR, "Unsupported included stream for sample reader type: %i",
-                    sReader->GetType());
-        }
+      if (sesStream->IsLinkedToStreamType(INPUTSTREAM_TYPE_VIDEO))
+      {
+        sesStream->UnlinkStream();
+        sesStream->LinkStream(stream, m_session->GetStreamIdFromIndex(i));
       }
     }
   }
-
-  m_session->EnableStream(stream, true);
 
   // If stream use DRM always update stream info
   const bool isInfoChanged = stream->GetReader()->GetInformation(stream->m_info) ||

@@ -76,20 +76,28 @@ public:
    * \brief Update stream's InputstreamInfo
    * \param stream The stream to prepare
    */
-  bool PrepareStream(CStream* stream, uint64_t startPts);
+  bool PrepareStream(CStream& stream, uint64_t startPts);
 
   /*!
    * \brief Get a stream by index
    * \param index The stream index
    * \return The stream object if the index exists
    */
-  CStream* GetStream(unsigned int index) const;
+  std::shared_ptr<CStream> GetStream(unsigned int index) const;
+
+  const std::vector<std::shared_ptr<CStream>>& GetStreams() const { return m_streams; }
+
+  /*!
+   * \brief Get the current (enabled) video stream
+   * \return The video stream if found, otherwise nullptr
+   */
+  std::shared_ptr<CStream> GetCurrentVideoStream() const;
 
   /*! \brief Enable or disable a stream
    *  \param stream The stream object to act on
    *  \param enable Whether to enable or disable the stream
    */
-  void EnableStream(CStream* stream, bool enable);
+  void EnableStream(std::shared_ptr<CStream> stream, bool enable);
 
   /*! \brief Get the number of streams in the session
    *  \return The number of streams in the session
@@ -273,8 +281,8 @@ private:
   adaptive::AdaptiveTree* m_adaptiveTree{nullptr};
   CHOOSER::IRepresentationChooser* m_reprChooser{nullptr};
 
-  std::vector<std::unique_ptr<CStream>> m_streams;
-  CStream* m_timingStream{nullptr};
+  std::vector<std::shared_ptr<CStream>> m_streams;
+  std::shared_ptr<CStream> m_timingStream;
 
   bool m_changed{false};
   uint64_t m_elapsedTime{0};
