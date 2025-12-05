@@ -1168,44 +1168,17 @@ bool adaptive::AdaptiveStream::seek_time(double seek_seconds, bool preceeding, b
 
   std::lock_guard<adaptive::AdaptiveTree::TreeUpdateThread> lckUpdTree(m_tree->GetTreeUpdMutex());
 
-  uint64_t sec_in_ts = static_cast<uint64_t>(seek_seconds * current_rep_->GetTimescale());
+  const uint64_t pts = static_cast<uint64_t>(seek_seconds * current_rep_->GetTimescale());
 
-  //Skip initialization
-  size_t choosen_seg{0};
-
-  while (choosen_seg < current_rep_->Timeline().GetSize() &&
-         sec_in_ts > current_rep_->Timeline().Get(choosen_seg)->startPTS_)
-  {
-    ++choosen_seg;
-  }
-
-  if (choosen_seg == current_rep_->Timeline().GetSize())
-  {
-    if (!current_rep_->Timeline().Get(0))
-    {
-      LOG::LogF(LOGERROR, "[AS-%u] Segment at position 0 not found from representation id: %s",
-                clsId, current_rep_->GetId().c_str());
-      return false;
-    }
-
-    if (sec_in_ts < current_rep_->Timeline().Get(0)->startPTS_ + current_rep_->Timeline().GetDuration())
-      --choosen_seg;
-    else
-      return false;
-  }
-
-  if (choosen_seg && current_rep_->Timeline().Get(choosen_seg)->startPTS_ > sec_in_ts)
-    --choosen_seg;
-
+  const CSegment* seekSeg = current_rep_->Timeline().FindByPTSOrNext(pts);
   const std::optional<CSegment> oldSeg = current_rep_->current_segment_;
-  const CSegment* newSeg = current_rep_->Timeline().Get(choosen_seg);
 
-  if (newSeg)
+  if (seekSeg)
   {
     needReset = true;
-    if (oldSeg.has_value() && !newSeg->IsSame(*oldSeg))
+    if (oldSeg.has_value() && !seekSeg->IsSame(*oldSeg))
     {
-      ResetCurrentSegment(*newSeg);
+      ResetCurrentSegment(*seekSeg);
     }
     else if (!preceeding)
     {
@@ -1224,7 +1197,7 @@ bool adaptive::AdaptiveStream::seek_time(double seek_seconds, bool preceeding, b
       //! and these downloads will be deleted just later without to be read, because CSession::SeekTime call these
       //! method two times so by starting two times downloads.
       //! This code has been introduced as part of subtitles fixes from https://github.com/xbmc/inputstream.adaptive/pull/1082
-      ResetCurrentSegment(*newSeg);
+      ResetCurrentSegment(*seekSeg);
 
       absolute_position_ -= segment_read_pos_;
       segment_read_pos_ = 0;

@@ -136,6 +136,19 @@ const CSegment* PLAYLIST::CSegContainer::Find(const CSegment& seg) const
   return nullptr;
 }
 
+const CSegment* PLAYLIST::CSegContainer::FindByPTSOrNext(uint64_t pts) const
+{
+  for (const CSegment& seg : m_segments)
+  {
+    if (seg.startPTS_ <= pts && pts <= seg.m_endPts)
+      return &seg;
+
+    if (seg.startPTS_ > pts)
+      return &seg;
+  }
+  return nullptr;
+}
+
 const size_t PLAYLIST::CSegContainer::GetPos(const CSegment& seg) const
 {
   for (size_t i = 0; i < m_segments.size(); ++i)
