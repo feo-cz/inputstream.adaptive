@@ -116,6 +116,13 @@ public:
   const CSegment* Find(const CSegment& seg) const;
 
   /*!
+   * \brief Find segment containing the PTS, or the next segment if PTS falls in a gap.
+   * \param pts The PTS, in timescale
+   * \return Segment containing PTS, or next segment after PTS, or nullptr if PTS is after all segments
+   */
+  const CSegment* FindByPTSOrNext(uint64_t pts) const;
+
+  /*!
    * \brief Get index position of a segment in the timeline.
    * \param elem The segment to get the position
    * \return The index position, or SEGMENT_NO_POS if not found
