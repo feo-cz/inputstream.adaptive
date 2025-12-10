@@ -114,9 +114,10 @@ enum class EVENT_TYPE
     /*!
      * \brief Seek the stream to the specified data position on the current segment.
      * \param pos The data position to seek, is the sum of the absolute position and any additional bytes to be seek for
+     * \param isEos[OUT] The value will be changed to true, only when the stream is end
      * \return True if has success, otherwise false (it should cause EOS in the sample reader demuxer)
      */
-    bool seek(uint64_t const pos);
+    bool seek(uint64_t const pos, bool& isEos);
 
     bool seek_time(double seek_seconds, bool preceeding, bool &needReset);
     PLAYLIST::CPeriod* getPeriod() { return current_period_; };

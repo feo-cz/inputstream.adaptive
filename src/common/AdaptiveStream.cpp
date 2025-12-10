@@ -1044,10 +1044,15 @@ uint64_t adaptive::AdaptiveStream::tell()
   return absolute_position_;
 }
 
-bool adaptive::AdaptiveStream::seek(uint64_t const pos)
+bool adaptive::AdaptiveStream::seek(uint64_t const pos, bool& isEos)
 {
   if (m_segBuffers.IsEmpty())
+  {
+    if (!current_rep_->IsWaitForSegment())
+      isEos = true;
+
     return false;
+  }
 
   SegmentBuffer& currSegBuffer = m_segBuffers.Front();
 

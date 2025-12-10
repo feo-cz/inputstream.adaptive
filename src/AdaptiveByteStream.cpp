@@ -32,7 +32,9 @@ bool CAdaptiveByteStream::ReadFull(std::vector<uint8_t>& buffer)
 
 AP4_Result CAdaptiveByteStream::Seek(AP4_Position position)
 {
-  return m_adStream->seek(position) ? AP4_SUCCESS : AP4_ERROR_NOT_SUPPORTED;
+  bool isEos{false};
+  const bool ret = m_adStream->seek(position, isEos);
+  return ret ? AP4_SUCCESS : isEos ? AP4_ERROR_EOS : AP4_ERROR_NOT_SUPPORTED;
 }
 
 AP4_Result CAdaptiveByteStream::Tell(AP4_Position& position)
