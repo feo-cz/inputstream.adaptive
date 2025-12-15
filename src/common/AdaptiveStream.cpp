@@ -1165,6 +1165,8 @@ PLAYLIST::StreamType adaptive::AdaptiveStream::GetStreamType() const
 
 bool adaptive::AdaptiveStream::seek_time(double seek_seconds, bool preceeding, bool& needReset)
 {
+  needReset = true;
+
   if (!current_rep_)
     return false;
 
@@ -1180,7 +1182,6 @@ bool adaptive::AdaptiveStream::seek_time(double seek_seconds, bool preceeding, b
 
   if (seekSeg)
   {
-    needReset = true;
     if (oldSeg.has_value() && !seekSeg->IsSame(*oldSeg))
     {
       ResetCurrentSegment(*seekSeg);

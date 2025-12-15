@@ -107,7 +107,12 @@ public:
    */
   void UnlinkStream();
 
-  bool IsLinkedToStreamType(INPUTSTREAM_TYPE type);
+  /*!
+   * \brief Determines if this stream is linked to a parent stream of specified type
+   * \param type The stream type
+   * \return True if it is linked to specified type, otherwise false
+   */
+  bool IsLinkedToStreamType(INPUTSTREAM_TYPE type) const;
 
   adaptive::AdaptiveStream m_adStream;
   kodi::addon::InputstreamInfo m_info;

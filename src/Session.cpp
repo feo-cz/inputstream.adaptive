@@ -368,7 +368,7 @@ void SESSION::CSession::InitializePeriod()
     GUI::ErrorDialog(GUI::GetLocalizedString(30309));
   }
 
-  // Ensure that video streams are always placed before all others
+  // Ensure that video streams are always placed before all other types
   std::stable_sort(m_streams.begin(), m_streams.end(),
                    [](const std::shared_ptr<CStream>& a, const std::shared_ptr<CStream>& b)
                    {
@@ -990,7 +990,7 @@ bool SESSION::CSession::SeekTime(double seekTime, unsigned int streamId, bool pr
     streamReader->WaitReadSampleAsyncComplete();
     if (stream->IsEnabled() && (streamId == 0 || stream->m_info.GetPhysicalIndex() == streamId))
     {
-      bool reset{true};
+      bool reset{false};
       // all streams must be started before seeking to ensure cross chapter seeks
       // will seek to the correct location/segment
       if (!streamReader->IsStarted())
@@ -1000,7 +1000,14 @@ bool SESSION::CSession::SeekTime(double seekTime, unsigned int streamId, bool pr
       
       double seekSecs{static_cast<double>(seekTimeCorrected - ptsDiff) /
                       STREAM_TIME_BASE};
-      if (stream->m_adStream.seek_time(seekSecs, preceeding, reset))
+
+      // With FMP4 audio stream included to video stream you must not seek with AdaptiveStream
+      // segments are managed by AdaptiveStream of the video stream
+      // so CFragmentedSampleReader read data from the reader of the video stream
+      const bool noAdStream = streamReader->GetType() == ISampleReader::Type::FMP4 &&
+                              stream->m_adStream.getRepresentation()->IsIncludedStream();
+
+      if (noAdStream || stream->m_adStream.seek_time(seekSecs, preceeding, reset))
       {
         if (reset)
           streamReader->Reset(false);

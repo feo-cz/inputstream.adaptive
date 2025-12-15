@@ -8,6 +8,7 @@
 
 #include "Stream.h"
 
+#include "samplereader/FragmentedSampleReader.h"
 #include "samplereader/TSSampleReader.h"
 #include "utils/log.h"
 
@@ -70,11 +71,26 @@ void SESSION::CStream::LinkStream(std::shared_ptr<CStream> mainStream, int strea
     tsReader->AddStreamType(m_info.GetStreamType(), streamId);
     tsReader->GetInformation(m_info);
   }
+  else if (mainStreamReader->GetType() == ISampleReader::Type::FMP4)
+  {
+    auto fMainReader = static_cast<CFragmentedSampleReader*>(mainStreamReader);
+
+    m_streamReader = fMainReader->CreateReaderByTrack();
+    if (!m_streamReader)
+      return;
+
+    m_streamReader->Initialize(this);
+    m_streamReader->SetStreamId(m_info.GetStreamType(), streamId);
+    m_streamReader->GetInformation(m_info);
+  }
   else
   {
     LOG::LogF(LOGERROR, "Cannot link stream ID %i, due to unsupported sample reader type: %i",
               streamId, mainStreamReader->GetType());
+    return;
   }
+
+  m_linkedStream = mainStream;
 }
 
 void SESSION::CStream::UnlinkStream()
@@ -93,6 +109,10 @@ void SESSION::CStream::UnlinkStream()
       auto tsReader = static_cast<CTSSampleReader*>(linkStreamReader);
       tsReader->RemoveStreamType(m_info.GetStreamType());
     }
+    else if (linkStreamReader->GetType() == ISampleReader::Type::FMP4)
+    {
+      m_streamReader.reset();
+    }
     else
     {
       LOG::LogF(LOGERROR, "Cannot unlink stream, due to unsupported sample reader type: %i",
@@ -102,7 +122,7 @@ void SESSION::CStream::UnlinkStream()
 
   m_linkedStream.reset();
 }
-bool SESSION::CStream::IsLinkedToStreamType(INPUTSTREAM_TYPE type)
+bool SESSION::CStream::IsLinkedToStreamType(INPUTSTREAM_TYPE type) const
 {
   if (auto linkStream = m_linkedStream.lock()) // check pointer validity
   {
