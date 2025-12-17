@@ -26,6 +26,8 @@
 #include "utils/Utils.h"
 #include "utils/log.h"
 
+#include <algorithm>
+
 using namespace adaptive;
 using namespace PLAYLIST;
 using namespace SESSION;
@@ -365,6 +367,15 @@ void SESSION::CSession::InitializePeriod()
               "No stream can be played, common causes: resolution limits or HDCP problem");
     GUI::ErrorDialog(GUI::GetLocalizedString(30309));
   }
+
+  // Ensure that video streams are always placed before all other types
+  std::stable_sort(m_streams.begin(), m_streams.end(),
+                   [](const std::shared_ptr<CStream>& a, const std::shared_ptr<CStream>& b)
+                   {
+                     const bool aIsVideo = a && a->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO;
+                     const bool bIsVideo = b && b->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO;
+                     return aIsVideo && !bIsVideo;
+                   });
 }
 
 void SESSION::CSession::AddStream(PLAYLIST::CAdaptationSet* adp,
@@ -373,7 +384,7 @@ void SESSION::CSession::AddStream(PLAYLIST::CAdaptationSet* adp,
                                   uint32_t uniqueId,
                                   std::string_view audioLanguageOrig)
 {
-  m_streams.push_back(std::make_unique<CStream>(m_adaptiveTree, adp, initialRepr));
+  m_streams.push_back(std::make_shared<CStream>(m_adaptiveTree, adp, initialRepr));
 
   CStream& stream{*m_streams.back()};
 
@@ -626,12 +637,12 @@ void SESSION::CSession::UpdateStream(CStream& stream)
   stream.m_info.SetCodecInternalName(codecStr);
 }
 
-bool SESSION::CSession::PrepareStream(CStream* stream, uint64_t startPts)
+bool SESSION::CSession::PrepareStream(CStream& stream, uint64_t startPts)
 {
-  const EVENT_TYPE startEvent = stream->m_adStream.GetStartEvent();
-  CPeriod* period = stream->m_adStream.getPeriod();
-  CAdaptationSet* adp = stream->m_adStream.getAdaptationSet();
-  CRepresentation* repr = stream->m_adStream.getRepresentation();
+  const EVENT_TYPE startEvent = stream.m_adStream.GetStartEvent();
+  CPeriod* period = stream.m_adStream.getPeriod();
+  CAdaptationSet* adp = stream.m_adStream.getAdaptationSet();
+  CRepresentation* repr = stream.m_adStream.getRepresentation();
 
   // Prepare the representation when the period change usually its not needed,
   // because the timeline is always already updated
@@ -663,24 +674,24 @@ bool SESSION::CSession::PrepareStream(CStream* stream, uint64_t startPts)
     }
 
     if (!m_drmEngine.InitializeSession(repr->DrmInfos(), drmMediaType,
-                                       period->IsSecureDecodeNeeded(), stream->m_info, repr, adp,
+                                       period->IsSecureDecodeNeeded(), stream.m_info, repr, adp,
                                        m_adaptiveTree->IsChangingPeriod(), initDrmInfo))
     {
       return false;
     }
   }
 
-  stream->m_adStream.start_stream(startPts);
-  stream->SetAdByteStream(std::make_unique<CAdaptiveByteStream>(&stream->m_adStream));
+  stream.m_adStream.start_stream(startPts);
+  stream.SetAdByteStream(std::make_unique<CAdaptiveByteStream>(&stream.m_adStream));
 
   ContainerType reprContainerType = repr->GetContainerType();
-  uint32_t mask = (1U << stream->m_info.GetStreamType()) | GetIncludedStreamMask();
-  auto reader = ADP::CreateStreamReader(reprContainerType, stream, mask);
+  uint32_t mask = (1U << stream.m_info.GetStreamType()) | GetIncludedStreamMask();
+  auto reader = ADP::CreateStreamReader(reprContainerType, &stream, mask);
 
   if (!reader)
     return false;
 
-  const auto session = m_drmEngine.GetSession(stream->m_info.GetCryptoSession().GetSessionId(),
+  const auto session = m_drmEngine.GetSession(stream.m_info.GetCryptoSession().GetSessionId(),
                                               initDrmInfo.defaultKid);
 
   if (adp->GetStreamType() == StreamType::VIDEO || adp->GetStreamType() == StreamType::VIDEO_AUDIO)
@@ -692,7 +703,7 @@ bool SESSION::CSession::PrepareStream(CStream* stream, uint64_t startPts)
   if (session)
     reader->SetDecrypter(session->decrypter, session->capabilities);
 
-  stream->SetReader(std::move(reader));
+  stream.SetReader(std::move(reader));
 
   if (reprContainerType == ContainerType::TS || reprContainerType == ContainerType::ADTS)
   {
@@ -700,18 +711,29 @@ bool SESSION::CSession::PrepareStream(CStream* stream, uint64_t startPts)
     // nextSegment would be deleted by the FreeSegments/newsegments swap. Do this now before the tree refresh.
     // Also, when reopening a stream (switching reps) the elapsed time would be incorrectly set until the
     // second segment plays, now force a correct calculation at the start of the stream.
-    OnSegmentChanged(&stream->m_adStream);
+    OnSegmentChanged(&stream.m_adStream);
   }
 
   return true;
 }
 
-CStream* SESSION::CSession::GetStream(unsigned int index) const
+std::shared_ptr<CStream> SESSION::CSession::GetStream(unsigned int index) const
 {
-  return index < m_streams.size() ? m_streams[index].get() : nullptr;
+  return index < m_streams.size() ? m_streams[index] : nullptr;
 }
 
-void CSession::EnableStream(CStream* stream, bool enable)
+std::shared_ptr<CStream> SESSION::CSession::GetCurrentVideoStream() const
+{
+  for (auto& stream : m_streams)
+  {
+    if (stream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO && stream->IsEnabled())
+      return stream;
+  }
+
+  return nullptr;
+}
+
+void CSession::EnableStream(std::shared_ptr<CStream> stream, bool enable)
 {
   if (enable)
   {
@@ -949,7 +971,7 @@ bool SESSION::CSession::SeekTime(double seekTime, unsigned int streamId, bool pr
     }
     timingReader->WaitReadSampleAsyncComplete();
     if (!timingReader->IsStarted())
-      StartReader(m_timingStream, seekTimeCorrected, ptsDiff, preceeding, true);
+      StartReader(m_timingStream.get(), seekTimeCorrected, ptsDiff, preceeding, true);
 
     seekTimeCorrected += m_timingStream->m_adStream.GetAbsolutePTSOffset();
     ptsDiff = timingReader->GetPTSDiff();
@@ -968,7 +990,7 @@ bool SESSION::CSession::SeekTime(double seekTime, unsigned int streamId, bool pr
     streamReader->WaitReadSampleAsyncComplete();
     if (stream->IsEnabled() && (streamId == 0 || stream->m_info.GetPhysicalIndex() == streamId))
     {
-      bool reset{true};
+      bool reset{false};
       // all streams must be started before seeking to ensure cross chapter seeks
       // will seek to the correct location/segment
       if (!streamReader->IsStarted())
@@ -978,7 +1000,14 @@ bool SESSION::CSession::SeekTime(double seekTime, unsigned int streamId, bool pr
       
       double seekSecs{static_cast<double>(seekTimeCorrected - ptsDiff) /
                       STREAM_TIME_BASE};
-      if (stream->m_adStream.seek_time(seekSecs, preceeding, reset))
+
+      // With FMP4 audio stream included to video stream you must not seek with AdaptiveStream
+      // segments are managed by AdaptiveStream of the video stream
+      // so CFragmentedSampleReader read data from the reader of the video stream
+      const bool noAdStream = streamReader->GetType() == ISampleReader::Type::FMP4 &&
+                              stream->m_adStream.getRepresentation()->IsIncludedStream();
+
+      if (noAdStream || stream->m_adStream.seek_time(seekSecs, preceeding, reset))
       {
         if (reset)
           streamReader->Reset(false);
@@ -1071,7 +1100,7 @@ bool SESSION::CSession::OnGetStream(int streamid, kodi::addon::InputstreamInfo& 
   }
   else
   {
-    CStream* stream = GetStream(GetStreamIndexFromId(streamid));
+    auto stream = GetStream(GetStreamIndexFromId(streamid));
     if (!stream)
       return false;
 

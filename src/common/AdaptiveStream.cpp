@@ -1044,10 +1044,15 @@ uint64_t adaptive::AdaptiveStream::tell()
   return absolute_position_;
 }
 
-bool adaptive::AdaptiveStream::seek(uint64_t const pos)
+bool adaptive::AdaptiveStream::seek(uint64_t const pos, bool& isEos)
 {
   if (m_segBuffers.IsEmpty())
+  {
+    if (!current_rep_->IsWaitForSegment())
+      isEos = true;
+
     return false;
+  }
 
   SegmentBuffer& currSegBuffer = m_segBuffers.Front();
 
@@ -1160,6 +1165,8 @@ PLAYLIST::StreamType adaptive::AdaptiveStream::GetStreamType() const
 
 bool adaptive::AdaptiveStream::seek_time(double seek_seconds, bool preceeding, bool& needReset)
 {
+  needReset = true;
+
   if (!current_rep_)
     return false;
 
@@ -1175,7 +1182,6 @@ bool adaptive::AdaptiveStream::seek_time(double seek_seconds, bool preceeding, b
 
   if (seekSeg)
   {
-    needReset = true;
     if (oldSeg.has_value() && !seekSeg->IsSame(*oldSeg))
     {
       ResetCurrentSegment(*seekSeg);

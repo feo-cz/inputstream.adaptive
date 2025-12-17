@@ -16,6 +16,7 @@
 #include <kodi/addon-instance/Inputstream.h>
 
 #include <optional>
+#include <memory>
 
 namespace SESSION
 {
@@ -92,7 +93,27 @@ public:
     m_adByteStream = std::move(adByteStream);
   }
 
-  std::optional<unsigned int> m_mainStreamIndex; // Used when this stream is "included" to video (main stream)
+  /*!
+   * \brief Link a multiplexed stream to this one
+   *        (usually audio embedded to the video stream).
+   * \param mainStream The stream to be linked to this stream
+   * \param streamId The InputStream stream ID relative to the linked stream
+   */
+  void LinkStream(std::shared_ptr<CStream> mainStream, int streamId);
+
+  /*!
+   * \brief Unlink a multiplexed stream from this one
+   *        (usually audio embedded to the video stream).
+   */
+  void UnlinkStream();
+
+  /*!
+   * \brief Determines if this stream is linked to a parent stream of specified type
+   * \param type The stream type
+   * \return True if it is linked to specified type, otherwise false
+   */
+  bool IsLinkedToStreamType(INPUTSTREAM_TYPE type) const;
+
   adaptive::AdaptiveStream m_adStream;
   kodi::addon::InputstreamInfo m_info;
   bool m_isValid;
@@ -102,5 +123,7 @@ private:
   std::unique_ptr<ISampleReader> m_streamReader;
   std::unique_ptr<CAdaptiveByteStream> m_adByteStream;
   std::unique_ptr<AP4_File> m_streamFile;
+
+  std::weak_ptr<CStream> m_linkedStream; // This CStream is part of a multiplexed audio/video stream
 };
 } // namespace SESSION

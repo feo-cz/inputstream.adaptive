@@ -36,13 +36,22 @@ constexpr uint8_t MP4_TFRFBOX_UUID[] = {0xd4, 0x80, 0x7e, 0xf2, 0xca, 0x39, 0x46
 CFragmentedSampleReader::CFragmentedSampleReader(AP4_ByteStream* input,
                                                  AP4_Movie* movie,
                                                  AP4_Track* track)
-  : AP4_LinearReader{*movie, input}, m_track{track}
+  : m_track{track}
 {
+  m_lReader = std::make_shared<CLinearReader>(input, movie);
+}
+
+CFragmentedSampleReader::CFragmentedSampleReader(std::shared_ptr<CLinearReader> lReader,
+                                                 AP4_Track* track)
+  : m_track{track}
+{
+  m_lReader = lReader;
 }
 
 CFragmentedSampleReader::~CFragmentedSampleReader()
 {
-  if (m_singleSampleDecryptor)
+  // Remove the decryptor pool only with the last CLinearReader instance
+  if (m_lReader.use_count() == 1 && m_singleSampleDecryptor)
     m_singleSampleDecryptor->RemovePool(m_poolId);
 
   delete m_codecHandler;
@@ -50,7 +59,7 @@ CFragmentedSampleReader::~CFragmentedSampleReader()
 
 bool CFragmentedSampleReader::Initialize(SESSION::CStream* stream)
 {
-  EnableTrack(m_track->GetId());
+  m_lReader->EnableTrack(m_track->GetId());
 
   AP4_SampleDescription* desc{m_track->GetSampleDescription(0)};
   if (desc->GetType() == AP4_SampleDescription::TYPE_PROTECTED)
@@ -135,11 +144,11 @@ AP4_Result CFragmentedSampleReader::ReadSample()
   AP4_DataBuffer sampleData;
   if (!m_codecHandler->ReadNextSample(m_sample, m_sampleData))
   {
-    if (AP4_FAILED(result = ReadNextSample(m_track->GetId(), m_sample, sampleData)))
+    if (AP4_FAILED(result = m_lReader->ExecReadNextSample(this, m_track->GetId(), m_sample, sampleData)))
     {
       if (result == AP4_ERROR_EOS)
       {
-        auto adByteStream = dynamic_cast<CAdaptiveByteStream*>(m_FragmentStream);
+        auto adByteStream = dynamic_cast<CAdaptiveByteStream*>(m_lReader->GetByteStream());
         if (!adByteStream)
         {
           LOG::LogF(LOGERROR, "Fragment stream cannot be casted to AdaptiveByteStream");
@@ -228,7 +237,8 @@ AP4_Result CFragmentedSampleReader::ReadSample()
 
 void CFragmentedSampleReader::Reset(bool bEOS)
 {
-  AP4_LinearReader::Reset();
+  m_lReader->Reset(); // Note: all shared readers call the same shared reader reset
+
   m_eos = bEOS;
   if (m_codecHandler)
     m_codecHandler->Reset();
@@ -280,7 +290,7 @@ bool CFragmentedSampleReader::TimeSeek(uint64_t pts, bool preceeding)
 {
   AP4_Ordinal sampleIndex;
   AP4_UI64 seekPos(static_cast<AP4_UI64>((pts * m_timeBaseInt) / m_timeBaseExt));
-  if (AP4_SUCCEEDED(SeekSample(m_track->GetId(), seekPos, sampleIndex, preceeding)))
+  if (AP4_SUCCEEDED(m_lReader->SeekSample(m_track->GetId(), seekPos, sampleIndex, preceeding)))
   {
     if (m_decrypter)
       m_decrypter->SetSampleIndex(sampleIndex);
@@ -296,7 +306,7 @@ bool CFragmentedSampleReader::TimeSeek(uint64_t pts, bool preceeding)
 
 void CFragmentedSampleReader::SetPTSOffset(uint64_t offset)
 {
-  FindTracker(m_track->GetId())->m_NextDts = (offset * m_timeBaseInt) / m_timeBaseExt;
+  m_lReader->FindTracker(m_track->GetId())->m_NextDts = (offset * m_timeBaseInt) / m_timeBaseExt;
   m_ptsOffs = offset;
 
   if (m_codecHandler)
@@ -305,8 +315,8 @@ void CFragmentedSampleReader::SetPTSOffset(uint64_t offset)
 
 bool CFragmentedSampleReader::GetFragmentInfo(uint64_t& duration)
 {
-  auto fragSampleTable =
-      dynamic_cast<AP4_FragmentSampleTable*>(FindTracker(m_track->GetId())->m_SampleTable);
+  auto fragSampleTable = dynamic_cast<AP4_FragmentSampleTable*>(
+      m_lReader->FindTracker(m_track->GetId())->m_SampleTable);
   if (fragSampleTable)
     duration = fragSampleTable->GetDuration();
   else
@@ -315,6 +325,27 @@ bool CFragmentedSampleReader::GetFragmentInfo(uint64_t& duration)
     return false;
   }
   return true;
+}
+
+std::unique_ptr<ISampleReader> CFragmentedSampleReader::CreateReaderByTrack()
+{
+  auto& movie = m_lReader->GetMovie();
+
+  // Note that CLinearReader (AP4_LinearReader) will be shared among all readers created,
+  // which read from a different track ID
+  AP4_Track* selTrack = movie.GetTrack(AP4_Track::Type::TYPE_AUDIO, 0);
+  if (!selTrack)
+  {
+    LOG::LogF(LOGERROR, "Audio track not found");
+    return nullptr;
+  }
+
+  auto newFragReader = std::make_unique<CFragmentedSampleReader>(m_lReader, selTrack);
+  newFragReader->SetDecrypter(m_singleSampleDecryptor, m_decrypterCaps);
+
+  LOG::LogF(LOGDEBUG, "Created shared reader for audio track id %u", selTrack->GetId());
+
+  return std::move(newFragReader);
 }
 
 AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
@@ -344,8 +375,8 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
 
   AP4_Result result;
 
-  if (AP4_SUCCEEDED((result = AP4_LinearReader::ProcessMoof(moof, moof_offset, mdat_payload_offset,
-                                                            mdat_payload_size))))
+  if (AP4_SUCCEEDED((result = m_lReader->ExecProcessMoof(moof, moof_offset, mdat_payload_offset,
+                                                         mdat_payload_size))))
   {
     AP4_ContainerAtom* traf =
         AP4_DYNAMIC_CAST(AP4_ContainerAtom, moof->GetChild(AP4_ATOM_TYPE_TRAF, 0));
@@ -396,7 +427,7 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
     //! This code is present also on the others sample readers, that need to be verified
     if (~m_ptsOffs)
     {
-      if (AP4_SUCCEEDED(GetSample(m_track->GetId(), sample, 0)))
+      if (AP4_SUCCEEDED(m_lReader->GetSample(m_track->GetId(), sample, 0)))
       {
         m_pts = m_dts = (sample.GetCts() * m_timeBaseExt) / m_timeBaseInt;
         m_ptsDiff = m_pts - m_ptsOffs;
@@ -440,7 +471,7 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
 
       bool reset_iv(false);
       if (AP4_FAILED(result = AP4_CencSampleInfoTable::Create(m_protectedDesc, traf, algorithm_id,
-                                                              reset_iv, *m_FragmentStream,
+                                                              reset_iv, *m_lReader->GetByteStream(),
                                                               moof_offset, sample_table)))
         // we assume unencrypted fragment here
         goto SUCCESS;
@@ -601,4 +632,74 @@ void CFragmentedSampleReader::ParseTrafTfrf(AP4_UuidAtom* uuidAtom)
     }
     m_observer->OnTFRFatom(time, duration, m_track->GetMediaTimeScale());
   }
+}
+
+CLinearReader::CLinearReader(AP4_ByteStream* input, AP4_Movie* movie)
+  : AP4_LinearReader{*movie, input}
+{
+}
+
+void CLinearReader::SetCallback(CLinearReaderCB* lReaderCB)
+{
+  m_lReaderCB = lReaderCB;
+}
+
+AP4_Result CLinearReader::ExecReadNextSample(CLinearReaderCB* lReaderCB,
+                                             AP4_UI32 track_id,
+                                             AP4_Sample& sample,
+                                             AP4_DataBuffer& sample_data)
+{
+  // Protect call to ReadNextSample until method exit,
+  // to ensure appropriate callback to ProcessMoof
+  // with the specified reader (CLinearReaderCB) instance
+  std::lock_guard<std::mutex> lock(m_readerMtx);
+  SetCallback(lReaderCB);
+  return AP4_LinearReader::ReadNextSample(track_id, sample, sample_data);
+}
+
+AP4_Result CLinearReader::ExecProcessMoof(AP4_ContainerAtom* moof,
+                                          AP4_Position moof_offset,
+                                          AP4_Position mdat_payload_offset,
+                                          AP4_UI64 mdat_payload_size)
+{
+  return AP4_LinearReader::ProcessMoof(moof, moof_offset, mdat_payload_offset, mdat_payload_size);
+}
+
+AP4_LinearReader::Tracker* CLinearReader::FindTracker(AP4_UI32 track_id)
+{
+  return AP4_LinearReader::FindTracker(track_id);
+}
+
+AP4_Result CLinearReader::GetSample(AP4_UI32 track_id, AP4_Sample& sample, AP4_Ordinal sample_index)
+{
+  return AP4_LinearReader::GetSample(track_id, sample, sample_index);
+}
+
+void CLinearReader::Reset()
+{
+  std::lock_guard<std::mutex> lock(m_readerMtx);
+  AP4_LinearReader::Reset();
+}
+
+AP4_ByteStream* CLinearReader::GetByteStream()
+{
+  return AP4_LinearReader::m_FragmentStream;
+}
+
+AP4_Movie& CLinearReader::GetMovie()
+{
+  return AP4_LinearReader::m_Movie;
+}
+
+AP4_Result CLinearReader::ProcessMoof(AP4_ContainerAtom* moof,
+                                      AP4_Position moof_offset,
+                                      AP4_Position mdat_payload_offset,
+                                      AP4_UI64 mdat_payload_size)
+{
+  if (!m_lReaderCB)
+  {
+    LOG::LogF(LOGFATAL, "Unable to execute ProcessMoof, CLinearReaderCB is not set");
+    return AP4_ERROR_INVALID_STATE;
+  }
+  return m_lReaderCB->ProcessMoof(moof, moof_offset, mdat_payload_offset, mdat_payload_size);
 }

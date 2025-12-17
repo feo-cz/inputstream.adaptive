@@ -29,6 +29,8 @@ class ATTR_DLL_LOCAL CSubtitleSampleReader : public ISampleReader
 public:
   CSubtitleSampleReader() = default;
 
+  Type GetType() const override { return Type::Subtitles; }
+
   virtual bool Initialize(SESSION::CStream* stream) override;
   bool IsStarted() const override { return m_started; }
   bool EOS() const override { return m_eos; }

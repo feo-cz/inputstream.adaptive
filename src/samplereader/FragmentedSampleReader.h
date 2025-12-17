@@ -11,16 +11,84 @@
 #include "SampleReader.h"
 #include "decrypters/IDecrypter.h"
 
+#include <bento4/Ap4.h>
+#include <bento4/Ap4LinearReader.h>
+
+#include <memory>
+#include <mutex>
+
 // forwards
 class CAdaptiveCencSampleDecrypter;
 class CodecHandler;
 
-class ATTR_DLL_LOCAL CFragmentedSampleReader : public ISampleReader, public AP4_LinearReader
+// \brief Redirects AP4_LinearReader callbacks
+class ATTR_DLL_LOCAL CLinearReaderCB
+{
+public:
+  virtual AP4_Result ProcessMoof(AP4_ContainerAtom* moof,
+                                 AP4_Position moof_offset,
+                                 AP4_Position mdat_payload_offset,
+                                 AP4_UI64 mdat_payload_size) = 0;
+};
+
+// \brief Extends the AP4_LinearReader functionality.
+//        Shared use of this class between different CFragmentedSampleReaders is permitted
+//        for multiplexed streams (e.g. audio embedded in video), for this reason
+//        some methods are protected by mutex to avoid possible race conditions.
+class ATTR_DLL_LOCAL CLinearReader : public AP4_LinearReader
+{
+public:
+  CLinearReader(AP4_ByteStream* input, AP4_Movie* movie);
+
+  void SetCallback(CLinearReaderCB* lReaderCB);
+
+  // \brief Execute AP4_LinearReader::ReadNextSample
+  //        and provide the ProcessMoof callback to the specified reader
+  AP4_Result ExecReadNextSample(CLinearReaderCB* lReaderCB,
+                                AP4_UI32 track_id,
+                                AP4_Sample& sample,
+                                AP4_DataBuffer& sample_data);
+
+  // \brief Execute AP4_LinearReader::ProcessMoof
+  AP4_Result ExecProcessMoof(AP4_ContainerAtom* moof,
+                             AP4_Position moof_offset,
+                             AP4_Position mdat_payload_offset,
+                             AP4_UI64 mdat_payload_size);
+
+  // \brief Execute AP4_LinearReader::FindTracker
+  AP4_LinearReader::Tracker* FindTracker(AP4_UI32 track_id);
+
+  // \brief Execute AP4_LinearReader::GetSample
+  AP4_Result GetSample(AP4_UI32 track_id, AP4_Sample& sample, AP4_Ordinal sample_index);
+  
+  // \brief Execute AP4_LinearReader::Reset
+  void Reset();
+
+  // \brief Get AP4_LinearReader::m_FragmentStream
+  AP4_ByteStream* GetByteStream();
+
+  // \brief Get AP4_LinearReader::m_Movie
+  AP4_Movie& GetMovie();
+
+protected:
+  // AP4_LinearReader implementations
+  AP4_Result ProcessMoof(AP4_ContainerAtom* moof,
+                         AP4_Position moof_offset,
+                         AP4_Position mdat_payload_offset,
+                         AP4_UI64 mdat_payload_size) override;
+
+  CLinearReaderCB* m_lReaderCB{nullptr};
+  std::mutex m_readerMtx;
+};
+
+class ATTR_DLL_LOCAL CFragmentedSampleReader : public ISampleReader, public CLinearReaderCB
 {
 public:
   CFragmentedSampleReader(AP4_ByteStream* input, AP4_Movie* movie, AP4_Track* track);
-
+  CFragmentedSampleReader(std::shared_ptr<CLinearReader> lReader, AP4_Track* track);
   ~CFragmentedSampleReader();
+
+  Type GetType() const override { return Type::FMP4; }
 
   virtual bool Initialize(SESSION::CStream* stream) override;
   virtual void SetDecrypter(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> ssd,
@@ -45,7 +113,14 @@ public:
   uint32_t GetTimeScale() const override { return m_track->GetMediaTimeScale(); }
   CryptoInfo GetReaderCryptoInfo() const override { return m_readerCryptoInfo; }
 
+  /*!
+   * \brief Create a new reader by sharing the same data reader and segment management (AdaptiveStream).
+   *        Use intended for multiplexed tracks (e.g. audio included on video stream).
+   */
+  std::unique_ptr<ISampleReader> CreateReaderByTrack();
+
 protected:
+  // CLinearReaderCB implementation
   AP4_Result ProcessMoof(AP4_ContainerAtom* moof,
                          AP4_Position moof_offset,
                          AP4_Position mdat_payload_offset,
@@ -77,4 +152,6 @@ private:
   std::shared_ptr<Adaptive_CencSingleSampleDecrypter> m_singleSampleDecryptor{nullptr};
   std::unique_ptr<CAdaptiveCencSampleDecrypter> m_decrypter;
   CryptoInfo m_readerCryptoInfo{};
+
+  std::shared_ptr<CLinearReader> m_lReader;
 };
