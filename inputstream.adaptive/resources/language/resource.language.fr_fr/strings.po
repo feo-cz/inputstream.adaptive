@@ -5,15 +5,15 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: translations@kodi.tv\n"
-"PO-Revision-Date: 2025-04-22 06:28+0000\n"
-"Last-Translator: skypichat <skypichat@hotmail.fr>\n"
+"PO-Revision-Date: 2025-12-18 09:09+0000\n"
+"Last-Translator: Stefano Gottardo <gottardo.stefano.83@gmail.com>\n"
 "Language-Team: French (France) <https://kodi.weblate.cloud/projects/kodi-add-ons-videoplayer-inputstream/inputstream-adaptive/fr_fr/>\n"
 "Language: fr_fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Weblate 5.11\n"
+"X-Generator: Weblate 5.15\n"
 
 msgctxt "Addon Summary"
 msgid "InputStream client for adaptive streams"
@@ -348,46 +348,46 @@ msgstr "Le débogage détaillé peut être utile pour le débogage des composant
 #. A GUI window title, "InputStream Adaptive" its the add-on name, not to be translated
 msgctxt "#30300"
 msgid "InputStream Adaptive error"
-msgstr ""
+msgstr "Erreur InputStream Adaptive"
 
 #. A GUI message that is displayed when there is a problem playing a stream
 #. Do not translate placeholders: {error-details}
 #. Use of double graphes e.g. {whatyouwant{error-details}whatyouwant} allows you to add additional text printed only when a value is present
 msgctxt "#30301"
 msgid "Unable to play the stream.{[CR]Error: {error-details}}"
-msgstr ""
+msgstr "Impossible de lire le flux.{[CR]Error: {error-details}}"
 
 msgctxt "#30302"
 msgid "The decryptor path is not set in the add-on settings."
-msgstr ""
+msgstr "Le chemin du décrypteur n'est pas défini dans les paramètres du module complémentaire."
 
 msgctxt "#30303"
 msgid "A problem occurred with the DRM decryptor."
-msgstr ""
+msgstr "Un problème est survenu avec le décryptage DRM."
 
 msgctxt "#30304"
 msgid "Cannot load Widevine CDM library."
-msgstr ""
+msgstr "Impossible de charger la bibliothèque Widevine CDM."
 
 msgctxt "#30305"
 msgid "Cannot initialize Widevine CDM library."
-msgstr ""
+msgstr "Impossible d'initialiser la bibliothèque Widevine CDM."
 
 msgctxt "#30306"
 msgid "The configuration to play the stream is incomplete or missing."
-msgstr ""
+msgstr "La configuration pour lire le flux est incomplète ou manquante."
 
 msgctxt "#30307"
 msgid "Cannot download the stream manifest file."
-msgstr ""
+msgstr "Impossible de télécharger le fichier manifeste du flux."
 
 msgctxt "#30308"
 msgid "A problem occurred in the stream initialization."
-msgstr ""
+msgstr "Un problème est survenu lors de l'initialisation du flux."
 
 msgctxt "#30309"
 msgid "No audio/video stream can be played."
-msgstr ""
+msgstr "Aucun flux audio/vidéo ne peut être lu."
 
 #~ msgctxt "#30232"
 #~ msgid "Video stream {codec} {quality}"
