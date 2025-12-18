@@ -1,3 +1,6 @@
+v22.3.4 (2025-12-18)
+- [HLS] Add support to MP4 a/v muxed streams (single audio track only)
+
 v22.3.3 (2025-12-02)
 - [HLS] Fix playing live segments in a loop regression
 - Fix possible forced stop of playback with live streaming while seeking
