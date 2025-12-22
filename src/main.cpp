@@ -227,8 +227,6 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
     return false;
   }
 
-  stream->SetIsEnabled(true);
-
   CRepresentation* rep = stream->m_adStream.getRepresentation();
 
   // "included" streams are audio streams embedded into a video stream (multiplexed).
@@ -254,12 +252,12 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
     }
 
     stream->LinkStream(videoStream, streamid);
+    m_session->EnableStream(stream, true);
     return true;
   }
 
   if (!m_session->PrepareStream(*stream, m_lastPts))
   {
-    m_session->EnableStream(stream, false);
     return false;
   }
 
@@ -283,6 +281,8 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
       }
     }
   }
+
+  m_session->EnableStream(stream, true);
 
   // If stream use DRM always update stream info
   const bool isInfoChanged = stream->GetReader()->GetInformation(stream->m_info) ||
