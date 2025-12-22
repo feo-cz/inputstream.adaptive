@@ -676,13 +676,39 @@ AP4_LinearReader::Tracker* CLinearReader::FindTracker(AP4_UI32 track_id)
 
 AP4_Result CLinearReader::GetSample(AP4_UI32 track_id, AP4_Sample& sample, AP4_Ordinal sample_index)
 {
-  return AP4_LinearReader::GetSample(track_id, sample, sample_index);
+  // look for a sample from a specific track
+  Tracker* tracker = FindTracker(track_id);
+  if (tracker == NULL)
+    return AP4_ERROR_INVALID_PARAMETERS;
+
+  // don't continue if we've reached the end of that tracker
+  if (tracker->m_Eos)
+    return AP4_ERROR_EOS;
+
+  return tracker->m_SampleTable->GetSample(sample_index, sample);
 }
 
 void CLinearReader::Reset()
 {
   std::lock_guard<std::mutex> lock(m_readerMtx);
-  AP4_LinearReader::Reset();
+
+  // flush any queued samples
+  FlushQueues();
+
+  // reset tracker states
+  for (unsigned int i = 0; i < m_Trackers.ItemCount(); i++)
+  {
+    if (m_Trackers[i]->m_SampleTableIsOwned)
+    {
+      delete m_Trackers[i]->m_SampleTable;
+    }
+    delete m_Trackers[i]->m_NextSample;
+    m_Trackers[i]->m_SampleTable = NULL;
+    m_Trackers[i]->m_NextSample = NULL;
+    m_Trackers[i]->m_NextSampleIndex = 0;
+    m_Trackers[i]->m_Eos = false;
+  }
+  m_NextFragmentPosition = 0;
 }
 
 AP4_ByteStream* CLinearReader::GetByteStream()
@@ -693,6 +719,59 @@ AP4_ByteStream* CLinearReader::GetByteStream()
 AP4_Movie& CLinearReader::GetMovie()
 {
   return AP4_LinearReader::m_Movie;
+}
+
+AP4_Result CLinearReader::SeekSample(AP4_UI32 track_id,
+                                     AP4_UI64 ts,
+                                     AP4_Ordinal& sample_index,
+                                     bool preceedingSync)
+{
+  // we only support fragmented sources for now
+  if (!m_HasFragments)
+    return AP4_ERROR_NOT_SUPPORTED;
+
+  if (m_Trackers.ItemCount() == 0)
+  {
+    return AP4_ERROR_NO_SUCH_ITEM;
+  }
+
+  // look for a sample from a specific track
+  Tracker* tracker = FindTracker(track_id);
+  if (tracker == NULL)
+    return AP4_ERROR_INVALID_PARAMETERS;
+
+  // don't continue if we've reached the end of that tracker
+  if (tracker->m_Eos)
+    return AP4_ERROR_EOS;
+
+  AP4_Result result;
+
+  if (!tracker->m_SampleTable && AP4_FAILED(result = Advance()))
+    return result;
+
+  while (AP4_FAILED(result = tracker->m_SampleTable->GetSampleIndexForTimeStamp(ts, sample_index)))
+  {
+    if (result == AP4_ERROR_NOT_ENOUGH_DATA)
+    {
+      tracker->m_NextSampleIndex = tracker->m_SampleTable->GetSampleCount();
+      if (AP4_FAILED(result = Advance()))
+        return result;
+      continue;
+    }
+    return result;
+  }
+
+  sample_index = tracker->m_SampleTable->GetNearestSyncSampleIndex(sample_index, preceedingSync);
+  //we have reached the end -> go for the first sample of the next segment
+  if (sample_index == tracker->m_SampleTable->GetSampleCount())
+  {
+    tracker->m_NextSampleIndex = tracker->m_SampleTable->GetSampleCount();
+    if (AP4_FAILED(result = Advance()))
+      return result;
+
+    sample_index = 0;
+  }
+  return SetSampleIndex(tracker->m_Track->GetId(), sample_index);
 }
 
 AP4_Result CLinearReader::ProcessMoof(AP4_ContainerAtom* moof,
