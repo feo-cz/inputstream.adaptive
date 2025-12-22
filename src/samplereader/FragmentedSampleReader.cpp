@@ -37,6 +37,8 @@ public:
   // Expose atom data
   const AP4_DataBuffer& GetData() { return m_Data; }
 };
+
+constexpr AP4_UI32 FMP4_SAMPLE_FORMAT_WVTT = AP4_ATOM_TYPE('w', 'v', 't', 't');
 } // unnamed namespace
 
 
@@ -590,7 +592,7 @@ void CFragmentedSampleReader::UpdateSampleDescription()
       case AP4_SAMPLE_FORMAT_STPP:
         m_codecHandler = new TTMLCodecHandler(desc, false);
         break;
-      case AP4_SAMPLE_FORMAT_WVTT:
+      case FMP4_SAMPLE_FORMAT_WVTT:
         m_codecHandler = new WebVTTCodecHandler(desc, false);
         break;
       case AP4_SAMPLE_FORMAT_VP9:
