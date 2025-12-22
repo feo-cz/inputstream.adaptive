@@ -290,18 +290,22 @@ bool CFragmentedSampleReader::TimeSeek(uint64_t pts, bool preceeding)
 {
   AP4_Ordinal sampleIndex;
   AP4_UI64 seekPos(static_cast<AP4_UI64>((pts * m_timeBaseInt) / m_timeBaseExt));
-  if (AP4_SUCCEEDED(m_lReader->SeekSample(m_track->GetId(), seekPos, sampleIndex, preceeding)))
+
+  AP4_Result result = m_lReader->SeekSample(m_track->GetId(), seekPos, sampleIndex, preceeding);
+  if (AP4_FAILED(result))
   {
-    if (m_decrypter)
-      m_decrypter->SetSampleIndex(sampleIndex);
-
-    if (m_codecHandler)
-      m_codecHandler->TimeSeek(seekPos);
-
-    m_started = true;
-    return AP4_SUCCEEDED(ReadSample());
+    LOG::LogF(LOGERROR, "Cannot seek track id %u, error %i", m_track->GetId(), result);
+    return false;
   }
-  return false;
+
+  if (m_decrypter)
+    m_decrypter->SetSampleIndex(sampleIndex);
+
+  if (m_codecHandler)
+    m_codecHandler->TimeSeek(seekPos);
+
+  m_started = true;
+  return AP4_SUCCEEDED(ReadSample());
 }
 
 void CFragmentedSampleReader::SetPTSOffset(uint64_t offset)
