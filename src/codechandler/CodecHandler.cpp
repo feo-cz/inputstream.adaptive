@@ -8,6 +8,10 @@
 
 #include "CodecHandler.h"
 
+#include "utils/Bento4Utils.h"
+
+using namespace UTILS;
+
 namespace
 {
 constexpr const char* NETFLIX_FRAMERATE_UUID = "NetflixFrameRate";
@@ -19,21 +23,26 @@ bool CodecHandler::GetInformation(kodi::addon::InputstreamInfo& info)
       m_sampleDescription->GetType() != AP4_SampleDescription::Type::TYPE_UNKNOWN)
   {
     // Netflix Framerate
-    AP4_Atom* atom;
-    AP4_UnknownUuidAtom* nxfr;
-    atom = m_sampleDescription->GetDetails().GetChild(
+    AP4_Atom* atom = m_sampleDescription->GetDetails().GetChild(
         reinterpret_cast<const AP4_UI08*>(NETFLIX_FRAMERATE_UUID));
-    if (atom && (nxfr = dynamic_cast<AP4_UnknownUuidAtom*>(atom)) &&
-        nxfr->GetData().GetDataSize() == 10)
-    {
-      unsigned int fpsRate = nxfr->GetData().GetData()[7] | nxfr->GetData().GetData()[6] << 8;
-      unsigned int fpsScale = nxfr->GetData().GetData()[9] | nxfr->GetData().GetData()[8] << 8;
 
-      if (info.GetFpsScale() != fpsScale || info.GetFpsRate() != fpsRate)
+    auto* unknownUuidAtom = dynamic_cast<AP4_UnknownUuidAtom*>(atom);
+    if (unknownUuidAtom)
+    {
+      auto* accessor = reinterpret_cast<BENTO4::FMP4UnknownUuidAtom*>(unknownUuidAtom);
+      const AP4_DataBuffer& data = accessor->GetData();
+
+      if (data.GetDataSize() == 10)
       {
-        info.SetFpsScale(fpsScale);
-        info.SetFpsRate(fpsRate);
-        return true;
+        unsigned int fpsRate = data.GetData()[7] | data.GetData()[6] << 8;
+        unsigned int fpsScale = data.GetData()[9] | data.GetData()[8] << 8;
+
+        if (info.GetFpsScale() != fpsScale || info.GetFpsRate() != fpsRate)
+        {
+          info.SetFpsScale(fpsScale);
+          info.SetFpsRate(fpsRate);
+          return true;
+        }
       }
     }
   }

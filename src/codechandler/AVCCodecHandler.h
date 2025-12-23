@@ -24,4 +24,6 @@ private:
   unsigned int m_countPictureSetIds;
   bool m_needSliceInfo;
   STREAMCODEC_PROFILE m_codecProfile;
+  AP4_UI08 m_pictureId{0};
+  AP4_UI08 m_pictureIdPrev{AP4_AVC_PPS_MAX_ID};
 };
