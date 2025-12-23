@@ -16,6 +16,7 @@ set(SOURCES
 
 set(HEADERS
   Base64Utils.h
+  Bento4Utils.h
   CharArrayParser.h
   CryptoUtils.h
   CurlUtils.h

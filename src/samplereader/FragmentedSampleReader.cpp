@@ -18,6 +18,7 @@
 #include "codechandler/VP9CodecHandler.h"
 #include "codechandler/WebVTTCodecHandler.h"
 #include "common/AdaptiveCencSampleDecrypter.h"
+#include "utils/Bento4Utils.h"
 #include "utils/CharArrayParser.h"
 #include "utils/Utils.h"
 #include "utils/log.h"
@@ -30,13 +31,6 @@ namespace
 {
 constexpr uint8_t MP4_TFRFBOX_UUID[] = {0xd4, 0x80, 0x7e, 0xf2, 0xca, 0x39, 0x46, 0x95,
                                         0x8e, 0x54, 0x26, 0xcb, 0x9e, 0x46, 0xa7, 0x9f};
-
-class FMP4UnknownUuidAtom : public AP4_UnknownUuidAtom
-{
-public:
-  // Expose atom data
-  const AP4_DataBuffer& GetData() { return m_Data; }
-};
 
 constexpr AP4_UI32 FMP4_SAMPLE_FORMAT_WVTT = AP4_ATOM_TYPE('w', 'v', 't', 't');
 } // unnamed namespace
@@ -617,7 +611,7 @@ void CFragmentedSampleReader::ParseTrafTfrf(AP4_UuidAtom* uuidAtom)
     return;
   }
 
-  auto* accessor = reinterpret_cast<FMP4UnknownUuidAtom*>(unknownUuidAtom);
+  auto* accessor = reinterpret_cast<BENTO4::FMP4UnknownUuidAtom*>(unknownUuidAtom);
   const AP4_DataBuffer& buf{accessor->GetData()};
   CCharArrayParser parser;
   parser.Reset(buf.GetData(), buf.GetDataSize());
