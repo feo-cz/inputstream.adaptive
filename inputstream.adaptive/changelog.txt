@@ -1,3 +1,8 @@
+v22.3.5 (2025-12-23)
+- Fixed video seek to broken timeshift and possible crashes from v22.3.4
+- Bento4 dependecy version bump 1.6.0-641-4-Piers for cleanup only
+- Updated translations
+
 v22.3.4 (2025-12-18)
 - [HLS] Add support to MP4 a/v muxed streams (single audio track only)
 
