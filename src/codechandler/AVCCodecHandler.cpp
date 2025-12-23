@@ -87,7 +87,8 @@ void AVCCodecHandler::UpdatePPSId(const AP4_DataBuffer& buffer)
   if (!m_needSliceInfo)
     return;
 
-  //Search the Slice header NALU
+  // Iterate data to find all NALU units slice headers of type 5 "Coded slice of an IDR picture"
+  // to get the pic_parameter_set_id value of last NALU
   const AP4_Byte* data(buffer.GetData());
   AP4_Size dataSize(buffer.GetDataSize());
   for (; dataSize;)
@@ -126,15 +127,10 @@ void AVCCodecHandler::UpdatePPSId(const AP4_DataBuffer& buffer)
     if (m_countPictureSetIds < 2)
       m_needSliceInfo = false;
 
-    unsigned int nal_unit_type = *data & 0x1F;
+    unsigned int nalUnitType = *data & 0x1F;
 
-    if (
-        //nal_unit_type == AP4_AVC_NAL_UNIT_TYPE_CODED_SLICE_OF_NON_IDR_PICTURE ||
-        nal_unit_type == AP4_AVC_NAL_UNIT_TYPE_CODED_SLICE_OF_IDR_PICTURE //||
-        //nal_unit_type == AP4_AVC_NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_A ||
-        //nal_unit_type == AP4_AVC_NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_B ||
-        //nal_unit_type == AP4_AVC_NAL_UNIT_TYPE_CODED_SLICE_DATA_PARTITION_C
-    )
+    // Following code is a simplification of AP4_AvcFrameParser::ParseSliceHeader from AP4_AvcFrameParser::Feed
+    if (nalUnitType == AP4_AVC_NAL_UNIT_TYPE_CODED_SLICE_OF_IDR_PICTURE)
     {
       AP4_DataBuffer unescaped(data, dataSize);
       AP4_NalParser::Unescape(unescaped);
@@ -144,7 +140,7 @@ void AVCCodecHandler::UpdatePPSId(const AP4_DataBuffer& buffer)
 
       AP4_AvcFrameParser::ReadGolomb(bits); // first_mb_in_slice
       AP4_AvcFrameParser::ReadGolomb(bits); // slice_type
-      m_pictureId = AP4_AvcFrameParser::ReadGolomb(bits); //picture_set_id
+      m_pictureId = AP4_AvcFrameParser::ReadGolomb(bits); // pic_parameter_set_id
     }
     // move to the next NAL unit
     data += naluSize;
