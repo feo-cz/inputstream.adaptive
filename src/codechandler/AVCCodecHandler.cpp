@@ -12,6 +12,28 @@
 
 using namespace UTILS;
 
+namespace
+{
+unsigned int ReadGolomb(AP4_BitReader& bits)
+{
+  unsigned int leadingZeros = 0;
+  while (bits.ReadBit() == 0)
+  {
+    leadingZeros++;
+    if (leadingZeros > 32)
+      return 0; // safeguard
+  }
+  if (leadingZeros)
+  {
+    return (1 << leadingZeros) - 1 + bits.ReadBits(leadingZeros);
+  }
+  else
+  {
+    return 0;
+  }
+}
+} // unnamed namespace
+
 AVCCodecHandler::AVCCodecHandler(AP4_SampleDescription* sd)
   : CodecHandler{sd},
     m_countPictureSetIds{0},
@@ -138,9 +160,9 @@ void AVCCodecHandler::UpdatePPSId(const AP4_DataBuffer& buffer)
 
       bits.SkipBits(8); // NAL Unit Type
 
-      AP4_AvcFrameParser::ReadGolomb(bits); // first_mb_in_slice
-      AP4_AvcFrameParser::ReadGolomb(bits); // slice_type
-      m_pictureId = AP4_AvcFrameParser::ReadGolomb(bits); // pic_parameter_set_id
+      ReadGolomb(bits); // first_mb_in_slice
+      ReadGolomb(bits); // slice_type
+      m_pictureId = ReadGolomb(bits); // pic_parameter_set_id
     }
     // move to the next NAL unit
     data += naluSize;
