@@ -20,7 +20,7 @@ unsigned int ReadGolomb(AP4_BitReader& bits)
   while (bits.ReadBit() == 0)
   {
     leadingZeros++;
-    if (leadingZeros > 32)
+    if (leadingZeros >= 32)
       return 0; // safeguard
   }
   if (leadingZeros)
