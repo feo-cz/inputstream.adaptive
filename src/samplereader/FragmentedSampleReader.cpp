@@ -149,6 +149,8 @@ AP4_Result CFragmentedSampleReader::ReadSample()
   {
     if (AP4_FAILED(result = m_lReader->ExecReadNextSample(this, m_track->GetId(), m_sample, sampleData)))
     {
+      m_sampleData.SetDataSize(0);
+
       if (result == AP4_ERROR_EOS)
       {
         auto adByteStream = dynamic_cast<CAdaptiveByteStream*>(m_lReader->GetByteStream());
@@ -159,14 +161,8 @@ AP4_Result CFragmentedSampleReader::ReadSample()
         }
         else
         {
-          if (adByteStream->waitingForSegment())
-          {
-            m_sampleData.SetDataSize(0);
-          }
-          else
-          {
+          if (!adByteStream->waitingForSegment())
             m_eos = true;
-          }
         }
       }
       return result;
