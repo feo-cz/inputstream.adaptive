@@ -1,3 +1,6 @@
+v22.3.6 (2025-12-25)
+- Fix regression from v22.3.4 where FMP4 live streaming playback could stop
+
 v22.3.5 (2025-12-23)
 - Fixed video seek to broken timeshift and possible crashes from v22.3.4
 - Bento4 dependecy version bump 1.6.0-641-4-Piers for cleanup only
