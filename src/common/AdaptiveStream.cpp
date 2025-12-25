@@ -1048,6 +1048,19 @@ bool adaptive::AdaptiveStream::seek(uint64_t const pos, bool& isEos)
 {
   if (m_segBuffers.IsEmpty())
   {
+    // NOTE: FragmentedSampleReader (FMP4) hacky sequential read:
+    // When FragmentedSampleReader run ReadNextSample, its possible that AP4_LinearReader
+    // try to go to the start of the next fragment even though it has already reached the end of the file
+    // (of the last segment fed) so AP4_LinearReader::AdvanceFragment do a callback to this method.
+    // This method assume to read always from the current segment,
+    // but if there are no segments, on live streams it could mean that we are waiting for the next
+    // manifest update or the insertion of new live segments.
+    // At this point, since the value of "IsWaitForSegment" could have been changed to False
+    // just before this "seek" callback, we must call "ensureSegment" to guarantee the next segment
+    // and obtain an updated value for "IsWaitForSegment" to determine a EOS
+    if (ensureSegment())
+      return true;
+
     if (!current_rep_->IsWaitForSegment())
       isEos = true;
 
