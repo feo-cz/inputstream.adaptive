@@ -76,6 +76,12 @@ private:
     AP4_UI16 m_decrypterFlags;
     std::vector<uint8_t> m_annexbSpsPps;
   };
+  
+  struct SubsampleEntry
+  {
+    uint32_t clear_bytes;
+    uint32_t cipher_bytes;
+  };
 
   bool ProvisionRequest();
   bool GetKeyRequest(std::vector<uint8_t>& keyRequestData);
@@ -87,7 +93,9 @@ private:
                                       FINFO& fragInfo,
                                       const AP4_UI08* iv,
                                       const AP4_UI16* bytesOfCleartextData,
-                                      const AP4_UI32* bytesOfEncryptedData);
+                                      const AP4_UI32* bytesOfEncryptedData,
+                                      bool convertAnnexB,
+                                      std::vector<SubsampleEntry>& rebuiltSubs);
 
   IWVCdmAdapter<jni::CJNIMediaDrm>* m_cdmAdapter;
 
