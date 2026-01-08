@@ -69,10 +69,25 @@ public:
   void OnNotify(const CdmMessage& message) override;
 
 private:
+  struct FINFO
+  {
+    std::vector<uint8_t> m_key;
+    AP4_UI08 m_nalLengthSize;
+    AP4_UI16 m_decrypterFlags;
+    std::vector<uint8_t> m_annexbSpsPps;
+  };
+
   bool ProvisionRequest();
   bool GetKeyRequest(std::vector<uint8_t>& keyRequestData);
   bool KeyUpdateRequest(bool waitForKeys, bool skipSessionMessage);
   bool SendSessionMessage(const std::vector<uint8_t>& challenge);
+  AP4_Result ConvertToAnnexBandInject(AP4_DataBuffer& dataIn,
+                                      AP4_DataBuffer& dataOut,
+                                      unsigned int subsampleCount,
+                                      FINFO& fragInfo,
+                                      const AP4_UI08* iv,
+                                      const AP4_UI16* bytesOfCleartextData,
+                                      const AP4_UI32* bytesOfEncryptedData);
 
   IWVCdmAdapter<jni::CJNIMediaDrm>* m_cdmAdapter;
 
@@ -90,13 +105,6 @@ private:
 
   std::vector<uint8_t> m_defaultKeyId;
 
-  struct FINFO
-  {
-    std::vector<uint8_t> m_key;
-    AP4_UI08 m_nalLengthSize;
-    AP4_UI16 m_decrypterFlags;
-    std::vector<uint8_t> m_annexbSpsPps;
-  };
   std::vector<FINFO> m_fragmentPool;
 
   uint16_t m_hdcpVersion{DRM::HDCP_V_MAX};
