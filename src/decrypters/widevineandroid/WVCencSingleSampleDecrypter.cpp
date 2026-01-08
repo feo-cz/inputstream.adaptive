@@ -517,137 +517,212 @@ AP4_Result CWVCencSingleSampleDecrypterA::DecryptSampleData(AP4_UI32 poolId,
   if (!m_cdmAdapter->GetCDM())
     return AP4_ERROR_INVALID_STATE;
 
-  if (dataIn.GetDataSize() > 0)
+  FINFO& fragInfo(m_fragmentPool[poolId]);
+
+  if (fragInfo.m_nalLengthSize > 4)
   {
-    FINFO& fragInfo(m_fragmentPool[poolId]);
+    LOG::LogF(LOGERROR, "Nalu length size > 4 not supported");
+    return AP4_ERROR_NOT_SUPPORTED;
+  }
 
-    if (fragInfo.m_nalLengthSize > 4)
+  AP4_DataBuffer payload;
+  std::vector<SubsampleEntry> rebuiltSubs;
+  bool convertAnnexB = (fragInfo.m_decrypterFlags & DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED) != 0;
+
+  // Convert only when safe to look at clear_bytes[0]
+  if (fragInfo.m_nalLengthSize && (!iv || (subsampleCount > 0 && bytesOfCleartextData[0] > 0)))
+  {
+    AP4_Result res = ConvertToAnnexBandInject(dataIn, payload, subsampleCount, fragInfo, iv,
+                                              bytesOfCleartextData, bytesOfEncryptedData,
+                                              convertAnnexB, rebuiltSubs);
+
+    if (res != AP4_SUCCESS)
     {
-      LOG::LogF(LOGERROR, "Nalu length size > 4 not supported");
-      return AP4_ERROR_NOT_SUPPORTED;
-    }
-
-    AP4_UI16 dummyClear = 0;
-    AP4_UI32 dummyCipher(dataIn.GetDataSize());
-
-    if (iv)
-    {
-      if (!subsampleCount)
-      {
-        subsampleCount = 1;
-        bytesOfCleartextData = &dummyClear;
-        bytesOfEncryptedData = &dummyCipher;
-      }
-
-      dataOut.SetData(reinterpret_cast<const AP4_Byte*>(&subsampleCount), sizeof(subsampleCount));
-      dataOut.AppendData(reinterpret_cast<const AP4_Byte*>(bytesOfCleartextData),
-                         subsampleCount * sizeof(AP4_UI16));
-      dataOut.AppendData(reinterpret_cast<const AP4_Byte*>(bytesOfEncryptedData),
-                         subsampleCount * sizeof(AP4_UI32));
-      dataOut.AppendData(reinterpret_cast<const AP4_Byte*>(iv), 16);
-      dataOut.AppendData(fragInfo.m_key.data(), static_cast<AP4_Size>(fragInfo.m_key.size()));
-    }
-    else
-    {
-      dataOut.SetDataSize(0);
-      bytesOfCleartextData = &dummyClear;
-      bytesOfEncryptedData = &dummyCipher;
-    }
-
-    if (fragInfo.m_nalLengthSize && (!iv || bytesOfCleartextData[0] > 0))
-    {
-      //check NAL / subsample
-      const AP4_Byte* packetIn(dataIn.GetData());
-      const AP4_Byte* packetInEnd(dataIn.GetData() + dataIn.GetDataSize());
-      // Byte position of "bytesOfCleartextData" where to set the size of the data,
-      // by default starts after the subsample count data (so the size of subsampleCount data type)
-      size_t clrDataBytePos = sizeof(subsampleCount);
-      // size_t nalUnitCount = 0; //! @todo: what is the point of this?
-      size_t nalUnitSum = 0;
-      // size_t configSize = 0; //! @todo:what is the point of this?
-
-      while (packetIn < packetInEnd)
-      {
-        uint32_t nalsize = 0;
-        for (size_t i = 0; i < fragInfo.m_nalLengthSize; ++i)
-        {
-          nalsize = (nalsize << 8) + *packetIn++;
-        };
-
-        //look if we have to inject sps / pps
-        if (!fragInfo.m_annexbSpsPps.empty() && (*packetIn & 0x1F) != 9 /*AVC_NAL_AUD*/)
-        {
-          dataOut.AppendData(fragInfo.m_annexbSpsPps.data(),
-                             static_cast<AP4_Size>(fragInfo.m_annexbSpsPps.size()));
-          if (iv)
-          {
-            // Update the byte containing the data size of current subsample referred to clear bytes array
-            AP4_UI16* clrb_out = reinterpret_cast<AP4_UI16*>(dataOut.UseData() + clrDataBytePos);
-            *clrb_out += fragInfo.m_annexbSpsPps.size();
-          }
-          // configSize = fragInfo.m_annexbSpsPps.GetDataSize();
-          fragInfo.m_annexbSpsPps.clear();
-        }
-
-        //Annex-B Start pos
-        static AP4_Byte annexbStartCode[4] = {0x00, 0x00, 0x00, 0x01};
-        dataOut.AppendData(annexbStartCode, 4);
-        dataOut.AppendData(packetIn, nalsize);
-        packetIn += nalsize;
-
-        if (iv)
-        {
-          // Update the byte containing the data size of current subsample referred to clear bytes array
-          AP4_UI16* clrb_out = reinterpret_cast<AP4_UI16*>(dataOut.UseData() + clrDataBytePos);
-          *clrb_out += (4 - fragInfo.m_nalLengthSize);
-        }
-        
-        // ++nalUnitCount;
-
-        if (!iv)
-        {
-          nalUnitSum = 0;
-        }
-        else if (nalsize + fragInfo.m_nalLengthSize + nalUnitSum >=
-                 *bytesOfCleartextData + *bytesOfEncryptedData)
-        {
-          AP4_UI32 summedBytes = 0;
-          do
-          {
-            summedBytes += *bytesOfCleartextData + *bytesOfEncryptedData;
-            ++bytesOfCleartextData;
-            ++bytesOfEncryptedData;
-            clrDataBytePos += sizeof(AP4_UI16); // Move to the next clear data subsample byte position
-            --subsampleCount;
-          } while (subsampleCount && nalsize + fragInfo.m_nalLengthSize + nalUnitSum > summedBytes);
-
-          if (nalsize + fragInfo.m_nalLengthSize + nalUnitSum > summedBytes)
-          {
-            LOG::LogF(LOGERROR, "NAL Unit exceeds subsample definition (nls: %u) %u -> %u ",
-                      static_cast<unsigned int>(fragInfo.m_nalLengthSize),
-                      static_cast<unsigned int>(nalsize + fragInfo.m_nalLengthSize + nalUnitSum),
-                      summedBytes);
-            return AP4_ERROR_NOT_SUPPORTED;
-          }
-          nalUnitSum = 0;
-        }
-        else
-          nalUnitSum += nalsize + fragInfo.m_nalLengthSize;
-      }
-      if (packetIn != packetInEnd || subsampleCount)
-      {
-        LOG::LogF(LOGERROR, "NAL Unit definition incomplete (nls: %d) %d -> %u ",
-                  fragInfo.m_nalLengthSize, (int)(packetInEnd - packetIn), subsampleCount);
-        return AP4_ERROR_NOT_SUPPORTED;
-      }
-    }
-    else
-    {
-      dataOut.AppendData(dataIn.GetData(), dataIn.GetDataSize());
-      fragInfo.m_annexbSpsPps.clear();
+      LOG::LogF(LOGERROR, "ConvertToAnnexBandInject failed: %d", res);
+      return res;
     }
   }
   else
-    dataOut.SetDataSize(0);
+  {
+    payload.AppendData(dataIn.GetData(), dataIn.GetDataSize());
+
+    if (subsampleCount)
+    {
+      rebuiltSubs.reserve(subsampleCount);
+      for (unsigned i = 0; i < subsampleCount; ++i)
+      {
+        rebuiltSubs.push_back({bytesOfCleartextData[i], bytesOfEncryptedData[i]});
+      }
+    }
+  }
+
+  // If IV present but no subs were provided, treat as fully encrypted payload
+  if (iv && rebuiltSubs.empty())
+  {
+    rebuiltSubs.push_back({0u, static_cast<uint32_t>(payload.GetDataSize())});
+  }
+
+  dataOut.SetDataSize(0);
+
+  if (iv)
+  {
+    const AP4_UI32 subsOut = static_cast<AP4_UI32>(rebuiltSubs.size());
+    std::vector<AP4_UI16> rebuiltBytesOfCleartextData(subsOut);
+    std::vector<AP4_UI32> rebuiltBytesOfEncryptedData(subsOut);
+
+    for (AP4_UI32 i = 0; i < subsOut; ++i)
+    {
+      rebuiltBytesOfCleartextData[i] = rebuiltSubs[i].clear_bytes;
+      rebuiltBytesOfEncryptedData[i] = rebuiltSubs[i].cipher_bytes;
+    }
+
+    // CENC-like prefix: [count:32][clear[]:16*N][cipher[]:32*N][IV:16][key]
+    dataOut.SetData(reinterpret_cast<const AP4_Byte*>(&subsOut), sizeof(AP4_UI32));
+    dataOut.AppendData(reinterpret_cast<const AP4_Byte*>(rebuiltBytesOfCleartextData.data()),
+                       subsOut * sizeof(AP4_UI16));
+    dataOut.AppendData(reinterpret_cast<const AP4_Byte*>(rebuiltBytesOfEncryptedData.data()),
+                       subsOut * sizeof(AP4_UI32));
+    dataOut.AppendData(reinterpret_cast<const AP4_Byte*>(iv), 16);
+    dataOut.AppendData(fragInfo.m_key.data(), static_cast<AP4_Size>(fragInfo.m_key.size()));
+  }
+  else
+  {
+    fragInfo.m_annexbSpsPps.clear();
+  }
+
+  // Prefix (if IV) + raw payload
+  dataOut.AppendData(payload.GetData(), payload.GetDataSize());
+
+  return AP4_SUCCESS;
+}
+
+AP4_Result CWVCencSingleSampleDecrypterA::ConvertToAnnexBandInject(
+    AP4_DataBuffer& dataIn,
+    AP4_DataBuffer& dataOut,
+    unsigned int subsampleCount,
+    FINFO& fragInfo,
+    const AP4_UI08* iv,
+    const AP4_UI16* bytesOfCleartextData,
+    const AP4_UI32* bytesOfEncryptedData,
+    bool convertAnnexB,
+    std::vector<SubsampleEntry>& rebuiltSubs)
+{
+  //check NAL / subsample
+  const AP4_Byte *packetIn(dataIn.GetData()), *packetInEnd(dataIn.GetData() + dataIn.GetDataSize());
+  // Byte position of "bytesOfCleartextData" where to set the size of the data,
+  // by default starts after the subsample count data (so the size of subsampleCount data type)
+  size_t clrDataBytePos = sizeof(subsampleCount);
+  // size_t nalUnitCount = 0; // is there a use for this?
+  size_t nalUnitSum = 0;
+
+  // Prepare subs from originals
+  rebuiltSubs.clear();
+  if (iv && subsampleCount)
+  {
+    rebuiltSubs.reserve(subsampleCount);
+    for (unsigned i = 0; i < subsampleCount; ++i)
+    {
+      SubsampleEntry e;
+      e.clear_bytes = bytesOfCleartextData[i];
+      e.cipher_bytes = bytesOfEncryptedData[i];
+      rebuiltSubs.push_back(e);
+    }
+  }
+
+  size_t curSub = 0;
+  bool injectedStartupNALs = false;
+
+  while (packetIn < packetInEnd)
+  {
+    // Read length-prefixed NAL size
+    uint32_t nalSize = 0;
+    for (size_t i = 0; i < fragInfo.m_nalLengthSize; ++i)
+    {
+      nalSize = (nalSize << 8) + *packetIn++;
+    }
+
+    // Inject SPS/PPS once before first non-AUD
+    if (!injectedStartupNALs && !fragInfo.m_annexbSpsPps.empty() &&
+        ((*packetIn & 0x1F) != 9 /*AVC_NAL_AUD*/))
+    {
+      dataOut.AppendData(fragInfo.m_annexbSpsPps.data(),
+                         static_cast<AP4_Size>(fragInfo.m_annexbSpsPps.size()));
+
+      if (iv && curSub < rebuiltSubs.size())
+      {
+        // attribute injected bytes to clear region of current subsample
+        rebuiltSubs[curSub].clear_bytes += static_cast<uint32_t>(fragInfo.m_annexbSpsPps.size());
+      }
+
+      fragInfo.m_annexbSpsPps.clear();
+      injectedStartupNALs = true;
+    }
+
+    // Write Annex-B start code and payload
+    static const AP4_Byte annexbStartCode[4] = {0x00, 0x00, 0x00, 0x01};
+    if (convertAnnexB && !(nalSize >= 4 && packetIn[0] == 0x00 && packetIn[1] == 0x00 &&
+                           packetIn[2] == 0x00 && packetIn[3] == 0x01))
+    {
+      dataOut.AppendData(annexbStartCode, 4);
+    }
+
+    dataOut.AppendData(packetIn, nalSize);
+    packetIn += nalSize;
+
+    if (iv)
+    {
+      // Start-code delta: 4 - nalLengthSize (0,2,3) goes to clear_bytes of current subsample
+      if (curSub < rebuiltSubs.size())
+      {
+        rebuiltSubs[curSub].clear_bytes += static_cast<uint32_t>(4 - fragInfo.m_nalLengthSize);
+      }
+    }
+
+    if (!iv)
+    {
+      nalUnitSum = 0;
+    }
+    else if (nalSize + fragInfo.m_nalLengthSize + nalUnitSum >=
+             *bytesOfCleartextData + *bytesOfEncryptedData)
+    {
+      // We may cross one or more subsample boundaries; advance pointers and curSub in lockstep
+      AP4_UI32 summedBytes = 0;
+      size_t advanced = 0;
+
+      do
+      {
+        summedBytes += *bytesOfCleartextData + *bytesOfEncryptedData;
+        ++bytesOfCleartextData;
+        ++bytesOfEncryptedData;
+        ++advanced;
+        --subsampleCount;
+      } while (subsampleCount && nalSize + fragInfo.m_nalLengthSize + nalUnitSum > summedBytes);
+
+      if (nalSize + fragInfo.m_nalLengthSize + nalUnitSum > summedBytes)
+      {
+        LOG::LogF(LOGERROR, "NAL Unit exceeds subsample definition (nls: %u) %u -> %u ",
+                  static_cast<unsigned>(fragInfo.m_nalLengthSize),
+                  static_cast<unsigned>(nalSize + fragInfo.m_nalLengthSize + nalUnitSum),
+                  summedBytes);
+        return AP4_ERROR_NOT_SUPPORTED;
+      }
+
+      curSub += advanced;
+      nalUnitSum = 0;
+    }
+    else
+    {
+      nalUnitSum += nalSize + fragInfo.m_nalLengthSize;
+    }
+  }
+
+  if (packetIn != packetInEnd || subsampleCount)
+  {
+    LOG::Log(LOGERROR, "NAL Unit definition incomplete (nls: %u) %u -> %u ",
+             static_cast<unsigned>(fragInfo.m_nalLengthSize),
+             static_cast<unsigned>(packetInEnd - packetIn), subsampleCount);
+    return AP4_ERROR_NOT_SUPPORTED;
+  }
+
   return AP4_SUCCESS;
 }
