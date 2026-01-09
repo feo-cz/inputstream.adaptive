@@ -179,7 +179,21 @@ bool SESSION::CSession::CheckPlayableStreams(PLAYLIST::CPeriod* period)
           kodi::addon::InputstreamInfo isInfo;
           DRM::DRMInfo initDrmInfo;
 
-          if (m_drmEngine.InitializeSession(repr->DrmInfos(), DRM::DRMMediaType::VIDEO,
+          DRM::DRMMediaType drmMediaType{DRM::DRMMediaType::UNKNOWN};
+          const StreamType sType = adp->GetStreamType();
+
+          if (sType == StreamType::VIDEO || sType == StreamType::VIDEO_AUDIO)
+            drmMediaType = DRM::DRMMediaType::VIDEO;
+          else if (sType == StreamType::AUDIO)
+            drmMediaType = DRM::DRMMediaType::AUDIO;
+          else
+          {
+            LOG::LogF(LOGWARNING, "Stream media type \"%i\" is not supported by the DRM engine",
+                      static_cast<int>(sType));
+            continue;
+          }
+
+          if (m_drmEngine.InitializeSession(repr->DrmInfos(), drmMediaType,
                                             period->IsSecureDecodeNeeded(), isInfo, repr.get(),
                                             adp.get(), false, initDrmInfo))
           {
@@ -669,7 +683,8 @@ bool SESSION::CSession::PrepareStream(CStream& stream, uint64_t startPts)
       drmMediaType = DRM::DRMMediaType::AUDIO;
     else
     {
-      LOG::LogF(LOGWARNING, "Stream media type \"%i\" is not supported by the DRM engine", sType);
+      LOG::LogF(LOGWARNING, "Stream media type \"%i\" is not supported by the DRM engine",
+                static_cast<int>(sType));
       return false;
     }
 
