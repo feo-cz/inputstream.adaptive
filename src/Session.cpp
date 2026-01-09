@@ -189,7 +189,7 @@ bool SESSION::CSession::CheckPlayableStreams(PLAYLIST::CPeriod* period)
           else
           {
             LOG::LogF(LOGWARNING, "Stream media type \"%i\" is not supported by the DRM engine",
-                      sType);
+                      static_cast<int>(sType));
             continue;
           }
 
@@ -683,7 +683,8 @@ bool SESSION::CSession::PrepareStream(CStream& stream, uint64_t startPts)
       drmMediaType = DRM::DRMMediaType::AUDIO;
     else
     {
-      LOG::LogF(LOGWARNING, "Stream media type \"%i\" is not supported by the DRM engine", sType);
+      LOG::LogF(LOGWARNING, "Stream media type \"%i\" is not supported by the DRM engine",
+                static_cast<int>(sType));
       return false;
     }
 
