@@ -1,5 +1,6 @@
 set(SOURCES
   Base64Utils.cpp
+  Bento4Utils.cpp
   CharArrayParser.cpp
   CurlUtils.cpp
   DigestMD5Utils.cpp

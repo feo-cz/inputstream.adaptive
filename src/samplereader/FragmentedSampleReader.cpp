@@ -18,6 +18,7 @@
 #include "codechandler/VP9CodecHandler.h"
 #include "codechandler/WebVTTCodecHandler.h"
 #include "common/AdaptiveCencSampleDecrypter.h"
+#include "decrypters/Helpers.h"
 #include "utils/Bento4Utils.h"
 #include "utils/CharArrayParser.h"
 #include "utils/Utils.h"
@@ -450,6 +451,9 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
       if (!traf)
         return AP4_ERROR_INVALID_FORMAT;
 
+      ParseMoofPssh(moof);
+      ParseTrafSgpd(traf);
+
       bool isDefaultProtected{true};
       AP4_ContainerAtom* schi = m_protectedDesc->GetSchemeInfo()->GetSchiAtom();
       if (schi)
@@ -642,6 +646,70 @@ void CFragmentedSampleReader::ParseTrafTfrf(AP4_UuidAtom* uuidAtom)
       return;
     }
     m_observer->OnTFRFatom(time, duration, m_track->GetMediaTimeScale());
+  }
+}
+
+void CFragmentedSampleReader::ParseTrafSgpd(AP4_ContainerAtom* traf)
+{
+  std::vector<BENTO4::CencSeigGroupEntry> seigEntries;
+
+  AP4_Atom* childAtom{nullptr};
+  unsigned int atomIndex{0};
+
+  while ((childAtom = traf->GetChild(AP4_ATOM_TYPE_SGPD, atomIndex++)) != nullptr)
+  {
+    auto sgpdAtom = static_cast<BENTO4::FMP4SgpdAtom*>(childAtom);
+
+    if (sgpdAtom->GetGroupingType() != AP4_ATOM_TYPE('s', 'e', 'i', 'g'))
+      continue;
+
+    seigEntries = sgpdAtom->GetSeigEntries();
+
+    break; // Assume that only a single SGPD can contains SEIG
+  }
+
+  if (!seigEntries.empty())
+  {
+    //! @todo: Key rotation feature not implemented
+    LOG::LogF(LOGDEBUG, "Found TRAF/SGPD/SEIG boxes with %zu entries", seigEntries.size());
+    for (auto& entry : seigEntries)
+    {
+      if (entry.isProtected && !entry.keySets.empty())
+      {
+        LOG::LogF(LOGDEBUG, "Protected SEIG box entry have %zu key sets", entry.keySets.size());
+
+        auto& firstEntry = entry.keySets[0];
+        if (m_defaultKey != firstEntry.kid)
+        {
+          LOG::LogF(LOGERROR,
+                    "New KID found (%s) due to key rotation feature, operation not supported",
+                    DRM::ConvertKidBytesToUUID(firstEntry.kid).c_str());
+        }
+      }
+    }
+  }
+}
+
+void CFragmentedSampleReader::ParseMoofPssh(AP4_ContainerAtom* moof)
+{
+  std::vector<AP4_PsshAtom*> psshEntries;
+
+  AP4_Atom* childAtom{nullptr};
+  unsigned int atomIndex{0};
+
+  while ((childAtom = moof->GetChild(AP4_ATOM_TYPE_PSSH, atomIndex++)) != nullptr)
+  {
+    auto psshAtom = static_cast<AP4_PsshAtom*>(childAtom);
+    psshEntries.emplace_back(psshAtom);
+  }
+
+  if (!psshEntries.empty())
+  {
+    //! @todo: Key rotation feature not implemented
+    //! Possible use case: MPD dont provide KID/PSSH and init segment has default KID 00000000000000000000000000000000
+    //! a placeholder that means no default KID, so its needed initialize DRM later time when we can
+    //! parse a media segment with a PSSH (or SEIG box)
+    LOG::LogF(LOGDEBUG, "Found %zu PSSH on media segment, key rotation feature not supported", psshEntries.size());
   }
 }
 

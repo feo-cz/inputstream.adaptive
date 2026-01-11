@@ -15,18 +15,45 @@
 #endif
 
 #include <bento4/Ap4.h>
+#include <bento4/Ap4SgpdAtom.h>
 
 namespace UTILS
 {
 namespace BENTO4
 {
 
-// \brief Accessory for accessing AP4_UnknownUuidAtom data
+// \brief Accessor for accessing AP4_UnknownUuidAtom data
 class ATTR_DLL_LOCAL FMP4UnknownUuidAtom : public AP4_UnknownUuidAtom
 {
 public:
   const AP4_DataBuffer& GetData() { return m_Data; }
 };
 
-} // namespace BASE64
+struct CencSeigKeySet
+{
+  std::uint8_t perSampleIvSize = 0;
+  std::vector<std::uint8_t> kid;
+  std::uint8_t constantIvSize = 0; // Only when per_sample_iv_size==0
+  std::vector<std::uint8_t> constantIv;
+};
+
+struct CencSeigGroupEntry // CencSampleEncryptionInformationGroupEntry
+{
+  bool multiKeyFlag = false;
+  std::uint8_t cryptByteBlock = 0; // Encryption pattern (4 bit)
+  std::uint8_t skipByteBlock = 0; // Encryption pattern (4 bit)
+  std::uint8_t isProtected = 0; // 0=unprotected, 1=protected, other reserved
+  std::vector<CencSeigKeySet> keySets;
+};
+
+// \brief Accessor for accessing AP4_SgpdAtom data
+class ATTR_DLL_LOCAL FMP4SgpdAtom : public AP4_SgpdAtom
+{
+public:
+  AP4_UI32 GetGroupingType() const { return m_GroupingType; }
+
+  std::vector<CencSeigGroupEntry> GetSeigEntries();
+};
+
+} // namespace BENTO4
 } // namespace UTILS

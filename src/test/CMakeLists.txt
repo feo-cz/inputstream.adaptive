@@ -43,6 +43,7 @@ add_executable(${BINARY}
     ../CompSettings.cpp
     ../CompKodiProps.cpp
     ../utils/Base64Utils.cpp
+	../utils/Bento4Utils.cpp
     ../utils/CharArrayParser.cpp
     ../utils/CurlUtils.cpp
     ../utils/DigestMD5Utils.cpp
