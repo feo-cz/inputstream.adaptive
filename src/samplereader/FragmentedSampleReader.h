@@ -134,6 +134,8 @@ protected:
 private:
   void UpdateSampleDescription();
   void ParseTrafTfrf(AP4_UuidAtom* uuidAtom);
+  void ParseTrafSgpd(AP4_ContainerAtom* traf);
+  void ParseMoofPssh(AP4_ContainerAtom* moof);
 
   AP4_Track* m_track;
   AP4_UI32 m_poolId{0};
