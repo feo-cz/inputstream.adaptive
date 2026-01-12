@@ -733,7 +733,8 @@ void CFragmentedSampleReader::ParseMoofPssh(AP4_ContainerAtom* moof)
 
   if (!psshEntries.empty())
   {
-    //! @todo: PSSH can also be used for Key rotation feature, that is not implemented
+    //! @todo: Media segments can contains PSSH also when there is no Key rotation
+    //! @todo: Key rotation feature not implemented
     //! Possible use case: MPD dont provide KID/PSSH and init segment has default KID 00000000000000000000000000000000
     //! a placeholder that means no default KID, so its needed initialize DRM later time when we can
     //! parse a media segment with a PSSH (or SEIG box)
