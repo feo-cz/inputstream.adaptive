@@ -112,6 +112,8 @@ void CFragmentedSampleReader::SetDecrypter(std::shared_ptr<Adaptive_CencSingleSa
   if (!kodiProps.GetManifestConfig().ignoreFMP4defaultKid)
   {
     // Get default KID from initialization segment
+    //! @todo: init segment can provide also PSSH, see also DRM engine code
+    //! where there is a decoupled code, all this need to be reworked
     AP4_SampleDescription* desc{m_track->GetSampleDescription(0)};
     if (desc->GetType() == AP4_SampleDescription::TYPE_PROTECTED)
     {
@@ -720,11 +722,11 @@ void CFragmentedSampleReader::ParseMoofPssh(AP4_ContainerAtom* moof)
 
   if (!psshEntries.empty())
   {
-    //! @todo: Key rotation feature not implemented
+    //! @todo: PSSH can also be used for Key rotation feature, that is not implemented
     //! Possible use case: MPD dont provide KID/PSSH and init segment has default KID 00000000000000000000000000000000
     //! a placeholder that means no default KID, so its needed initialize DRM later time when we can
     //! parse a media segment with a PSSH (or SEIG box)
-    LOG::LogF(LOGDEBUG, "Found %zu PSSH on media segment, key rotation feature not supported", psshEntries.size());
+    LOG::LogF(LOGDEBUG, "Found %zu PSSH on media segment", psshEntries.size());
   }
 }
 
