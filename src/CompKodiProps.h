@@ -72,6 +72,12 @@ struct ManifestConfig
   uint64_t liveDelay{0};
   // Allows to set a custom UTC Timing for DASH live streams (schemeIdUri, value)
   std::optional<std::pair<std::string, std::string>> dashUTCTiming;
+  // If true will ignore default KID provided from FMP4 init segment
+  // and so will be used from the manifest one
+  //! @todo: This is a temporary workaround for a much broader issue,
+  //! where DRM initialization should occur first with MP4 init segment protection data
+  //! and then if it fails, try init DRM with manifest protection data
+  bool ignoreFMP4defaultKid{false};
 };
 
 struct DrmCfg
