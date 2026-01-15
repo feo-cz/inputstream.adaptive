@@ -9,6 +9,8 @@
 #include "FragmentedSampleReader.h"
 
 #include "AdaptiveByteStream.h"
+#include "CompKodiProps.h"
+#include "SrvBroker.h"
 #include "codechandler/AV1CodecHandler.h"
 #include "codechandler/AVCCodecHandler.h"
 #include "codechandler/AudioCodecHandler.h"
@@ -65,27 +67,6 @@ bool CFragmentedSampleReader::Initialize(SESSION::CStream* stream)
 {
   m_lReader->EnableTrack(m_track->GetId());
 
-  AP4_SampleDescription* desc{m_track->GetSampleDescription(0)};
-  if (desc->GetType() == AP4_SampleDescription::TYPE_PROTECTED)
-  {
-    auto protectedDesc = static_cast<AP4_ProtectedSampleDescription*>(desc);
-
-    AP4_ContainerAtom* schi;
-    if (protectedDesc->GetSchemeInfo() && (schi = protectedDesc->GetSchemeInfo()->GetSchiAtom()))
-    {
-      AP4_TencAtom* tenc(AP4_DYNAMIC_CAST(AP4_TencAtom, schi->GetChild(AP4_ATOM_TYPE_TENC, 0)));
-      if (tenc && tenc->GetDefaultKid())
-        m_defaultKey.assign(tenc->GetDefaultKid(), tenc->GetDefaultKid() + 16);
-      else
-      {
-        AP4_PiffTrackEncryptionAtom* piff(AP4_DYNAMIC_CAST(
-            AP4_PiffTrackEncryptionAtom, schi->GetChild(AP4_UUID_PIFF_TRACK_ENCRYPTION_ATOM, 0)));
-        if (piff && piff->GetDefaultKid())
-          m_defaultKey.assign(piff->GetDefaultKid(), piff->GetDefaultKid() + 16);
-      }
-    }
-  }
-
   m_timeBaseExt = STREAM_TIME_BASE;
   m_timeBaseInt = m_track->GetMediaTimeScale();
   if (m_timeBaseInt == 0)
@@ -113,7 +94,8 @@ bool CFragmentedSampleReader::Initialize(SESSION::CStream* stream)
 }
 
 void CFragmentedSampleReader::SetDecrypter(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> ssd,
-                                           const DRM::DecrypterCapabilites& dcaps)
+                                           const DRM::DecrypterCapabilites& dcaps,
+                                           const std::vector<uint8_t>& defaultKid)
 {
   if (ssd)
   {
@@ -122,6 +104,41 @@ void CFragmentedSampleReader::SetDecrypter(std::shared_ptr<Adaptive_CencSingleSa
   }
   
   m_decrypterCaps = dcaps;
+
+  auto& kodiProps = CSrvBroker::GetKodiProps();
+  //! @todo: This is a temporary workaround for a much broader issue,
+  //! where DRM initialization should occur first with MP4 init segment protection data
+  //! and then if it fails, try init DRM with manifest protection data
+  if (!kodiProps.GetManifestConfig().ignoreFMP4defaultKid)
+  {
+    // Get default KID from initialization segment
+    //! @todo: init segment can provide also PSSH, see also DRM engine code
+    //! where there is a decoupled code, all this need to be reworked
+    AP4_SampleDescription* desc{m_track->GetSampleDescription(0)};
+    if (desc->GetType() == AP4_SampleDescription::TYPE_PROTECTED)
+    {
+      auto protectedDesc = static_cast<AP4_ProtectedSampleDescription*>(desc);
+
+      AP4_ContainerAtom* schi;
+      if (protectedDesc->GetSchemeInfo() && (schi = protectedDesc->GetSchemeInfo()->GetSchiAtom()))
+      {
+        AP4_TencAtom* tenc(AP4_DYNAMIC_CAST(AP4_TencAtom, schi->GetChild(AP4_ATOM_TYPE_TENC, 0)));
+        if (tenc && tenc->GetDefaultKid())
+          m_defaultKey.assign(tenc->GetDefaultKid(), tenc->GetDefaultKid() + 16);
+        else
+        {
+          AP4_PiffTrackEncryptionAtom* piff(AP4_DYNAMIC_CAST(
+              AP4_PiffTrackEncryptionAtom, schi->GetChild(AP4_UUID_PIFF_TRACK_ENCRYPTION_ATOM, 0)));
+          if (piff && piff->GetDefaultKid())
+            m_defaultKey.assign(piff->GetDefaultKid(), piff->GetDefaultKid() + 16);
+        }
+      }
+    }
+  }
+  else // Use manifest default KID (or extracted by DRM engine from init segment)
+  {
+    m_defaultKey = defaultKid;
+  }
 }
 
 AP4_Result CFragmentedSampleReader::Start(bool& bStarted)
@@ -345,7 +362,7 @@ std::unique_ptr<ISampleReader> CFragmentedSampleReader::CreateReaderByTrack()
   }
 
   auto newFragReader = std::make_unique<CFragmentedSampleReader>(m_lReader, selTrack);
-  newFragReader->SetDecrypter(m_singleSampleDecryptor, m_decrypterCaps);
+  newFragReader->SetDecrypter(m_singleSampleDecryptor, m_decrypterCaps, m_defaultKey);
 
   LOG::LogF(LOGDEBUG, "Created shared reader for audio track id %u", selTrack->GetId());
 
@@ -705,11 +722,11 @@ void CFragmentedSampleReader::ParseMoofPssh(AP4_ContainerAtom* moof)
 
   if (!psshEntries.empty())
   {
-    //! @todo: Key rotation feature not implemented
+    //! @todo: PSSH can also be used for Key rotation feature, that is not implemented
     //! Possible use case: MPD dont provide KID/PSSH and init segment has default KID 00000000000000000000000000000000
     //! a placeholder that means no default KID, so its needed initialize DRM later time when we can
     //! parse a media segment with a PSSH (or SEIG box)
-    LOG::LogF(LOGDEBUG, "Found %zu PSSH on media segment, key rotation feature not supported", psshEntries.size());
+    LOG::LogF(LOGDEBUG, "Found %zu PSSH on media segment", psshEntries.size());
   }
 }
 
