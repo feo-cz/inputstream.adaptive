@@ -5,15 +5,15 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: translations@kodi.tv\n"
-"PO-Revision-Date: 2025-05-13 10:58+0000\n"
-"Last-Translator: Massimo Pissarello <mapi68@gmail.com>\n"
+"PO-Revision-Date: 2026-01-13 12:13+0000\n"
+"Last-Translator: Stefano Gottardo <gottardo.stefano.83@gmail.com>\n"
 "Language-Team: Italian <https://kodi.weblate.cloud/projects/kodi-add-ons-videoplayer-inputstream/inputstream-adaptive/it_it/>\n"
 "Language: it_it\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.11.3\n"
+"X-Generator: Weblate 5.15.1\n"
 
 msgctxt "Addon Summary"
 msgid "InputStream client for adaptive streams"
@@ -287,7 +287,7 @@ msgstr "Seleziona flusso video"
 #. Use of double graphes e.g. {whatyouwant{hdr-type}whatyouwant} allows you to add additional text printed only when a value is present
 msgctxt "#30232"
 msgid "Video stream {codec}{ [{hdr-type}]} {quality}"
-msgstr "Flusso video {codec}{ [{hdr-type}]} {qualità}"
+msgstr "Flusso video {codec}{ [{hdr-type}]} {quality}"
 
 #. Enum setting to set the test mode
 msgctxt "#30233"
