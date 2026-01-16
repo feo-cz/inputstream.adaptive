@@ -45,12 +45,12 @@ public:
    * \brief Get the period index, a sequential number used to distinguish periods.
    * \return The period index.
    */
-  uint32_t GetIndex() const { return m_index; }
+  uint16_t GetIndex() const { return m_index; }
 
   /*!
    * \brief Set the period index.
    */
-  void SetIndex(uint32_t index) { m_index = index; }
+  void SetIndex(uint16_t index) { m_index = index; }
 
   /*!
    * \brief Get the sequence number (e.g. discontinuity sequence number on HLS).
@@ -140,7 +140,7 @@ protected:
   std::string m_baseUrl;
   uint32_t m_timescale{1000};
   uint32_t m_sequence{0};
-  uint32_t m_index{0};
+  uint16_t m_index{0};
   uint64_t m_start{NO_VALUE};
   uint64_t m_duration{0};
   uint64_t m_tlDuration{0};
