@@ -500,6 +500,7 @@ bool AdaptiveStream::parseIndexRange(PLAYLIST::CRepresentation* rep,
 
     CSegment seg;
     seg.startPTS_ = 0;
+    seg.m_time = 0;
 
     // Iterate each atom in the stream
     AP4_DefaultAtomFactory atomFactory;
@@ -542,10 +543,10 @@ bool AdaptiveStream::parseIndexRange(PLAYLIST::CRepresentation* rep,
         {
           seg.range_begin_ = seg.range_end_ + 1;
           seg.range_end_ = seg.range_begin_ + refs[i].m_ReferencedSize - 1;
+          seg.m_endPts = seg.startPTS_ + refs[i].m_SubsegmentDuration;
           rep->Timeline().Add(seg);
 
           seg.startPTS_ += refs[i].m_SubsegmentDuration;
-          seg.m_endPts = seg.startPTS_ + refs[i].m_SubsegmentDuration;
           seg.m_time += refs[i].m_SubsegmentDuration;
         }
 
