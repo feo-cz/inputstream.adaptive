@@ -116,7 +116,7 @@ protected:
   std::map<std::string, std::string> m_manifestRespHeaders;
 
   // Period index incremented to every new period added
-  uint32_t m_periodIndex{1};
+  uint16_t m_periodIndex{1};
 
   uint64_t m_timeShiftBufferDepth{0}; // MPD Timeshift buffer attribute value, in ms
   uint64_t m_tsbLimited{0}; // Timeshift buffer for templated representations (max value limited), in ms

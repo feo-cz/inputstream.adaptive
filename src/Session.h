@@ -159,13 +159,12 @@ public:
 
   /*! \brief Seek streams and readers to a specified time
    *  \param seekTime The seek time in seconds
-   *  \param streamId ID of stream to seek, 0 seeks all
    *  \param preceeding True to seek to keyframe preceeding seektime,
    *         false to clamp to the start of the next segment
    *  \return True if seeking to another chapter or 1+ streams successfully
    *          seeked, false on error or no streams seeked
    */
-  bool SeekTime(double seekTime, unsigned int streamId = 0, bool preceeding = true);
+  bool SeekTime(double seekTime, bool preceeding = true);
 
   /*! \brief Report if the current content is dynamic/live
    *  \return True if live, false if VOD

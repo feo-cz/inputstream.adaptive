@@ -259,7 +259,7 @@ private:
   std::optional<uint32_t> m_discontSeq;
 
   // Period index incremented to every new period added
-  uint32_t m_periodIndex{1};
+  uint16_t m_periodIndex{1};
 };
 
 } // namespace

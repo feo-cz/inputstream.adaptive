@@ -27,6 +27,7 @@
 #include "utils/log.h"
 
 #include <algorithm>
+#include <cassert>
 
 using namespace adaptive;
 using namespace PLAYLIST;
@@ -36,6 +37,15 @@ using namespace UTILS;
 namespace
 {
 constexpr const char* CHAPTER_NAME_UNKNOWN = "[Unknown]";
+
+// \brief Make an unique ID based on period index and stream index.
+// \param periodIndex The max value accepted by period index is uint16_t type max value.
+// \param streamIndex The max value accepted by stream index is 2047.
+uint32_t MakeUniqueId(uint16_t periodIndex, uint16_t streamIndex)
+{
+  assert(streamIndex <= 2047 && "streamIndex exceeds maximum for 11 bits (2047)");
+  return (static_cast<uint32_t>(periodIndex) << 11) | (streamIndex & 0x7FFu);
+}
 } // unnamed namespace
 
 SESSION::CSession::~CSession()
@@ -315,11 +325,11 @@ void SESSION::CSession::InitializePeriod()
   const CAdaptationSet* defVideoAdpSet =
       m_reprChooser->GetPreferredVideoAdpSet(currPeriod, DetermineDefaultAdpSet(currPeriod));
 
-  uint32_t adpIndex{0};
+  const uint16_t periodIndex{currPeriod->GetIndex()};
+  uint16_t streamIndex{0}; // Stream index in the current period
+
   for (auto& adp : currPeriod->GetAdaptationSets())
   {
-    adpIndex++;
-
     if (adp->GetRepresentations().empty())
       continue;
 
@@ -343,22 +353,36 @@ void SESSION::CSession::InitializePeriod()
     if (isDefaultAdpSet)
       m_reprChooser->LogDetails(defaultRepr);
 
+    // Helper lambda method to add a stream
+    auto AddStreamRepr = [&](PLAYLIST::CRepresentation* repr) -> bool
+    {
+      if (streamIndex >= INPUTSTREAM_MAX_STREAM_COUNT)
+      {
+        LOG::LogF(
+            LOGWARNING,
+            "Exceeded the maximum limit of %i streams. Some streams will be excluded from playback",
+            INPUTSTREAM_MAX_STREAM_COUNT);
+        return false;
+      }
+
+      const uint32_t uniqueId = MakeUniqueId(periodIndex, streamIndex);
+      const bool isDefaultVideoRepr{isDefaultAdpSet && repr == defaultRepr};
+
+      AddStream(adp.get(), repr, isDefaultVideoRepr, uniqueId, audioLanguageOrig);
+      ++streamIndex;
+      return true;
+    };
+
     if (isManualStreamSelection)
     {
       // Add all stream representations
-      for (size_t i{0}; i < adp->GetRepresentations().size(); i++)
+      for (auto& currentRepr : adp->GetRepresentations())
       {
-        size_t reprIndex{adp->GetRepresentations().size() - i};
-        uint32_t uniqueId{adpIndex};
-        uniqueId |= reprIndex << 16;
-
-        CRepresentation* currentRepr = adp->GetRepresentations()[i].get();
         if (!currentRepr->isPlayable)
           continue;
 
-        const bool isDefaultVideoRepr{isDefaultAdpSet && currentRepr == defaultRepr};
-
-        AddStream(adp.get(), currentRepr, isDefaultVideoRepr, uniqueId, audioLanguageOrig);
+        if (!AddStreamRepr(currentRepr.get()))
+          break;
       }
     }
     else
@@ -367,11 +391,8 @@ void SESSION::CSession::InitializePeriod()
       if (!defaultRepr->isPlayable)
         continue;
 
-      size_t reprIndex{adp->GetRepresentations().size()};
-      uint32_t uniqueId{adpIndex};
-      uniqueId |= reprIndex << 16;
-
-      AddStream(adp.get(), defaultRepr, isDefaultAdpSet, uniqueId, audioLanguageOrig);
+      if (!AddStreamRepr(defaultRepr))
+        break;
     }
   }
 
@@ -911,7 +932,7 @@ bool SESSION::CSession::GetNextSample(ISampleReader*& sampleReader)
   return false;
 }
 
-bool SESSION::CSession::SeekTime(double seekTime, unsigned int streamId, bool preceeding)
+bool SESSION::CSession::SeekTime(double seekTime, bool preceeding)
 {
   bool ret{false};
 
@@ -1004,7 +1025,7 @@ bool SESSION::CSession::SeekTime(double seekTime, unsigned int streamId, bool pr
       continue;
 
     streamReader->WaitReadSampleAsyncComplete();
-    if (stream->IsEnabled() && (streamId == 0 || stream->m_info.GetPhysicalIndex() == streamId))
+    if (stream->IsEnabled())
     {
       bool reset{false};
       // all streams must be started before seeking to ensure cross chapter seeks
