@@ -170,7 +170,7 @@ SegmentBuffer* ADP::CSegmentBuffers::GetNextDownload()
   if (m_buffers.empty())
     return nullptr;
 
-  if (m_buffers.size() < m_downloadIndex)
+  if (m_buffers.size() <= m_downloadIndex)
   {
     LOG::LogF(LOGERROR, "Cannot find the buffer segment at index %zu", m_downloadIndex);
     return nullptr;
