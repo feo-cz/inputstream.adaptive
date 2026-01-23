@@ -81,7 +81,15 @@ public:
   virtual AP4_Result ReadSample() = 0;
   virtual void Reset(bool bEOS) = 0;
   virtual bool GetInformation(kodi::addon::InputstreamInfo& info) = 0;
+
+  /*!
+   * \brief Advance the reader to requested PTS.
+   * \param pts The PTS to seek for
+   * \param preceeding Allow a backward seek for sample sync
+   * \return True if has success, otherwise false.
+   */
   virtual bool TimeSeek(uint64_t pts, bool preceeding) = 0;
+
   virtual void SetPTSOffset(uint64_t offset) = 0;
   virtual int64_t GetPTSDiff() const = 0;
   virtual void SetPTSDiff(uint64_t pts) {}

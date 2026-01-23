@@ -271,17 +271,54 @@ void adaptive::AdaptiveStream::ResetSegment(const PLAYLIST::CSegment& segment)
   }
 }
 
-void adaptive::AdaptiveStream::ResetActiveBuffer()
+bool adaptive::AdaptiveStream::AlignBufferToSegment(const PLAYLIST::CSegment& segment)
 {
-  thread_data_->StopDownloads();
+  if (m_segBuffers.ContainsSegment(segment))
   {
-    std::lock_guard<std::mutex> lckWorker(thread_data_->mutexWorker);
-    absolute_position_ = 0;
-    segment_read_pos_ = 0;
+    thread_data_->PauseDownloads();
+    // Check if there is a download in progress and if its PTS
+    // is older than the requested segment, if so immediately stop the download
+    std::unique_lock<std::mutex> lckWorker(thread_data_->mutexWorker, std::try_to_lock);
+    if (!lckWorker.owns_lock())
+    {
+      // No lock, there is a possible download in progress
+      {
+        std::unique_lock<std::mutex> lckrw(thread_data_->mutexRW);
+        // Note: doesnt matter if the download is finished right now and GetNextDownload return next buffer
+        SegmentBuffer* currDownload = m_segBuffers.GetNextDownload();
 
-    m_segBuffers.Reset();
+        if (currDownload && currDownload->State() == BufferState::DOWNLOADING)
+        {
+          const uint64_t downloadStartPTS = currDownload->segment.startPTS_;
+          const uint64_t targetStartPTS = segment.startPTS_;
+
+          if (downloadStartPTS < targetStartPTS)
+            thread_data_->StopDownloads();
+        }
+      }
+      lckWorker.lock();
+    }
+
+    // Delete all segments older than the requested one from the buffer
+    while (!m_segBuffers.IsEmpty())
+    {
+      if (!segment.IsSame(m_segBuffers.Front().segment))
+        m_segBuffers.PopFront();
+      else
+        break;
+    }
   }
+  else
+  {
+    thread_data_->StopDownloads();
+    {
+      std::lock_guard<std::mutex> lckWorker(thread_data_->mutexWorker);
+      m_segBuffers.Reset();
+    }
+  }
+
   thread_data_->StartDownloads();
+  return !m_segBuffers.IsEmpty();
 }
 
 void adaptive::AdaptiveStream::worker()
@@ -611,8 +648,7 @@ bool adaptive::AdaptiveStream::start_stream(const uint64_t startPts)
     if (seekSecs > PLAYLIST::KODI_VP_BUFFER_SECS)
       seekSecs -= PLAYLIST::KODI_VP_BUFFER_SECS;
 
-    bool needReset;
-    seek_time(static_cast<double>(seekSecs), false, needReset);
+    seek_time(static_cast<double>(seekSecs));
   }
 
   if (!current_rep_->current_segment_.has_value())
@@ -1130,17 +1166,24 @@ void adaptive::AdaptiveStream::Disable()
   m_startEvent = EVENT_TYPE::STREAM_ENABLE;
 }
 
-void adaptive::AdaptiveStream::ResetCurrentSegment(const PLAYLIST::CSegment& newSegment)
+void adaptive::AdaptiveStream::UpdateCurrentSegment(const PLAYLIST::CSegment& newSegment)
 {
-  // EnsureSegment always loads the segment following the one specified as current, then sets the previous one
-  const CSegment* prevSeg = current_rep_->Timeline().GetPrevious(newSegment);
-  if (prevSeg)
-    current_rep_->current_segment_ = *prevSeg;
+  if (AlignBufferToSegment(newSegment))
+  {
+    current_rep_->current_segment_ = m_segBuffers.Front().segment;
+  }
   else
-    current_rep_->current_segment_.reset();
+  {
+    // EnsureSegment always loads the segment following the one specified as current, then sets the previous one
+    const CSegment* prevSeg = current_rep_->Timeline().GetPrevious(newSegment);
+    if (prevSeg)
+      current_rep_->current_segment_ = *prevSeg;
+    else
+      current_rep_->current_segment_.reset();
+  }
 
-  // TODO: if new segment is already prefetched, don't ResetActiveBuffer;
-  ResetActiveBuffer();
+  absolute_position_ = 0;
+  segment_read_pos_ = 0;
 }
 
 int adaptive::AdaptiveStream::GetTrackType() const
@@ -1177,10 +1220,8 @@ PLAYLIST::StreamType adaptive::AdaptiveStream::GetStreamType() const
   return current_adp_->GetStreamType();
 }
 
-bool adaptive::AdaptiveStream::seek_time(double seek_seconds, bool preceeding, bool& needReset)
+bool adaptive::AdaptiveStream::seek_time(double seek_seconds)
 {
-  needReset = true;
-
   if (!current_rep_)
     return false;
 
@@ -1190,44 +1231,14 @@ bool adaptive::AdaptiveStream::seek_time(double seek_seconds, bool preceeding, b
   std::lock_guard<adaptive::AdaptiveTree::TreeUpdateThread> lckUpdTree(m_tree->GetTreeUpdMutex());
 
   const uint64_t pts = static_cast<uint64_t>(seek_seconds * current_rep_->GetTimescale());
-
   const CSegment* seekSeg = current_rep_->Timeline().FindByPTSOrNext(pts);
-  const std::optional<CSegment> oldSeg = current_rep_->current_segment_;
 
-  if (seekSeg)
-  {
-    if (oldSeg.has_value() && !seekSeg->IsSame(*oldSeg))
-    {
-      ResetCurrentSegment(*seekSeg);
-    }
-    else if (!preceeding)
-    {
-      // restart stream if it has 'finished', e.g in the case of subtitles
-      // where there may be a few or only one segment for the period and
-      // the stream is now in EOS state (all data already passed to Kodi)
+  if (!seekSeg)
+    return false;
 
-      //! @TODO: Twice downloaded segments, cause of video seek delay
-      //! Steps to reproduce:
-      //!   Play any kind of video, do a video seek
-      //!   on the log after "PosTime" callback print you can see twice downloaded segments
-      //!   a better way to debug is add a new log into AdaptiveStream::ensureSegment to the code related to Push new segments
-      //!   into segment buffers var and so print the segment numbers of the segments added to buffers.
-      //! the problem is also related to CSession::StartReader called by CSession::SeekTime,
-      //! In short the adaptive stream start to download segments seem just to know the "PTS diff"
-      //! and these downloads will be deleted just later without to be read, because CSession::SeekTime call these
-      //! method two times so by starting two times downloads.
-      //! This code has been introduced as part of subtitles fixes from https://github.com/xbmc/inputstream.adaptive/pull/1082
-      ResetCurrentSegment(*seekSeg);
+  UpdateCurrentSegment(*seekSeg);
 
-      absolute_position_ -= segment_read_pos_;
-      segment_read_pos_ = 0;
-    }
-    else
-      needReset = false;
-    return true;
-  }
-
-  return false;
+  return true;
 }
 
 bool adaptive::AdaptiveStream::waitingForSegment() const
@@ -1369,6 +1380,11 @@ void adaptive::AdaptiveStream::THREADDATA::Initialize(AdaptiveStream* parent)
 void adaptive::AdaptiveStream::THREADDATA::StopDownloads()
 {
   m_state = ThState::STOPPED;
+}
+
+void adaptive::AdaptiveStream::THREADDATA::PauseDownloads()
+{
+  m_state = ThState::PAUSED;
 }
 
 void adaptive::AdaptiveStream::THREADDATA::StartDownloads()

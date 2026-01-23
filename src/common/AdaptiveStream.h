@@ -78,11 +78,10 @@ enum class EVENT_TYPE
     EVENT_TYPE GetStartEvent() const { return m_startEvent; }
 
     /*!
-    * \brief Set the current segment to the one specified, and reset
-    *   the buffer
-    * \param newSegment The new segment
-    */
-    void ResetCurrentSegment(const PLAYLIST::CSegment& newSegment);
+     * \brief Update the current segment to the specified one, and align or reset the buffer
+     * \param newSegment The new current segment
+     */
+    void UpdateCurrentSegment(const PLAYLIST::CSegment& newSegment);
 
     // Return the AP4_Track::Type based on current adaptation stream type
     int GetTrackType() const;
@@ -119,7 +118,7 @@ enum class EVENT_TYPE
      */
     bool seek(uint64_t const pos, bool& isEos);
 
-    bool seek_time(double seek_seconds, bool preceeding, bool &needReset);
+    bool seek_time(double seek_seconds);
     PLAYLIST::CPeriod* getPeriod() { return current_period_; };
     PLAYLIST::CAdaptationSet* getAdaptationSet() { return current_adp_; };
     PLAYLIST::CRepresentation* getRepresentation() { return current_rep_; };
@@ -195,7 +194,13 @@ enum class EVENT_TYPE
                          DownloadInfo& downloadInfo);
 
     void ResetSegment(const PLAYLIST::CSegment& segment);
-    void ResetActiveBuffer();
+    
+    /*!
+     * \brief Align the buffer to the specified segment, if it exists in the buffer, otherwise empty the buffer.
+     * \param segment The segment to align the buffer
+     * \return Return true if the buffer contains the segment, otherwise false
+     */
+    bool AlignBufferToSegment(const PLAYLIST::CSegment& segment);
 
     void worker();
 
@@ -239,6 +244,8 @@ enum class EVENT_TYPE
       bool IsThreadExit() const { return m_isThreadExit; }
       // \brief Stop downloads, and cancel download in progress (it dont delete buffer queue)
       void StopDownloads();
+      // \brief Pause downloads on next iteration, without cancel download in progress (it dont delete buffer queue)
+      void PauseDownloads();
       // \brief Start downloads
       void StartDownloads();
 

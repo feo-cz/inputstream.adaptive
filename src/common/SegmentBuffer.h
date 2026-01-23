@@ -176,6 +176,12 @@ public:
   */
   void Reset();
 
+ /*!
+  * \brief Determines whether the specified segment is contained in the buffer, regardless of its download status.
+  * \return True if segment exists, otherwise false.
+  */
+  bool ContainsSegment(const PLAYLIST::CSegment& seg) const;
+
 private:
   mutable std::mutex m_mutex;
   std::condition_variable m_cvWaitSegment;

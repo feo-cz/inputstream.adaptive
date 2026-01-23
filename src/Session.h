@@ -131,16 +131,6 @@ public:
    */
   uint64_t GetTimeshiftBufferStart();
 
-  /*! \brief Align adaptiveStream and start stream reader
-   *  \param stream The stream to start
-   *  \param seekTime The pts value to start the stream at
-   *  \param ptsDiff The pts difference to adjust seekTime by
-   *  \param preceeding True to ask reader to seek to preceeding sync point
-   *  \param timing True if this is the initial starting stream
-   */
-  void StartReader(
-      CStream* stream, uint64_t seekTime, int64_t ptsDiff, bool preceeding, bool timing);
-
   /*! \brief Check if the stream has changed, reset changed status
    *  \param bSet True to keep m_changed value true
    *  \return True if stream has changed

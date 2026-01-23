@@ -172,7 +172,6 @@ SegmentBuffer* ADP::CSegmentBuffers::GetNextDownload()
 
   if (m_buffers.size() <= m_downloadIndex)
   {
-    LOG::LogF(LOGERROR, "Cannot find the buffer segment at index %zu", m_downloadIndex);
     return nullptr;
   }
 
@@ -199,4 +198,15 @@ void ADP::CSegmentBuffers::Reset()
   // Unlock "WaitForSegment" method
   m_forceUnlock = true;
   m_cvWaitSegment.notify_all();
+}
+
+bool ADP::CSegmentBuffers::ContainsSegment(const PLAYLIST::CSegment& seg) const
+{
+  std::lock_guard<std::mutex> lock(m_mutex);
+  for (const auto& segBuffer : m_buffers)
+  {
+    if (segBuffer.segment.IsSame(seg))
+      return true;
+  }
+  return false;
 }
