@@ -1,3 +1,14 @@
+v22.3.7 (2026-01-24)
+- Add new ignore_fmp4_defaultkid on manifest_config property (see wiki)
+- Speedup video seeking, now can reuse existing buffer
+- Fix case of DRM session creation, where only one session was created even for different media types
+- Fix video seek (SIDX) problem from v22.3.4, cause playback to freeze
+- Fix TS demuxer video seek from v22.3.3, cause playback to freeze
+- Fix occasional playback freeze on video seek across chapters on TS stream
+- Partially fixed possible double downloaded segments on video seek
+- Bento4 version bump to 1.6.0-641-5-Piers
+- Updated translations
+
 v22.3.6 (2025-12-25)
 - Fix regression from v22.3.4 where FMP4 live streaming playback could stop
 
