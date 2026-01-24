@@ -717,6 +717,14 @@ bool SESSION::CSession::PrepareStream(CStream& stream, uint64_t startPts)
     }
   }
 
+  //! @todo: when the stream will be opened (OpenStream) while you change chapter/period during video seek,
+  //!  triggered by DEMUX_SPECIALID_STREAMCHANGE (chapter changed)
+  //!  the adaptive stream start to download segments from the start of period, for nothing,
+  //!  because when CInputStreamAdaptive::DemuxRead call CSession::OnDemuxRead
+  //!  will call Session::SeekTime method that cause to delete and cancel current downloads/buffer,
+  //!  and re-start downloads from the appropriate PTS,
+  //!  this wastes time for the video seek and resources due to unnecessary downloads
+  //!  more likely its more easy to see also cancelled downloads on log with TS streams
   stream.m_adStream.start_stream(startPts);
   stream.SetAdByteStream(std::make_unique<CAdaptiveByteStream>(&stream.m_adStream));
 
@@ -837,35 +845,6 @@ uint64_t SESSION::CSession::GetTimeshiftBufferStart()
   }
   else
     return 0ULL;
-}
-
-// TODO: clean this up along with seektime
-void SESSION::CSession::StartReader(
-    CStream* stream, uint64_t seekTime, int64_t ptsDiff, bool preceeding, bool timing)
-{
-  ISampleReader* streamReader = stream->GetReader();
-  if (!streamReader)
-  {
-    LOG::LogF(LOGERROR, "Cannot get the stream reader");
-    return;
-  }
-
-  bool bReset = true;
-  if (timing)
-    seekTime += stream->m_adStream.GetAbsolutePTSOffset();
-  else
-    seekTime -= ptsDiff;
-
-  stream->m_adStream.seek_time(static_cast<double>(seekTime / STREAM_TIME_BASE), preceeding,
-                               bReset);
-
-  if (bReset)
-    streamReader->Reset(false);
-
-  bool bStarted = false;
-  streamReader->Start(bStarted);
-  if (bStarted && (streamReader->GetInformation(stream->m_info)))
-    m_changed = true;
 }
 
 void SESSION::CSession::OnScreenResChange()
@@ -992,25 +971,64 @@ bool SESSION::CSession::SeekTime(double seekTime, bool preceeding)
       seekTime = maxSeek;
   }
 
+  // Helper lambda to check if reader is started,
+  // since after seeking across chapters/periods the reader is not started yet
+  auto CheckReaderRunning = [this](CStream& stream) -> bool
+  {
+    auto reader = stream.GetReader();
+    if (!reader->IsStarted())
+    {
+      bool isStarted = false;
+      if (AP4_FAILED(reader->Start(isStarted)))
+        return false;
+
+      if (isStarted && reader->GetInformation(stream.m_info))
+        m_changed = true;
+    }
+    return true;
+  };
+
+  // Helper lambda to perform seek on adaptive stream segment buffer
+  auto SeekAdStream = [](CStream& stream, double seekSecs, bool preceeding) -> bool
+  {
+    if (!stream.m_adStream.seek_time(seekSecs))
+    {
+      stream.GetReader()->Reset(true);
+      return false;
+    }
+    if (!preceeding)
+      stream.GetReader()->Reset(false);
+
+    return true;
+  };
+
   // correct for starting segment pts value of chapter and chapter offset within program
   uint64_t seekTimeCorrected{static_cast<uint64_t>(seekTime * STREAM_TIME_BASE)};
   int64_t ptsDiff{0};
+
+  // If we have a timing stream, ensure it is started first and compute ptsDiff /
+  // corrected seek base that will be used by all other streams.
   if (m_timingStream)
   {
-    // after seeking across chapters with fmp4 streams the reader will not have started
-    // so we start here to ensure that we have the required information to correctly
-    // seek with proper stream alignment
     ISampleReader* timingReader{m_timingStream->GetReader()};
     if (!timingReader)
     {
-      LOG::LogF(LOGERROR, "Cannot get the stream sample reader");
+      LOG::LogF(LOGERROR, "Cannot get the stream sample reader of timing stream");
       return false;
     }
+
     timingReader->WaitReadSampleAsyncComplete();
-    if (!timingReader->IsStarted())
-      StartReader(m_timingStream.get(), seekTimeCorrected, ptsDiff, preceeding, true);
 
     seekTimeCorrected += m_timingStream->m_adStream.GetAbsolutePTSOffset();
+
+    const double seekSecs = static_cast<double>(seekTimeCorrected) / STREAM_TIME_BASE;
+
+    if (!SeekAdStream(*m_timingStream, seekSecs, preceeding))
+      return false;
+
+    if (!CheckReaderRunning(*m_timingStream))
+      return false;
+
     ptsDiff = timingReader->GetPTSDiff();
     if (ptsDiff < 0 && seekTimeCorrected + ptsDiff > seekTimeCorrected)
       seekTimeCorrected = 0;
@@ -1025,54 +1043,49 @@ bool SESSION::CSession::SeekTime(double seekTime, bool preceeding)
       continue;
 
     streamReader->WaitReadSampleAsyncComplete();
-    if (stream->IsEnabled())
+    if (!stream->IsEnabled())
+      continue;
+
+    // With FMP4 audio stream included to video stream you must not seek with AdaptiveStream
+    // segments are managed by AdaptiveStream of the video stream
+    // so CFragmentedSampleReader read data from the reader of the video stream
+    const bool hasAdStream = !(streamReader->GetType() == ISampleReader::Type::FMP4 &&
+                               stream->m_adStream.getRepresentation()->IsIncludedStream());
+
+    if (hasAdStream && m_timingStream != stream) // Do not "seek time" on "timing stream" already done above
     {
-      bool reset{false};
-      // all streams must be started before seeking to ensure cross chapter seeks
-      // will seek to the correct location/segment
-      if (!streamReader->IsStarted())
-        StartReader(stream.get(), seekTimeCorrected, ptsDiff, preceeding, false);
+      const double seekSecs{static_cast<double>(seekTimeCorrected - ptsDiff) / STREAM_TIME_BASE};
 
-      streamReader->SetPTSDiff(ptsDiff);
-      
-      double seekSecs{static_cast<double>(seekTimeCorrected - ptsDiff) /
-                      STREAM_TIME_BASE};
+      if (!SeekAdStream(*stream, seekSecs, preceeding))
+        continue;
+    }
 
-      // With FMP4 audio stream included to video stream you must not seek with AdaptiveStream
-      // segments are managed by AdaptiveStream of the video stream
-      // so CFragmentedSampleReader read data from the reader of the video stream
-      const bool noAdStream = streamReader->GetType() == ISampleReader::Type::FMP4 &&
-                              stream->m_adStream.getRepresentation()->IsIncludedStream();
+    if (!CheckReaderRunning(*stream))
+      continue;
 
-      if (noAdStream || stream->m_adStream.seek_time(seekSecs, preceeding, reset))
+    streamReader->SetPTSDiff(ptsDiff);
+
+    if (!streamReader->TimeSeek(seekTimeCorrected, preceeding))
+    {
+      streamReader->Reset(true);
+    }
+    else
+    {
+      double destTime{static_cast<double>(PTSToElapsed(streamReader->PTS())) / STREAM_TIME_BASE};
+
+      // Note: TS sample reader with included streams have a dynamic streamId,
+      // so could be that will be printed on log stream id referred to audio or video,
+      // maybe this could be improved on sample reader to always start the seek from a video packet
+      LOG::Log(LOGINFO, "Seek time %0.1lf for stream: %i continues at %0.1lf (PTS: %llu)", seekTime,
+               streamReader->GetStreamId(), destTime, streamReader->PTS());
+
+      if (stream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO)
       {
-        if (reset)
-          streamReader->Reset(false);
-        // advance reader to requested time
-        if (!streamReader->TimeSeek(seekTimeCorrected, preceeding))
-        {
-          streamReader->Reset(true);
-        }
-        else
-        {
-          double destTime{static_cast<double>(PTSToElapsed(streamReader->PTS())) /
-                          STREAM_TIME_BASE};
-          LOG::Log(LOGINFO,
-                   "Seek time %0.1lf for stream: %i (physical index %u) continues at %0.1lf "
-                   "(PTS: %llu)",
-                   seekTime, streamReader->GetStreamId(), stream->m_info.GetPhysicalIndex(),
-                   destTime, streamReader->PTS());
-          if (stream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO)
-          {
-            seekTime = destTime;
-            seekTimeCorrected = streamReader->PTS();
-            preceeding = false;
-          }
-          ret = true;
-        }
+        seekTime = destTime;
+        seekTimeCorrected = streamReader->PTS();
+        preceeding = false;
       }
-      else
-        streamReader->Reset(true);
+      ret = true;
     }
   }
 
