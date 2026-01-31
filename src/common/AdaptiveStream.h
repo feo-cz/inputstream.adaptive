@@ -59,7 +59,7 @@ enum class EVENT_TYPE
     virtual ~AdaptiveStream();
     void set_observer(AdaptiveStreamObserver *observer){ observer_ = observer; };
     void Reset();
-    bool start_stream(const uint64_t startPts = 0);
+    bool start_stream();
     /*!
      * \brief Disable current representation, wait the current download is finished and stop downloads.
      */
