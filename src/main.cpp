@@ -304,7 +304,7 @@ DEMUX_PACKET* CInputStreamAdaptive::DemuxRead(void)
   if (~m_failedSeekTime)
   {
     LOG::Log(LOGDEBUG, "Seeking to last failed seek position (%d)", m_failedSeekTime);
-    m_session->SeekTime(static_cast<double>(m_failedSeekTime) * 0.001f, false);
+    m_session->SeekTime(static_cast<double>(m_failedSeekTime) * 0.001f);
     m_failedSeekTime = ~0;
   }
 
@@ -430,7 +430,7 @@ bool CInputStreamAdaptive::PosTime(int ms)
 
   LOG::Log(LOGINFO, "PosTime (%d)", ms);
 
-  bool ret = m_session->SeekTime(static_cast<double>(ms) * 0.001f, false);
+  bool ret = m_session->SeekTime(static_cast<double>(ms) * 0.001f);
   m_failedSeekTime = ret ? ~0 : ms;
 
   return ret;

@@ -59,10 +59,10 @@ void CWebmSampleReader::Reset(bool bEOS)
   m_eos = bEOS;
 }
 
-bool CWebmSampleReader::TimeSeek(uint64_t pts, bool preceeding)
+bool CWebmSampleReader::TimeSeek(uint64_t pts)
 {
   AP4_UI64 seekPos((pts * 9) / 100);
-  if (WebmReader::SeekTime(seekPos, preceeding))
+  if (WebmReader::SeekTime(seekPos))
   {
     m_started = true;
     return AP4_SUCCEEDED(ReadSample());

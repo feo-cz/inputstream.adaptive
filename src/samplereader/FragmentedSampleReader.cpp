@@ -305,7 +305,7 @@ bool CFragmentedSampleReader::GetInformation(kodi::addon::InputstreamInfo& info)
   return isChanged;
 }
 
-bool CFragmentedSampleReader::TimeSeek(uint64_t pts, bool preceeding)
+bool CFragmentedSampleReader::TimeSeek(uint64_t pts)
 {
   AP4_Ordinal sampleIndex;
   AP4_UI64 seekPos(static_cast<AP4_UI64>((pts * m_timeBaseInt) / m_timeBaseExt));

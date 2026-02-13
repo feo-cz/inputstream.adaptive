@@ -41,7 +41,7 @@ public:
   bool Initialize();
 
   void Reset();
-  bool SeekTime(uint64_t timeInTs, bool preceeding);
+  bool SeekTime(uint64_t timeInTs);
 
   bool GetInformation(kodi::addon::InputstreamInfo& info);
   bool ReadPacket();

@@ -911,7 +911,7 @@ bool SESSION::CSession::GetNextSample(ISampleReader*& sampleReader)
   return false;
 }
 
-bool SESSION::CSession::SeekTime(double seekTime, bool preceeding)
+bool SESSION::CSession::SeekTime(double seekTime)
 {
   bool ret{false};
 
@@ -989,16 +989,15 @@ bool SESSION::CSession::SeekTime(double seekTime, bool preceeding)
   };
 
   // Helper lambda to perform seek on adaptive stream segment buffer
-  auto SeekAdStream = [](CStream& stream, double seekSecs, bool preceeding) -> bool
+  auto SeekAdStream = [](CStream& stream, double seekSecs) -> bool
   {
     if (!stream.m_adStream.seek_time(seekSecs))
     {
       stream.GetReader()->Reset(true);
       return false;
     }
-    if (!preceeding)
-      stream.GetReader()->Reset(false);
 
+    stream.GetReader()->Reset(false);
     return true;
   };
 
@@ -1023,7 +1022,7 @@ bool SESSION::CSession::SeekTime(double seekTime, bool preceeding)
 
     const double seekSecs = static_cast<double>(seekTimeCorrected) / STREAM_TIME_BASE;
 
-    if (!SeekAdStream(*m_timingStream, seekSecs, preceeding))
+    if (!SeekAdStream(*m_timingStream, seekSecs))
       return false;
 
     if (!CheckReaderRunning(*m_timingStream))
@@ -1063,7 +1062,7 @@ bool SESSION::CSession::SeekTime(double seekTime, bool preceeding)
     {
       const double seekSecs{static_cast<double>(seekTimeCorrected - ptsDiff) / STREAM_TIME_BASE};
 
-      if (!SeekAdStream(*stream, seekSecs, preceeding))
+      if (!SeekAdStream(*stream, seekSecs))
         continue;
     }
 
@@ -1072,7 +1071,7 @@ bool SESSION::CSession::SeekTime(double seekTime, bool preceeding)
 
     streamReader->SetPTSDiff(ptsDiff);
 
-    if (!streamReader->TimeSeek(seekTimeCorrected, preceeding))
+    if (!streamReader->TimeSeek(seekTimeCorrected))
     {
       streamReader->Reset(true);
     }
@@ -1090,7 +1089,6 @@ bool SESSION::CSession::SeekTime(double seekTime, bool preceeding)
       {
         seekTime = destTime;
         seekTimeCorrected = streamReader->PTS();
-        preceeding = false;
       }
       ret = true;
     }

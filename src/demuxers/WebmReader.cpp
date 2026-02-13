@@ -174,7 +174,7 @@ bool WebmReader::GetInformation(kodi::addon::InputstreamInfo& info)
 }
 
 // We assume that m_startpos is the current I-Frame position
-bool WebmReader::SeekTime(uint64_t timeInTs, bool preceeding)
+bool WebmReader::SeekTime(uint64_t timeInTs)
 {
   Reset();
   return true;

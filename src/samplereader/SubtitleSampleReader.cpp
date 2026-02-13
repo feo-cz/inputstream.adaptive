@@ -216,7 +216,7 @@ bool CSubtitleSampleReader::GetInformation(kodi::addon::InputstreamInfo& info)
   return false;
 }
 
-bool CSubtitleSampleReader::TimeSeek(uint64_t pts, bool preceeding)
+bool CSubtitleSampleReader::TimeSeek(uint64_t pts)
 {
   if (dynamic_cast<WebVTTCodecHandler*>(m_codecHandler.get()))
   {

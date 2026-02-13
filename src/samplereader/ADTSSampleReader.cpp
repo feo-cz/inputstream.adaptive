@@ -55,10 +55,10 @@ void CADTSSampleReader::Reset(bool bEOS)
   m_eos = bEOS;
 }
 
-bool CADTSSampleReader::TimeSeek(uint64_t pts, bool preceeding)
+bool CADTSSampleReader::TimeSeek(uint64_t pts)
 {
   AP4_UI64 seekPos{(pts * 9) / 100};
-  if (ADTSReader::SeekTime(seekPos, preceeding))
+  if (ADTSReader::SeekTime(seekPos))
   {
     m_started = true;
     return AP4_SUCCEEDED(ReadSample());

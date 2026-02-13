@@ -206,7 +206,7 @@ bool TSReader::GetInformation(kodi::addon::InputstreamInfo& info)
 }
 
 // We assume that m_startpos is the current I-Frame position
-bool TSReader::SeekTime(uint64_t timeInTs, bool preceeding)
+bool TSReader::SeekTime(uint64_t timeInTs)
 {
   bool hasVideo(false);
   //look if we have video
@@ -218,7 +218,7 @@ bool TSReader::SeekTime(uint64_t timeInTs, bool preceeding)
     }
 
   uint64_t lastRecovery(static_cast<uint64_t>(m_startPos));
-  while (m_pkt.pts == PTS_UNSET || !preceeding || static_cast<uint64_t>(m_pkt.pts) < timeInTs)
+  while (m_pkt.pts == PTS_UNSET || static_cast<uint64_t>(m_pkt.pts) < timeInTs)
   {
     uint64_t thisFrameStart(m_AVContext->GetRecoveryPos());
     if (!ReadPacket())
@@ -226,7 +226,7 @@ bool TSReader::SeekTime(uint64_t timeInTs, bool preceeding)
     if (!hasVideo || m_pkt.recoveryPoint || thisFrameStart >= m_startPos)
     {
       lastRecovery = thisFrameStart;
-      if (!preceeding && static_cast<uint64_t>(m_pkt.pts) >= timeInTs)
+      if (static_cast<uint64_t>(m_pkt.pts) >= timeInTs)
         break;
     }
   }

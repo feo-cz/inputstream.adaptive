@@ -31,7 +31,7 @@ public:
   {
     return WebmReader::GetInformation(info);
   }
-  bool TimeSeek(uint64_t pts, bool preceeding) override;
+  bool TimeSeek(uint64_t pts) override;
   void SetPTSOffset(uint64_t offset) override { m_ptsOffs = offset; }
   int64_t GetPTSDiff() const override { return m_ptsDiff; }
   uint32_t GetTimeScale() const override { return 1000; }

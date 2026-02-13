@@ -102,13 +102,13 @@ void CTSSampleReader::Reset(bool bEOS)
   m_eos = bEOS;
 }
 
-bool CTSSampleReader::TimeSeek(uint64_t pts, bool preceeding)
+bool CTSSampleReader::TimeSeek(uint64_t pts)
 {
   if (!StartStreaming(m_typeMask))
     return false;
 
   AP4_UI64 seekPos((pts * 9) / 100);
-  if (TSReader::SeekTime(seekPos, preceeding))
+  if (TSReader::SeekTime(seekPos))
   {
     m_started = true;
     return AP4_SUCCEEDED(ReadSample());
