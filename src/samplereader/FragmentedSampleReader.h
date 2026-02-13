@@ -70,10 +70,7 @@ public:
   // \brief Get AP4_LinearReader::m_Movie
   AP4_Movie& GetMovie();
 
-  AP4_Result SeekSample(AP4_UI32 track_id,
-                        AP4_UI64 ts,
-                        AP4_Ordinal& sample_index,
-                        bool preceedingSync);
+  AP4_Result SeekSample(AP4_UI32 track_id, AP4_UI64 ts, AP4_Ordinal& sample_index);
 
 protected:
   // AP4_LinearReader implementations

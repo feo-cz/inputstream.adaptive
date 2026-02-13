@@ -28,6 +28,8 @@
 
 #include <bento4/Ap4SencAtom.h>
 
+#include <limits>
+
 using namespace UTILS;
 
 namespace
@@ -308,7 +310,7 @@ bool CFragmentedSampleReader::TimeSeek(uint64_t pts, bool preceeding)
   AP4_Ordinal sampleIndex;
   AP4_UI64 seekPos(static_cast<AP4_UI64>((pts * m_timeBaseInt) / m_timeBaseExt));
 
-  AP4_Result result = m_lReader->SeekSample(m_track->GetId(), seekPos, sampleIndex, preceeding);
+  AP4_Result result = m_lReader->SeekSample(m_track->GetId(), seekPos, sampleIndex);
   if (AP4_FAILED(result))
   {
     LOG::LogF(LOGERROR, "Cannot seek track id %u, error %i", m_track->GetId(), result);
@@ -813,10 +815,7 @@ AP4_Movie& CLinearReader::GetMovie()
   return AP4_LinearReader::m_Movie;
 }
 
-AP4_Result CLinearReader::SeekSample(AP4_UI32 track_id,
-                                     AP4_UI64 ts,
-                                     AP4_Ordinal& sample_index,
-                                     bool preceedingSync)
+AP4_Result CLinearReader::SeekSample(AP4_UI32 track_id, AP4_UI64 ts, AP4_Ordinal& sample_index)
 {
   // we only support fragmented sources for now
   if (!m_HasFragments)
@@ -838,24 +837,23 @@ AP4_Result CLinearReader::SeekSample(AP4_UI32 track_id,
 
   AP4_Result result;
 
-  if (!tracker->m_SampleTable && AP4_FAILED(result = Advance()))
-    return result;
-
-  while (AP4_FAILED(result = tracker->m_SampleTable->GetSampleIndexForTimeStamp(ts, sample_index)))
+  if (!tracker->m_SampleTable)
   {
-    if (result == AP4_ERROR_NOT_ENOUGH_DATA)
+    if (AP4_FAILED(result = Advance()))
+      return result;
+    // Ensure that Advance has populated the sample table
+    if (!tracker->m_SampleTable)
     {
-      tracker->m_NextSampleIndex = tracker->m_SampleTable->GetSampleCount();
-      if (AP4_FAILED(result = Advance()))
-        return result;
-      continue;
+      LOG::LogF(LOGERROR, "No sample table");
+      return AP4_ERROR_INVALID_STATE;
     }
-    return result;
   }
 
-  sample_index = tracker->m_SampleTable->GetNearestSyncSampleIndex(sample_index, preceedingSync);
-  //we have reached the end -> go for the first sample of the next segment
-  if (sample_index == tracker->m_SampleTable->GetSampleCount())
+  //! @todo: remove our custom GetNearestSyncSampleIndex from Bento4
+  AP4_Cardinal samplesCount = tracker->m_SampleTable->GetSampleCount();
+
+  // No samples, attempt advance to (download/read) next segment
+  if (samplesCount == 0)
   {
     tracker->m_NextSampleIndex = tracker->m_SampleTable->GetSampleCount();
 
@@ -869,13 +867,70 @@ AP4_Result CLinearReader::SeekSample(AP4_UI32 track_id,
       tracker->m_SampleTableIsOwned = isOwned;
       return result;
     }
+    // Ensure that Advance has populated the sample table
+    if (!tracker->m_SampleTable)
+    {
+      LOG::LogF(LOGERROR, "No sample table");
+      return AP4_ERROR_INVALID_STATE;
+    }
 
     tracker->m_SampleTableIsOwned = isOwned;
-    sample_index = 0;
+    samplesCount = tracker->m_SampleTable->GetSampleCount();
+
+    if (samplesCount == 0)
+    {
+      LOG::LogF(LOGERROR, "No samples found in the segment packet");
+      return AP4_ERROR_INVALID_STATE;
+    }
+  }
+
+  constexpr AP4_Cardinal indexNoValue{std::numeric_limits<AP4_Cardinal>::max()};
+  AP4_Cardinal syncIndex{indexNoValue};
+  AP4_UI64 syncCts{0};
+  AP4_Cardinal sampleIndex{indexNoValue};
+
+  // Try find a sample "sync", when possible, with equal or higher ts than the target ts
+  // or, fallback to the sample (without sync) with nearest ts
+  // NOTE: search exclusively within this segment,
+  // avoiding requesting (download/read) other segments to speedup the seek operation
+  for (AP4_Cardinal index{0}; index < samplesCount; ++index)
+  {
+    AP4_Sample sample;
+    if (AP4_FAILED(tracker->m_SampleTable->GetSample(index, sample)))
+      continue;
+
+    const AP4_UI64 cts = sample.GetCts();
+    if (sample.IsSync())
+    {
+      if (syncIndex == indexNoValue || syncCts < ts && cts > syncCts)
+      {
+        syncCts = cts;
+        syncIndex = index;
+      }
+    }
+    // Find any sample (no sync) closer to the target ts
+    if (cts <= ts)
+      sampleIndex = index;
+  }
+
+  if (syncIndex != indexNoValue)
+    sample_index = syncIndex;
+  else if (sampleIndex != indexNoValue)
+  {
+    LOG::LogF(LOGDEBUG, "No sample sync found, fallback to sample with nearest timestamp");
+    sample_index = sampleIndex;
+  }
+  else
+  {
+    LOG::LogF(LOGERROR, "Cannot determine the sample index");
+    return AP4_ERROR_INVALID_STATE;
   }
 
   if (!tracker->m_SampleTable) // Required for SetSampleIndex
+  {
+    LOG::LogF(LOGERROR, "Missing sample table, cannot set the sample index");
     return AP4_ERROR_INVALID_STATE;
+  }
 
   return SetSampleIndex(tracker->m_Track->GetId(), sample_index);
 }
