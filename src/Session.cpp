@@ -1036,6 +1036,13 @@ bool SESSION::CSession::SeekTime(double seekTime, bool preceeding)
       seekTimeCorrected += ptsDiff;
   }
 
+  // Note: At the end of the seek operations, you may notice on Kodi debug log "dropping packets" prints
+  // this happens because we cannot always guarantee a precise seek, for example
+  // with FragmentedSampleReader (MP4 samples/packets)
+  // we need to start feeding the Kodi demuxer with a synchronization sample/packet
+  // but the sync sample (packet) at least for the video track is usually not available for all PTS
+  // so we try choose the sample/package closest to the requested "seek" PTS, causing "dropping packets"
+
   for (auto& stream : m_streams)
   {
     ISampleReader* streamReader{stream->GetReader()};
