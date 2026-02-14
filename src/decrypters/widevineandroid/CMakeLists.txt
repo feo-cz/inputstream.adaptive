@@ -11,6 +11,3 @@ set(HEADERS
 )
 
 add_dir_sources(SOURCES HEADERS)
-
-# JNI android wrapper library
-add_dependency(jni lib/jni)

@@ -1,0 +1,1 @@
+libandroidjni https://github.com/CastagnaIT/libandroidjni/archive/59b68509c1d175db2610afeb2daedcdb5e1a77a4.tar.gz
