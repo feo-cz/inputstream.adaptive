@@ -109,7 +109,7 @@ public:
   uint64_t GetDuration() const override;
   bool IsEncrypted() const override;
   bool GetInformation(kodi::addon::InputstreamInfo& info) override;
-  bool TimeSeek(uint64_t pts, bool preceeding) override;
+  bool TimeSeek(uint64_t pts) override;
   void SetPTSOffset(uint64_t offset) override;
   int64_t GetPTSDiff() const override { return m_ptsDiff; }
   bool GetFragmentInfo(uint64_t& duration) override;

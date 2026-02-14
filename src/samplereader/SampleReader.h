@@ -85,10 +85,9 @@ public:
   /*!
    * \brief Advance the reader to requested PTS.
    * \param pts The PTS to seek for
-   * \param preceeding Allow a backward seek for sample sync
    * \return True if has success, otherwise false.
    */
-  virtual bool TimeSeek(uint64_t pts, bool preceeding) = 0;
+  virtual bool TimeSeek(uint64_t pts) = 0;
 
   virtual void SetPTSOffset(uint64_t offset) = 0;
   virtual int64_t GetPTSDiff() const = 0;

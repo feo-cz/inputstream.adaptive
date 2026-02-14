@@ -413,7 +413,7 @@ bool ADTSReader::GetInformation(kodi::addon::InputstreamInfo& info)
 }
 
 // We assume that m_startpos is the current I-Frame position
-bool ADTSReader::SeekTime(uint64_t timeInTs, bool preceeding)
+bool ADTSReader::SeekTime(uint64_t timeInTs)
 {
   while (m_pts < timeInTs)
     if (!ReadPacket())
