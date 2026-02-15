@@ -301,13 +301,6 @@ DEMUX_PACKET* CInputStreamAdaptive::DemuxRead(void)
   // since it can cause to reopen all streams, reset the check just before
   m_checkCoreReopen = false;
 
-  if (~m_failedSeekTime)
-  {
-    LOG::Log(LOGDEBUG, "Seeking to last failed seek position (%d)", m_failedSeekTime);
-    m_session->SeekTime(static_cast<double>(m_failedSeekTime) * 0.001f);
-    m_failedSeekTime = ~0;
-  }
-
   ISampleReader* sr{nullptr};
 
   if (m_session->GetNextSample(sr))
@@ -425,15 +418,36 @@ void CInputStreamAdaptive::SetVideoResolution(unsigned int width,
 
 bool CInputStreamAdaptive::PosTime(int ms)
 {
+  // Note: VP may require a seek (ms) even beyond the total duration of the media.
+  // Note: When you return false VP will continue to request packets with DemuxRead callbacks
+  // VP should expect to continue playback from the last PTS fed (as if the seek had not occurred)
+  // or you can stop playback by forcibly stop the packet feed from DemuxRead callbacks.
   if (!m_session)
     return false;
 
   LOG::Log(LOGINFO, "PosTime (%d)", ms);
 
-  bool ret = m_session->SeekTime(static_cast<double>(ms) * 0.001f);
-  m_failedSeekTime = ret ? ~0 : ms;
+  const uint64_t currentTimeMs = m_session->GetElapsedTimeMs();
+  bool isError{false};
 
-  return ret;
+  if (m_session->SeekTime(static_cast<double>(ms) * 0.001f, isError))
+    return true;
+
+  if (!isError)
+  {
+    // If for some reason the seek operation fails without errors
+    // try to restore the streams/readers to previous (current) position
+    LOG::Log(LOGWARNING, "PosTime - Seek failed. Attempt to restore previous %llu ms position",
+             currentTimeMs);
+
+    if (m_session->SeekTime(static_cast<double>(currentTimeMs) * 0.001f, isError))
+      return false; // returns false because the initially requested seek was unsuccessful
+  }
+
+  // A problem has occurred or EOS, force stop playback
+  LOG::Log(LOGDEBUG, "PosTime - Cannot seek at %d ms position.", ms);
+  m_session->DeleteStreams();
+  return false;
 }
 
 int CInputStreamAdaptive::GetTotalTime()

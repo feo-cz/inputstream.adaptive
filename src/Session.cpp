@@ -911,10 +911,8 @@ bool SESSION::CSession::GetNextSample(ISampleReader*& sampleReader)
   return false;
 }
 
-bool SESSION::CSession::SeekTime(double seekTime)
+bool SESSION::CSession::SeekTime(double seekTime, bool& isError)
 {
-  bool ret{false};
-
   if (m_streams.empty())
     return false;
 
@@ -949,26 +947,14 @@ bool SESSION::CSession::SeekTime(double seekTime)
 
   seekTime -= chapterTime;
 
-  // don't try to seek past the end of the stream, leave a sensible amount so we can buffer properly
   if (m_adaptiveTree->IsLive())
   {
-    double maxSeek{0};
-    uint64_t curTime;
-    uint64_t maxTime{0};
-    for (auto& stream : m_streams)
-    {
-      if (stream->IsEnabled() && (curTime = stream->m_adStream.getMaxTimeMs()) && curTime > maxTime)
-      {
-        maxTime = curTime;
-      }
-    }
+    double delayPtsSecs =
+        (static_cast<double>(GetMediaDurationMs()) / 1000) - m_adaptiveTree->m_liveDelay;
 
-    maxSeek = (static_cast<double>(maxTime) / 1000) - m_adaptiveTree->m_liveDelay;
-    if (maxSeek < 0)
-      maxSeek = 0;
-
-    if (seekTime > maxSeek)
-      seekTime = maxSeek;
+    // Check to avoid seek into live delay duration portion, to allow an appropriate live buffering
+    if (seekTime > delayPtsSecs)
+      seekTime = delayPtsSecs;
   }
 
   // Helper lambda to check if reader is started,
@@ -1023,12 +1009,18 @@ bool SESSION::CSession::SeekTime(double seekTime)
     const double seekSecs = static_cast<double>(seekTimeCorrected) / STREAM_TIME_BASE;
 
     if (!SeekAdStream(*m_timingStream, seekSecs))
+    {
+      isError = true;
       return false;
+    }
 
+    // Note: The following "running" check will download/read the package right now
+    // allowing you to read the PTS diff from stream reader
     if (!CheckReaderRunning(*m_timingStream))
       return false;
 
     ptsDiff = timingReader->GetPTSDiff();
+
     if (ptsDiff < 0 && seekTimeCorrected + ptsDiff > seekTimeCorrected)
       seekTimeCorrected = 0;
     else
@@ -1063,17 +1055,29 @@ bool SESSION::CSession::SeekTime(double seekTime)
       const double seekSecs{static_cast<double>(seekTimeCorrected - ptsDiff) / STREAM_TIME_BASE};
 
       if (!SeekAdStream(*stream, seekSecs))
-        continue;
+      {
+        if (stream->m_info.GetStreamType() == INPUTSTREAM_TYPE_SUBTITLE)
+          continue; // Subtitles failure should not block the seek operations
+
+        isError = true;
+        return false;
+      }
     }
 
     if (!CheckReaderRunning(*stream))
-      continue;
+      return false;
 
     streamReader->SetPTSDiff(ptsDiff);
 
     if (!streamReader->TimeSeek(seekTimeCorrected))
     {
       streamReader->Reset(true);
+
+      if (stream->m_info.GetStreamType() == INPUTSTREAM_TYPE_SUBTITLE)
+        continue; // Subtitles failure should not block the seek operations
+
+      isError = true;
+      return false;
     }
     else
     {
@@ -1085,16 +1089,20 @@ bool SESSION::CSession::SeekTime(double seekTime)
       LOG::Log(LOGINFO, "Seek time %0.1lf for stream: %i continues at %0.1lf (PTS: %llu)", seekTime,
                streamReader->GetStreamId(), destTime, streamReader->PTS());
 
+      // We replace the seek time PTS initially requested with the PTS of the video sample found
+      // in order to search the audio/subtitle sample packet more accurately.
+      // f.e. in the case of MP4 the video packet has very few sample sync points
+      // while the audio stream usually has many sample sync points, this cause a misalignment
+      // because for the video you will never find an exact sample for the requested PTS.
+      // Then get the nearest PTS found for the video, then align the audio/subtitles with it.
       if (stream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO)
       {
         seekTime = destTime;
         seekTimeCorrected = streamReader->PTS();
       }
-      ret = true;
     }
   }
-
-  return ret;
+  return true;
 }
 
 void SESSION::CSession::OnDemuxRead()
@@ -1105,7 +1113,10 @@ void SESSION::CSession::OnDemuxRead()
 
     if (GetChapterSeekTime() > 0)
     {
-      SeekTime(GetChapterSeekTime());
+      bool isError{false};
+      if (!SeekTime(GetChapterSeekTime(), isError))
+        DeleteStreams();
+
       ResetChapterSeekTime();
     }
   }
@@ -1348,4 +1359,12 @@ PLAYLIST::CAdaptationSet* SESSION::CSession::DetermineDefaultAdpSet(PLAYLIST::CP
   }
 
   return defaultAdp;
+}
+
+uint64_t SESSION::CSession::GetMediaDurationMs()
+{
+  if (!m_timingStream || !m_timingStream->IsEnabled())
+    return 0;
+
+  return m_timingStream->m_adStream.getMaxTimeMs();
 }

@@ -147,12 +147,14 @@ public:
    */
   void OnScreenResChange();
 
-  /*! \brief Seek streams and readers to a specified time
-   *  \param seekTime The seek time in seconds
-   *  \return True if seeking to another chapter or 1+ streams successfully
-   *          seeked, false on error or no streams seeked
+  /*!
+   * \brief Seek streams and readers to a specified time.
+   * \param seekTime The seek time in seconds.
+   * \param isError Cannot seek due to unrecoverable error,
+   *                in this case the method always return false.
+   * \return True if the operation is successful (or seek through chapter/s), otherwise false
    */
-  bool SeekTime(double seekTime);
+  bool SeekTime(double seekTime, bool& isError);
 
   /*! \brief Report if the current content is dynamic/live
    *  \return True if live, false if VOD
@@ -261,6 +263,11 @@ protected:
    * \return The AdaptationSet, or nullptr if unhandled
    */
   PLAYLIST::CAdaptationSet* DetermineDefaultAdpSet(PLAYLIST::CPeriod* period);
+
+  /*!
+   * \brief Get the media duration in ms, based on segments.
+   */
+  uint64_t GetMediaDurationMs();
 
 private:
   DRM::CDRMEngine m_drmEngine;

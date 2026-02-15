@@ -313,7 +313,9 @@ bool CFragmentedSampleReader::TimeSeek(uint64_t pts)
   AP4_Result result = m_lReader->SeekSample(m_track->GetId(), seekPos, sampleIndex);
   if (AP4_FAILED(result))
   {
-    LOG::LogF(LOGERROR, "Cannot seek track id %u, error %i", m_track->GetId(), result);
+    if (result != AP4_ERROR_EOS)
+      LOG::LogF(LOGERROR, "Cannot seek track id %u, error %i", m_track->GetId(), result);
+
     return false;
   }
 
