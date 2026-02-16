@@ -1825,8 +1825,17 @@ void adaptive::CDashTree::GenerateTemplatedSegments(PLAYLIST::CSegmentTemplate& 
 
   const uint64_t timeEnd = wndEnd * segTimescale / 1000;
 
-  // Create segments within time window
-  while (time + segDuration <= timeEnd && segNumber <= segNumberEnd)
+  // Create segments within time window,
+  // a segment that begins within the period and partially
+  // extends beyond the period boundaries must still be generated
+  //! @todo: currently when a segment extends beyond the period boundaries
+  //! it will exist also on next period, this will cause duplicate playback of the content (you can see also twice downloads)
+  //! in theory this should be fixed in the sample reader, where the sample packets of a segment
+  //! (at the beginning or end) must be filtered based on the duration of the period.
+  //! In other words, finish playing a segment early by skipping the samples that fall outside the period,
+  //! while in the next period, start playing the segment from a sample with a specific PTS,
+  //! thus skipping part of the initial samples.
+  while (time < timeEnd && segNumber <= segNumberEnd)
   {
     CSegment seg;
     seg.startPTS_ = time;

@@ -1135,25 +1135,21 @@ bool adaptive::AdaptiveStream::seek(uint64_t const pos, bool& isEos)
 
 uint64_t adaptive::AdaptiveStream::getMaxTimeMs()
 {
-  if (current_rep_->Timeline().IsEmpty())
+  const CSegment* lastSeg = current_rep_->Timeline().GetBack();
+  if (!lastSeg)
     return 0;
 
-  uint64_t duration{0};
-  if (current_rep_->Timeline().GetSize() > 1)
+  const uint64_t maxPts =
+      (lastSeg->m_endPts * current_rep_->timescale_ext_) / current_rep_->timescale_int_;
+
+  if (absolutePTSOffset_ > maxPts)
   {
-    duration =
-        current_rep_->Timeline().Get(current_rep_->Timeline().GetSize() - 1)->startPTS_ -
-        current_rep_->Timeline().Get(current_rep_->Timeline().GetSize() - 2)->startPTS_;
+    LOG::LogF(LOGERROR, "Absolute PTS offset (%llu) exceeds max PTS (%llu)", absolutePTSOffset_,
+              maxPts);
+    return 0;
   }
 
-  uint64_t timeExt = ((current_rep_->Timeline()
-                           .Get(current_rep_->Timeline().GetSize() - 1)
-                           ->startPTS_ +
-                       duration) *
-                      current_rep_->timescale_ext_) /
-                     current_rep_->timescale_int_;
-
-  return (timeExt - absolutePTSOffset_) / 1000;
+  return (maxPts - absolutePTSOffset_) / 1000;
 }
 
 void adaptive::AdaptiveStream::Disable()

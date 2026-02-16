@@ -113,5 +113,5 @@ bool CTSSampleReader::TimeSeek(uint64_t pts)
     m_started = true;
     return AP4_SUCCEEDED(ReadSample());
   }
-  return AP4_ERROR_EOS;
+  return false; // EOS
 }
