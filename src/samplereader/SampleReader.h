@@ -91,7 +91,6 @@ public:
 
   virtual void SetPTSOffset(uint64_t offset) = 0;
   virtual int64_t GetPTSDiff() const = 0;
-  virtual void SetPTSDiff(uint64_t pts) {}
 
   /*!
    * \brief Get the DTS or PTS of current packet, in manifest timing format
