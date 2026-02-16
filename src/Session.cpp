@@ -1067,8 +1067,6 @@ bool SESSION::CSession::SeekTime(double seekTime, bool& isError)
     if (!CheckReaderRunning(*stream))
       return false;
 
-    streamReader->SetPTSDiff(ptsDiff);
-
     if (!streamReader->TimeSeek(seekTimeCorrected))
     {
       streamReader->Reset(true);
