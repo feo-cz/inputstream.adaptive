@@ -1,3 +1,9 @@
+v22.3.8 (2026-02-16)
+- Add new libandroidjni dependency (and removed custom JNI code)
+- Video seek can be more fast with MP4 streaming contents
+- Fix possible video seek stall/freeze near the end of playback
+- Fix possible video loop at the end of playback
+
 v22.3.7 (2026-01-24)
 - Add new ignore_fmp4_defaultkid on manifest_config property (see wiki)
 - Speedup video seeking, now can reuse existing buffer
