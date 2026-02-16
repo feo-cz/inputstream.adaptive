@@ -22,12 +22,12 @@
 #include <chrono>
 #include <thread>
 
-#include <jni/src/MediaDrm.h>
+#include <androidjni/MediaDrm.h>
 
 using namespace UTILS;
 
 CWVCencSingleSampleDecrypterA::CWVCencSingleSampleDecrypterA(
-    IWVCdmAdapter<jni::CJNIMediaDrm>* cdmAdapter,
+    IWVCdmAdapter<CJNIMediaDrm>* cdmAdapter,
     const std::vector<uint8_t>& pssh,
     const std::vector<uint8_t>& defaultKeyId)
   : m_cdmAdapter(cdmAdapter),
@@ -202,7 +202,7 @@ bool CWVCencSingleSampleDecrypterA::ProvisionRequest()
 {
   LOG::Log(LOGWARNING, "Provision data request (MediaDrm instance: %p)", m_cdmAdapter->GetCDM().get());
 
-  jni::CJNIMediaDrmProvisionRequest request = m_cdmAdapter->GetCDM()->getProvisionRequest();
+  CJNIMediaDrmProvisionRequest request = m_cdmAdapter->GetCDM()->getProvisionRequest();
   if (xbmc_jnienv()->ExceptionCheck())
   {
     LOG::LogF(LOGERROR, "getProvisionRequest has raised an exception");
@@ -253,8 +253,8 @@ bool CWVCencSingleSampleDecrypterA::ProvisionRequest()
 
 bool CWVCencSingleSampleDecrypterA::GetKeyRequest(std::vector<uint8_t>& keyRequestData)
 {
-  jni::CJNIMediaDrmKeyRequest keyRequest = m_cdmAdapter->GetCDM()->getKeyRequest(
-      m_sessionIdVec, m_pssh, "video/mp4", jni::CJNIMediaDrm::KEY_TYPE_STREAMING, m_optParams);
+  CJNIMediaDrmKeyRequest keyRequest = m_cdmAdapter->GetCDM()->getKeyRequest(
+      m_sessionIdVec, m_pssh, "video/mp4", CJNIMediaDrm::KEY_TYPE_STREAMING, m_optParams);
 
   if (xbmc_jnienv()->ExceptionCheck())
   {
@@ -449,7 +449,7 @@ bool CWVCencSingleSampleDecrypterA::SendSessionMessage(const std::vector<uint8_t
   }
 
   m_keySetId = m_cdmAdapter->GetCDM()->provideKeyResponse(
-      m_sessionIdVec, std::vector<char>(respData.data(), respData.data() + respData.size()));
+      m_sessionIdVec, std::vector<uint8_t>(respData.data(), respData.data() + respData.size()));
   if (xbmc_jnienv()->ExceptionCheck())
   {
     LOG::LogF(LOGERROR, "MediaDrm: provideKeyResponse has raised an exception");

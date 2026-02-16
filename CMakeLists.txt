@@ -19,6 +19,11 @@ find_package(pugixml REQUIRED)
 find_package(Bento4 REQUIRED)
 find_package(NlohmannJSON REQUIRED)
 
+# JNI android wrapper library
+if(CORE_SYSTEM_NAME STREQUAL android)
+  find_package(LibAndroidJNI REQUIRED)
+endif()
+
 if(CMAKE_CXX_COMPILER MATCHES "arm-webos")
   add_compile_definitions(TARGET_WEBOS=1)
 endif()
@@ -57,6 +62,7 @@ list(APPEND ADP_HEADERS ${HEADERS_LIST})
 include_directories(${INCLUDES}
                     ${KODI_INCLUDE_DIR}/.. # Hack way with "/..", need bigger Kodi cmake rework to match right include ways (becomes done in future)
                     ${NLOHMANNJSON_INCLUDE_DIRS}
+                    $<$<STREQUAL:${CORE_SYSTEM_NAME},android>:${LIBANDROIDJNI_INCLUDE_DIRS}>
                     src/
 )
 
@@ -74,6 +80,10 @@ list(APPEND DEPLIBS ${PUGIXML_LIBRARIES}
                     mpegts
                     webm_parser
 )
+
+if(CORE_SYSTEM_NAME STREQUAL android)
+  list(APPEND DEPLIBS ${LIBANDROIDJNI_LIBRARIES})
+endif()
 
 # Add additional dependencies
 get_property(DEPS_FOLDERS_LIST GLOBAL PROPERTY GlobalDepsFoldersList)

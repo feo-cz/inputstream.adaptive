@@ -15,16 +15,13 @@
 #include <map>
 #include <string_view>
 
-namespace jni
-{
 class CJNIMediaDrm;
-}
 
 class ATTR_DLL_LOCAL CWVCencSingleSampleDecrypterA : public Adaptive_CencSingleSampleDecrypter,
                                                      public IWVObserver
 {
 public:
-  CWVCencSingleSampleDecrypterA(IWVCdmAdapter<jni::CJNIMediaDrm>* cdmAdapter,
+  CWVCencSingleSampleDecrypterA(IWVCdmAdapter<CJNIMediaDrm>* cdmAdapter,
                                 const std::vector<uint8_t>& pssh,
                                 const std::vector<uint8_t>& defaultKeyId);
   virtual ~CWVCencSingleSampleDecrypterA();
@@ -97,7 +94,7 @@ private:
                                       bool convertAnnexB,
                                       std::vector<SubsampleEntry>& rebuiltSubs);
 
-  IWVCdmAdapter<jni::CJNIMediaDrm>* m_cdmAdapter;
+  IWVCdmAdapter<CJNIMediaDrm>* m_cdmAdapter;
 
   std::vector<uint8_t> m_pssh;
   std::vector<uint8_t> m_initialPssh;
@@ -105,7 +102,7 @@ private:
 
   std::string m_sessionId;
   std::vector<char> m_sessionIdVec;
-  std::vector<char> m_keySetId;
+  std::vector<uint8_t> m_keySetId;
   std::vector<uint8_t> m_keyRequestData;
 
   bool m_isProvisioningRequested;

@@ -16,8 +16,8 @@
 #include "utils/GUIUtils.h"
 #include "utils/log.h"
 
-#include <jni/src/ClassLoader.h>
-#include <jni/src/UUID.h>
+#include <androidjni/ClassLoader.h>
+#include <androidjni/UUID.h>
 
 using namespace DRM;
 using namespace UTILS;
@@ -138,7 +138,7 @@ bool CWVDecrypterA::Initialize()
 
   //JNIEnv* env = static_cast<JNIEnv*>(m_androidSystem.GetJNIEnv());
   CJNIBase::SetSDKVersion(m_androidSystem.GetSDKVersion());
-  CJNIBase::SetBaseClassName(m_androidSystem.GetClassName());
+  //CJNIBase::SetBaseClassName(m_androidSystem.GetClassName()); ---> unused
   LOG::Log(LOGDEBUG, "WVDecrypter JNI, SDK version: %d", m_androidSystem.GetSDKVersion());
 
   const char* apkEnv = getenv("XBMC_ANDROID_APK");
@@ -153,7 +153,7 @@ bool CWVDecrypterA::Initialize()
 
   std::string apkPath = apkEnv;
 
-  m_classLoader = std::make_shared<jni::CJNIClassLoader>(apkEnv);
+  m_classLoader = std::make_shared<CJNIClassLoader>(apkEnv);
   if (xbmc_jnienv()->ExceptionCheck())
   {
     LOG::LogF(LOGERROR, "Failed to create ClassLoader");

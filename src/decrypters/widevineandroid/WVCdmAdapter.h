@@ -11,9 +11,9 @@
 #include "decrypters/HelperWv.h"
 #include "decrypters/IDecrypter.h"
 
-#include <jni/src/ClassLoader.h>
-#include <jni/src/MediaDrm.h>
-#include <jni/src/MediaDrmOnEventListener.h>
+#include <androidjni/ClassLoader.h>
+#include <androidjni/MediaDrm.h>
+#include <androidjni/MediaDrmOnEventListener.h>
 
 #ifdef INPUTSTREAM_TEST_BUILD
 #include "test/KodiStubs.h"
@@ -32,7 +32,7 @@ public:
   CMediaDrmOnEventCallback() = default;
   virtual ~CMediaDrmOnEventCallback() = default;
 
-  virtual void OnMediaDrmEvent(const jni::CJNIMediaDrm& mediaDrm,
+  virtual void OnMediaDrmEvent(const CJNIMediaDrm& mediaDrm,
                                const std::vector<char>& sessionId,
                                int event,
                                int extra,
@@ -45,14 +45,14 @@ public:
  *        of CJNIMediaDrmOnEventListener need to access to the global
  *        xbmc_jnienv method immediately.
  */
-class CMediaDrmOnEventListener : public jni::CJNIMediaDrmOnEventListener
+class CMediaDrmOnEventListener : public CJNIMediaDrmOnEventListener
 {
 public:
   CMediaDrmOnEventListener(CMediaDrmOnEventCallback* decrypterEventCallback,
-                           std::shared_ptr<jni::CJNIClassLoader> classLoader);
+                           std::shared_ptr<CJNIClassLoader> classLoader);
   virtual ~CMediaDrmOnEventListener() = default;
 
-  virtual void onEvent(const jni::CJNIMediaDrm& mediaDrm,
+  virtual void onEvent(const CJNIMediaDrm& mediaDrm,
                        const std::vector<char>& sessionId,
                        int event,
                        int extra,
@@ -63,18 +63,18 @@ private:
 };
 
 class ATTR_DLL_LOCAL CWVCdmAdapterA : public CMediaDrmOnEventCallback,
-                                      public IWVCdmAdapter<jni::CJNIMediaDrm>
+                                      public IWVCdmAdapter<CJNIMediaDrm>
 {
 public:
   CWVCdmAdapterA(std::string_view keySystem,
                  const DRM::Config& config,
-                 std::shared_ptr<jni::CJNIClassLoader> jniClassLoader,
+                 std::shared_ptr<CJNIClassLoader> jniClassLoader,
                  CWVDecrypterA* host);
   ~CWVCdmAdapterA();
 
   // IWVCdmAdapter interface methods
 
-  std::shared_ptr<jni::CJNIMediaDrm> GetCDM() override { return m_cdmAdapter; }
+  std::shared_ptr<CJNIMediaDrm> GetCDM() override { return m_cdmAdapter; }
   const DRM::Config& GetConfig() override;
   std::string_view GetKeySystem() override;
   std::string_view GetLibraryPath() const override;
@@ -90,14 +90,14 @@ private:
   void LoadServiceCertificate();
 
   // CMediaDrmOnEventCallback interface methods
-  void OnMediaDrmEvent(const jni::CJNIMediaDrm& mediaDrm,
+  void OnMediaDrmEvent(const CJNIMediaDrm& mediaDrm,
                        const std::vector<char>& sessionId,
                        int event,
                        int extra,
                        const std::vector<char>& data) override;
 
   DRM::Config m_config;
-  std::shared_ptr<jni::CJNIMediaDrm> m_cdmAdapter;
+  std::shared_ptr<CJNIMediaDrm> m_cdmAdapter;
   std::list<IWVObserver*> m_observers;
   std::mutex m_observer_mutex;
 

@@ -20,10 +20,8 @@
 #include <kodi/platform/android/System.h>
 
 class CWVCdmAdapterA;
-namespace jni
-{
 class CJNIClassLoader;
-}
+
 
 class ATTR_DLL_LOCAL CWVDecrypterA : public DRM::IDecrypter
 {
@@ -92,7 +90,7 @@ private:
   std::string m_libraryPath;
   kodi::platform::CInterfaceAndroidSystem m_androidSystem;
   std::shared_ptr<CWVCdmAdapterA> m_WVCdmAdapter;
-  std::shared_ptr<jni::CJNIClassLoader> m_classLoader;
+  std::shared_ptr<CJNIClassLoader> m_classLoader;
   std::string m_retvalHelper;
 #ifdef DRMTHREAD
   std::mutex m_jniMutex;

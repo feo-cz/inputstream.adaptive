@@ -14,20 +14,20 @@
 #include "utils/FileUtils.h"
 #include "utils/log.h"
 
-#include <jni/src/UUID.h>
+#include <androidjni/UUID.h>
 
 using namespace DRM;
 using namespace UTILS;
 
 CMediaDrmOnEventListener::CMediaDrmOnEventListener(
     CMediaDrmOnEventCallback* decrypterEventCallback,
-    std::shared_ptr<jni::CJNIClassLoader> classLoader)
-  : jni::CJNIMediaDrmOnEventListener(classLoader.get())
+    std::shared_ptr<CJNIClassLoader> classLoader)
+  : CJNIMediaDrmOnEventListener(*classLoader)
 {
   m_decrypterEventCallback = decrypterEventCallback;
 }
 
-void CMediaDrmOnEventListener::onEvent(const jni::CJNIMediaDrm& mediaDrm,
+void CMediaDrmOnEventListener::onEvent(const CJNIMediaDrm& mediaDrm,
                                        const std::vector<char>& sessionId,
                                        int event,
                                        int extra,
@@ -38,7 +38,7 @@ void CMediaDrmOnEventListener::onEvent(const jni::CJNIMediaDrm& mediaDrm,
 
 CWVCdmAdapterA::CWVCdmAdapterA(std::string_view keySystem,
                                const DRM::Config& config,
-                               std::shared_ptr<jni::CJNIClassLoader> jniClassLoader,
+                               std::shared_ptr<CJNIClassLoader> jniClassLoader,
                                CWVDecrypterA* host)
   : m_keySystem(keySystem), m_config(config), m_host(host)
 {
@@ -69,8 +69,8 @@ CWVCdmAdapterA::CWVCdmAdapterA(std::string_view keySystem,
   for (unsigned int i(8); i < 16; ++i)
     leastSigBits = (leastSigBits << 8) | systemUuid[i];
 
-  jni::CJNIUUID uuid(mostSigBits, leastSigBits);
-  m_cdmAdapter = std::make_shared<jni::CJNIMediaDrm>(uuid);
+  CJNIUUID uuid(mostSigBits, leastSigBits);
+  m_cdmAdapter = std::make_shared<CJNIMediaDrm>(uuid);
   if (xbmc_jnienv()->ExceptionCheck() || !*m_cdmAdapter.get())
   {
     LOG::LogF(LOGERROR, "Unable to initialize MediaDrm");
@@ -175,7 +175,7 @@ void CWVCdmAdapterA::LoadServiceCertificate()
   }
 }
 
-void CWVCdmAdapterA::OnMediaDrmEvent(const jni::CJNIMediaDrm& mediaDrm,
+void CWVCdmAdapterA::OnMediaDrmEvent(const CJNIMediaDrm& mediaDrm,
                                      const std::vector<char>& sessionId,
                                      int event,
                                      int extra,
@@ -184,7 +184,7 @@ void CWVCdmAdapterA::OnMediaDrmEvent(const jni::CJNIMediaDrm& mediaDrm,
   LOG::Log(LOGDEBUG, "MediaDrm event: type %i arrived", event);
 
   CdmMessageType type;
-  if (event == jni::CJNIMediaDrm::EVENT_KEY_REQUIRED)
+  if (event == CJNIMediaDrm::EVENT_KEY_REQUIRED)
     type = CdmMessageType::EVENT_KEY_REQUIRED;
   else
     return;
