@@ -299,10 +299,10 @@ msgctxt "#30234"
 msgid "Switch by segments"
 msgstr "Cambiar por segmentos"
 
-#. Stand for stream segments, referred to setting with label #30234
+#. Stand for video stream segments, referred to setting with label #30234
 msgctxt "#30235"
-msgid "Segments"
-msgstr "Segmentos"
+msgid "Video segments (set 0 to disable)"
+msgstr ""
 
 #. Category group title
 msgctxt "#30236"
@@ -388,6 +388,15 @@ msgstr "Ocurrió un problema al inicializar el flujo."
 msgctxt "#30309"
 msgid "No audio/video stream can be played."
 msgstr "No se puede reproducir ningún flujo audio/vídeo."
+
+#. Stand for audio stream segments, referred to setting with label #30234
+msgctxt "#30350"
+msgid "Audio segments (set 0 to disable)"
+msgstr ""
+
+#~ msgctxt "#30235"
+#~ msgid "Segments"
+#~ msgstr "Segmentos"
 
 #~ msgctxt "#30232"
 #~ msgid "Video stream {codec} {quality}"
