@@ -63,7 +63,8 @@ public:
   bool IsIgnoreScreenResChange() const;
 
   std::string GetChooserTestMode() const;
-  int GetChooserTestSegs() const;
+  int GetChooserTestSegsVideo() const;
+  int GetChooserTestSegsAudio() const;
 
   // Expert settings
 

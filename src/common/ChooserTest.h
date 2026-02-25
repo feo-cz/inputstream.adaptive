@@ -8,7 +8,10 @@
 
 #pragma once
 
+#include "AdaptiveUtils.h"
 #include "Chooser.h"
+
+#include <unordered_map>
 
 namespace CHOOSER
 {
@@ -39,8 +42,9 @@ namespace CHOOSER
 
     TestMode m_testMode{TestMode::NONE};
     StreamSelection m_streamSelectionMode = StreamSelection::AUTO;
-    int m_segmentsElapsed{1};
-    int m_segmentsLimit{1};
+
+    std::unordered_map<PLAYLIST::StreamType, int> m_segmentsCountByType;
+    std::unordered_map<PLAYLIST::StreamType, int> m_segmentsElapsedByType;
   };
 
 } // namespace CHOOSER

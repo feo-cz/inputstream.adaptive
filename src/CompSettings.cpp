@@ -112,9 +112,14 @@ std::string ADP::SETTINGS::CCompSettings::GetChooserTestMode() const
   return kodi::addon::GetSettingString("adaptivestream.test.mode");
 }
 
-int ADP::SETTINGS::CCompSettings::GetChooserTestSegs() const
+int ADP::SETTINGS::CCompSettings::GetChooserTestSegsVideo() const
 {
-  return kodi::addon::GetSettingInt("adaptivestream.test.segments");
+  return kodi::addon::GetSettingInt("adaptivestream.test.segments.video");
+}
+
+int ADP::SETTINGS::CCompSettings::GetChooserTestSegsAudio() const
+{
+  return kodi::addon::GetSettingInt("adaptivestream.test.segments.audio");
 }
 
 int ADP::SETTINGS::CCompSettings::GetMediaType() const
