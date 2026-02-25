@@ -49,6 +49,8 @@ protected:
 
   int m_screenWidth{0};
   int m_screenHeight{0};
+  int m_screenLastWidth{0};
+  int m_screenLastHeight{0};
   std::optional<std::chrono::steady_clock::time_point> m_screenResLastUpdate;
 
   std::pair<int, int> m_screenResMax; // Max resolution for non-protected video content
