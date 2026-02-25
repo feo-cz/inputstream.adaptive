@@ -299,10 +299,10 @@ msgctxt "#30234"
 msgid "Switch by segments"
 msgstr "세그먼트로 전환"
 
-#. Stand for stream segments, referred to setting with label #30234
+#. Stand for video stream segments, referred to setting with label #30234
 msgctxt "#30235"
-msgid "Segments"
-msgstr "세그먼트"
+msgid "Video segments (set 0 to disable)"
+msgstr ""
 
 #. Category group title
 msgctxt "#30236"
@@ -388,6 +388,15 @@ msgstr "스트림 초기화에 문제가 있습니다."
 msgctxt "#30309"
 msgid "No audio/video stream can be played."
 msgstr "오디오/비디오 스트림을 재생할 수 없습니다."
+
+#. Stand for audio stream segments, referred to setting with label #30234
+msgctxt "#30350"
+msgid "Audio segments (set 0 to disable)"
+msgstr ""
+
+#~ msgctxt "#30235"
+#~ msgid "Segments"
+#~ msgstr "세그먼트"
 
 #~ msgctxt "#30232"
 #~ msgid "Video stream {codec} {quality}"

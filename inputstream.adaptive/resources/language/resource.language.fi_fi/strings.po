@@ -299,10 +299,10 @@ msgctxt "#30234"
 msgid "Switch by segments"
 msgstr "Vaihda segmenttien perusteella"
 
-#. Stand for stream segments, referred to setting with label #30234
+#. Stand for video stream segments, referred to setting with label #30234
 msgctxt "#30235"
-msgid "Segments"
-msgstr "Segmentit"
+msgid "Video segments (set 0 to disable)"
+msgstr ""
 
 #. Category group title
 msgctxt "#30236"
@@ -388,6 +388,15 @@ msgstr ""
 msgctxt "#30309"
 msgid "No audio/video stream can be played."
 msgstr ""
+
+#. Stand for audio stream segments, referred to setting with label #30234
+msgctxt "#30350"
+msgid "Audio segments (set 0 to disable)"
+msgstr ""
+
+#~ msgctxt "#30235"
+#~ msgid "Segments"
+#~ msgstr "Segmentit"
 
 #~ msgctxt "#30232"
 #~ msgid "Video stream {codec} {quality}"

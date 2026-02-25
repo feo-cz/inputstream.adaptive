@@ -10,8 +10,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=4; plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || "
-"n%100==4 ? 2 : 3;\n"
+"Plural-Forms: nplurals=4; plural=n%100==1 ? 0 : n%100==2 ? 1 : n%100==3 || n%100==4 ? 2 : 3;\n"
 
 msgctxt "Addon Summary"
 msgid "InputStream client for adaptive streams"
@@ -41,13 +40,13 @@ msgctxt "#30103"
 msgid "Establishes the bandwidth limit not to be exceeded with the audio / video streams. Set to 0 to disable it."
 msgstr ""
 
-#empty strings from id 30104 to 30109
+# empty strings from id 30104 to 30109
 #. Maximum video resolution non-protected videos
 msgctxt "#30110"
 msgid "Maximum resolution"
 msgstr ""
 
-#empty string with id 30111
+# empty string with id 30111
 #. Type of media streams that will be handled for the playback
 msgctxt "#30112"
 msgid "Type of media streams played"
@@ -58,7 +57,7 @@ msgctxt "#30113"
 msgid "Maximum resolution for DRM videos"
 msgstr ""
 
-#empty string with id 30114
+# empty string with id 30114
 # Do not respect display resolution when selecting streams
 msgctxt "#30115"
 msgid "Ignore screen resolution"
@@ -78,13 +77,13 @@ msgctxt "#30118"
 msgid "Defines which type of streams to make available for manual selection on Kodi OSD settings during playback."
 msgstr ""
 
-#empty string with id 30119
+# empty string with id 30119
 #. Category title
 msgctxt "#30120"
 msgid "Expert"
 msgstr ""
 
-#empty string with id 30121
+# empty string with id 30121
 msgctxt "#30122"
 msgid "Disable secure decoder"
 msgstr ""
@@ -94,7 +93,7 @@ msgctxt "#30123"
 msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it. This setting may be overridden by the video add-on used."
 msgstr ""
 
-#empty strings from id 30124 to 30155
+# empty strings from id 30124 to 30155
 #. Item list value of setting with label #30117
 msgctxt "#30156"
 msgid "Audio / Video streams"
@@ -130,7 +129,7 @@ msgctxt "#30162"
 msgid "Adaptive stream"
 msgstr ""
 
-#empty strings from id 30163 to 30165
+# empty strings from id 30163 to 30165
 #. Category group title
 msgctxt "#30166"
 msgid "DRM Widevine"
@@ -202,7 +201,7 @@ msgctxt "#30180"
 msgid "Test"
 msgstr ""
 
-#empty strings reserved for "stream selection types" from id 30181 to 30190
+# empty strings reserved for "stream selection types" from id 30181 to 30190
 #. Assured buffer length duration (seconds)
 msgctxt "#30200"
 msgid "Assured buffer duration (sec)"
@@ -228,7 +227,7 @@ msgctxt "#30204"
 msgid "Decrypter path"
 msgstr ""
 
-#empty strings from id 30205 to 30208
+# empty strings from id 30205 to 30208
 #. Item list value of setting with label #30172
 msgctxt "#30209"
 msgid "Disabled"
@@ -274,9 +273,8 @@ msgctxt "#30217"
 msgid "4K"
 msgstr ""
 
-#empty strings reserved for resolution values of id #30110, #30113, from id 30217 to 30230
+# empty strings reserved for resolution values of id #30110, #30113, from id 30217 to 30230
 #. Dialog window to select the video stream
-#: src/common/RepresentationChooserAskQuality.cpp
 msgctxt "#30231"
 msgid "Select video stream"
 msgstr ""
@@ -284,7 +282,6 @@ msgstr ""
 #. Description of each list item in #30231 dialog window
 #. Do not translate placeholders: {codec} {quality} {hdr-type}
 #. Use of double graphes e.g. {whatyouwant{hdr-type}whatyouwant} allows you to add additional text printed only when a value is present
-#: src/common/RepresentationChooserAskQuality.cpp
 msgctxt "#30232"
 msgid "Video stream {codec}{ [{hdr-type}]} {quality}"
 msgstr ""
@@ -299,9 +296,9 @@ msgctxt "#30234"
 msgid "Switch by segments"
 msgstr ""
 
-#. Stand for stream segments, referred to setting with label #30234
+#. Stand for video stream segments, referred to setting with label #30234
 msgctxt "#30235"
-msgid "Segments"
+msgid "Video segments (set 0 to disable)"
 msgstr ""
 
 #. Category group title
@@ -344,7 +341,7 @@ msgctxt "#30243"
 msgid "Verbose debugging can be useful for debugging components, but in some cases it may expose sensitive information in the log."
 msgstr ""
 
-#empty strings reserved for settings from id 30244 to 30299
+# empty strings reserved for settings from id 30244 to 30299
 #. A GUI window title, "InputStream Adaptive" its the add-on name, not to be translated
 msgctxt "#30300"
 msgid "InputStream Adaptive error"
@@ -387,4 +384,9 @@ msgstr ""
 
 msgctxt "#30309"
 msgid "No audio/video stream can be played."
+msgstr ""
+
+#. Stand for audio stream segments, referred to setting with label #30234
+msgctxt "#30350"
+msgid "Audio segments (set 0 to disable)"
 msgstr ""
