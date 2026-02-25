@@ -184,10 +184,12 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
   if (!stream)
     return false;
 
+  const bool isStreamChanged{stream->m_adStream.StreamChanged()};
+
   if (stream->IsEnabled())
   {
     // Stream quality changed (by "adaptive" streaming, not OSD)
-    if (stream->m_adStream.StreamChanged())
+    if (isStreamChanged)
     {
       stream->Reset();
       stream->m_adStream.Reset();
@@ -221,7 +223,7 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
     }
   }
 
-  if (m_checkCoreReopen)
+  if (m_checkCoreReopen && !isStreamChanged)
   {
     LOG::Log(LOGDEBUG, "OpenStream(%d): The stream has already been opened", streamid);
     return false;

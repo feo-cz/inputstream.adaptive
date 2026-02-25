@@ -91,6 +91,9 @@ void CRepresentationChooserDefault::SetSecureSession(const bool isSecureSession)
 
 void CRepresentationChooserDefault::PostInit()
 {
+  m_screenLastWidth = m_screenCurrentWidth;
+  m_screenLastHeight = m_screenCurrentHeight;
+
   RefreshResolution();
 
   if (!m_bandwidthInitAuto)
@@ -116,7 +119,7 @@ void CRepresentationChooserDefault::PostInit()
 
 void CRepresentationChooserDefault::CheckResolution()
 {
-  if (m_screenWidth != m_screenCurrentWidth || m_screenHeight != m_screenCurrentHeight)
+  if (m_screenLastWidth != m_screenCurrentWidth || m_screenLastHeight != m_screenCurrentHeight)
   {
     // Update the screen resolution values only after n seconds
     // to prevent too fast update when Kodi window will be resized
@@ -128,6 +131,8 @@ void CRepresentationChooserDefault::CheckResolution()
       return;
     }
     RefreshResolution();
+    m_screenLastWidth = m_screenCurrentWidth;
+    m_screenLastHeight = m_screenCurrentHeight;
     m_screenResLastUpdate = std::chrono::steady_clock::now();
     LOG::Log(LOGDEBUG, "[Repr. chooser] Screen resolution has changed: %ix%i", m_screenCurrentWidth,
              m_screenCurrentHeight);
