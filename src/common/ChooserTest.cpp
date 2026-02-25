@@ -47,8 +47,11 @@ void CRepresentationChooserTest::Initialize(const ADP::KODI_PROPS::ChooserProps&
 
   if (m_testMode == TestMode::SWITCH_SEGMENTS)
   {
-    m_segmentsLimit = settings.GetChooserTestSegs();
-    logDetails = kodi::tools::StringUtils::Format("Segments: %i", m_segmentsLimit);
+    m_segmentsCountByType[StreamType::VIDEO] = settings.GetChooserTestSegsVideo();
+    m_segmentsCountByType[StreamType::AUDIO] = settings.GetChooserTestSegsAudio();
+    logDetails = kodi::tools::StringUtils::Format(
+        "Segments count video: %i, Segments count audio: %i",
+        m_segmentsCountByType[StreamType::VIDEO], m_segmentsCountByType[StreamType::AUDIO]);
   }
 
   LOG::Log(LOGDEBUG,
@@ -66,13 +69,15 @@ PLAYLIST::CRepresentation* CRepresentationChooserTest::GetNextRepresentation(
 {
   CRepresentationSelector selector(m_screenCurrentWidth, m_screenCurrentHeight);
   CRepresentation* nextRep{currentRep};
+  const StreamType streamType{adp->GetStreamType()};
 
   if (!currentRep) // Startup or new period
   {
-    m_segmentsElapsed = 1;
-
     if (m_testMode == TestMode::SWITCH_SEGMENTS)
     {
+      if (streamType == StreamType::VIDEO || streamType == StreamType::AUDIO)
+        m_segmentsElapsedByType[streamType] = 1;
+
       nextRep = selector.Lowest(adp);
     }
     else
@@ -84,22 +89,28 @@ PLAYLIST::CRepresentation* CRepresentationChooserTest::GetNextRepresentation(
   {
     if (m_testMode == TestMode::SWITCH_SEGMENTS)
     {
-      if (adp->GetStreamType() != StreamType::VIDEO)
+      if (streamType != StreamType::VIDEO && streamType != StreamType::AUDIO)
         return currentRep;
 
-      m_segmentsElapsed += 1;
-      if (m_segmentsElapsed > m_segmentsLimit)
+      const int maxSegCount{m_segmentsCountByType[streamType]};
+
+      if (maxSegCount == 0)
+        return currentRep;
+
+      if (m_segmentsElapsedByType[streamType] == maxSegCount)
       {
-        m_segmentsElapsed = 1;
+        m_segmentsElapsedByType[streamType] = 1;
         nextRep = selector.Higher(adp, currentRep);
         // If there are no next representations, start again from the lowest
         if (nextRep == currentRep)
           nextRep = selector.Lowest(adp);
       }
+      else
+        ++m_segmentsElapsedByType[streamType];
     }
   }
 
-  if (adp->GetStreamType() == StreamType::VIDEO && currentRep)
+  if (currentRep && (streamType == StreamType::VIDEO || streamType == StreamType::AUDIO))
     LogDetails(currentRep, nextRep);
 
   return nextRep;
