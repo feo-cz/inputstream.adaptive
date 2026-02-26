@@ -1,3 +1,8 @@
+v22.3.9 (2026-02-26)
+- Fix problem detecting resolution change (adaptive stream selection)
+- Fix audio deadlock during quality change
+- Kodi InputStream API update (min version 2.0.3)
+
 v22.3.8 (2026-02-16)
 - Add new libandroidjni dependency (and removed custom JNI code)
 - Video seek can be more fast with MP4 streaming contents
