@@ -27,11 +27,35 @@ namespace DRM
 struct Config;
 }
 
+//! @todo: cleanup to extend the namespace to the other things
+namespace DRM
+{
+enum class KeyStatus
+{
+  UNKNOWN,
+  USABLE,
+  EXPIRED,
+  OUTPUT_NOT_ALLOWED,
+  PENDING,
+  INTERNAL_ERROR,
+  USABLE_IN_FUTURE
+};
+
+struct KeyInfo
+{
+  bool operator==(KeyInfo const& other) const { return kid == other.kid; };
+  std::vector<uint8_t> kid;
+  KeyStatus status{KeyStatus::UNKNOWN};
+};
+
+const char* KeyStatusToStr(const KeyStatus status);
+
+} // namespace DRM
+
 enum class CdmMessageType
 {
   UNKNOWN,
   SESSION_MESSAGE,
-  SESSION_KEY_CHANGE,
   EVENT_KEY_REQUIRED,
 };
 
@@ -48,6 +72,8 @@ class ATTR_DLL_LOCAL IWVObserver // Observer called by IWVSubject interface
 public:
   virtual ~IWVObserver() = default;
   virtual void OnNotify(const CdmMessage& message) = 0;
+  virtual void OnKeyStatusChangeNotify(const std::string& sessionId,
+                                       const std::vector<DRM::KeyInfo>& keysInfo) = 0;
 };
 
 class ATTR_DLL_LOCAL IWVSubject // Subject to make callbacks to IWVObserver interfaces
@@ -57,6 +83,8 @@ public:
   virtual void AttachObserver(IWVObserver* observer) = 0;
   virtual void DetachObserver(IWVObserver* observer) = 0;
   virtual void NotifyObservers(const CdmMessage& message) = 0;
+  virtual void NotifyOnKeyStatusChange(const std::string& sessionId,
+                                       const std::vector<DRM::KeyInfo>& keysInfo) = 0;
 };
 
 template<class T>

@@ -743,3 +743,23 @@ int DRM::ParseXLimitVideoHeader(std::string_view value)
     return STRING::ToInt32(value);
   }
 }
+
+const char* DRM::KeyStatusToStr(const KeyStatus status)
+{
+  if (status == KeyStatus::USABLE)
+    return "USABLE";
+  if (status == KeyStatus::EXPIRED)
+    return "EXPIRED";
+  if (status == KeyStatus::OUTPUT_NOT_ALLOWED)
+    return "OUTPUT_NOT_ALLOWED";
+  if (status == KeyStatus::PENDING)
+    return "PENDING";
+  if (status == KeyStatus::INTERNAL_ERROR)
+    return "INTERNAL_ERROR";
+  if (status == KeyStatus::USABLE_IN_FUTURE)
+    return "USABLE_IN_FUTURE";
+  if (status == KeyStatus::UNKNOWN)
+    return "UNKNOWN";
+
+  return "UNHANDLED_VALUE";
+}

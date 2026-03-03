@@ -83,6 +83,7 @@ list(APPEND DEPLIBS ${PUGIXML_LIBRARIES}
 
 if(CORE_SYSTEM_NAME STREQUAL android)
   list(APPEND DEPLIBS ${LIBANDROIDJNI_LIBRARIES})
+  list(APPEND DEPLIBS log) # android log library, used by libandroidjni to print logs
 endif()
 
 # Add additional dependencies

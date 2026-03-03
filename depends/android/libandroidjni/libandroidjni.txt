@@ -1,1 +1,1 @@
-libandroidjni https://github.com/CastagnaIT/libandroidjni/archive/59b68509c1d175db2610afeb2daedcdb5e1a77a4.tar.gz
+libandroidjni https://github.com/xbmc/libandroidjni/archive/8e59504d0b914ad7cb4bed3acfce846aff1c375e.tar.gz

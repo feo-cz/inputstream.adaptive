@@ -159,8 +159,6 @@ void CWVCdmAdapter::OnCDMMessage(const char* session,
   CdmMessageType type;
   if (msg == CDMADPMSG::kSessionMessage)
     type = CdmMessageType::SESSION_MESSAGE;
-  else if (msg == CDMADPMSG::kSessionKeysChange)
-    type = CdmMessageType::SESSION_KEY_CHANGE;
   else
     return;
 
@@ -172,6 +170,53 @@ void CWVCdmAdapter::OnCDMMessage(const char* session,
 
   // Send the message to attached CWVCencSingleSampleDecrypter instances
   NotifyObservers(cdmMsg);
+}
+
+void CWVCdmAdapter::OnKeyStatusChange(const std::string& sessionId,
+                                      const std::vector<CdmAdapterClient::KeyInfo>& keysInfo)
+{
+  std::vector<DRM::KeyInfo> adpKeysInfo;
+  
+  for (const CdmAdapterClient::KeyInfo& keyInfo : keysInfo)
+  {
+    DRM::KeyInfo adpKeyInfo;
+    adpKeyInfo.kid = keyInfo.kid;
+
+    switch (keyInfo.status)
+    {
+      case CdmAdapterClient::CDMKeyStatus::kUsable:
+        adpKeyInfo.status = KeyStatus::USABLE;
+        break;
+      case CdmAdapterClient::CDMKeyStatus::kInternalError:
+        adpKeyInfo.status = KeyStatus::INTERNAL_ERROR;
+        break;
+      case CdmAdapterClient::CDMKeyStatus::kExpired:
+        adpKeyInfo.status = KeyStatus::EXPIRED;
+        break;
+      case CdmAdapterClient::CDMKeyStatus::kOutputRestricted:
+        adpKeyInfo.status = KeyStatus::OUTPUT_NOT_ALLOWED;
+        break;
+      case CdmAdapterClient::CDMKeyStatus::kOutputDownscaled: // Optional support
+        adpKeyInfo.status = KeyStatus::OUTPUT_NOT_ALLOWED;
+        break;
+      case CdmAdapterClient::CDMKeyStatus::kStatusPending:
+        adpKeyInfo.status = KeyStatus::PENDING;
+        break;
+      case CdmAdapterClient::CDMKeyStatus::kReleased:
+        adpKeyInfo.status = KeyStatus::UNKNOWN; // Not implemented
+        break;
+      case CdmAdapterClient::CDMKeyStatus::kUsableInFuture:
+        adpKeyInfo.status = KeyStatus::USABLE_IN_FUTURE;
+        break;
+      default:
+        LOG::LogF(LOGERROR, "Unhandled CDMKeyStatus %i, KID ignored", keyInfo.status);
+        continue;
+    }
+
+    adpKeysInfo.emplace_back(adpKeyInfo);
+  }
+ 
+  NotifyOnKeyStatusChange(sessionId, adpKeysInfo);
 }
 
 cdm::Buffer* CWVCdmAdapter::AllocateBuffer(size_t sz)
@@ -231,5 +276,16 @@ void CWVCdmAdapter::NotifyObservers(const CdmMessage& message)
   {
     if (observer)
       observer->OnNotify(message);
+  }
+}
+
+void CWVCdmAdapter::NotifyOnKeyStatusChange(const std::string& sessionId,
+                                            const std::vector<DRM::KeyInfo>& keysInfo)
+{
+  std::lock_guard<std::mutex> lock(m_observer_mutex);
+  for (IWVObserver* observer : m_observers)
+  {
+    if (observer)
+      observer->OnKeyStatusChangeNotify(sessionId, keysInfo);
   }
 }

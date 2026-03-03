@@ -11,6 +11,7 @@
 #include "WVDecrypter.h"
 #include "decrypters/HelperWv.h"
 #include "decrypters/Helpers.h"
+#include "utils/StringUtils.h"
 #include "utils/FileUtils.h"
 #include "utils/log.h"
 
@@ -34,6 +35,24 @@ void CMediaDrmOnEventListener::onEvent(const CJNIMediaDrm& mediaDrm,
                                        const std::vector<char>& data)
 {
   m_decrypterEventCallback->OnMediaDrmEvent(mediaDrm, sessionId, event, extra, data);
+}
+
+CMediaDrmOnKeyStatusChangeListener::CMediaDrmOnKeyStatusChangeListener(
+    CMediaDrmOnKeyStatusChangeCallback* decrypterOnKeyStatusChangeCallback,
+    std::shared_ptr<CJNIClassLoader> classLoader)
+  : CJNIMediaDrmOnKeyStatusChangeListener(*classLoader)
+{
+  m_decrypterOnKeyStatusChangeCallback = decrypterOnKeyStatusChangeCallback;
+}
+
+void CMediaDrmOnKeyStatusChangeListener::onKeyStatusChange(
+    const CJNIMediaDrm& mediaDrm,
+    const std::vector<char>& sessionId,
+    const CJNIList<CJNIMediaDrmKeyStatus>& keyInformation,
+    bool hasNewUsableKey)
+{
+  m_decrypterOnKeyStatusChangeCallback->OnKeyStatusChange(mediaDrm, sessionId, keyInformation,
+                                                          hasNewUsableKey);
 }
 
 CWVCdmAdapterA::CWVCdmAdapterA(std::string_view keySystem,
@@ -83,8 +102,21 @@ CWVCdmAdapterA::CWVCdmAdapterA(std::string_view keySystem,
   m_cdmAdapter->setOnEventListener(*m_mediaDrmEventListener.get());
   if (xbmc_jnienv()->ExceptionCheck())
   {
-    LOG::LogF(LOGERROR, "Exception during installation of EventListener");
     xbmc_jnienv()->ExceptionClear();
+    LOG::LogF(LOGERROR, "Failed to create CMediaDrmOnEventListener");
+    m_cdmAdapter->release();
+    return;
+  }
+
+  // Create media drm OnKeyStatusChangeListener (unique_ptr explanation on class comment)
+  m_mediaDrmOnKeyChangeListener =
+      std::make_unique<CMediaDrmOnKeyStatusChangeListener>(this, jniClassLoader);
+  CJNIMediaDrmKeyStatus::PopulateStaticFields(); // should be done by CJNIContext but currently not implemented for add-ons case
+  m_cdmAdapter->setOnKeyStatusChangeListener(*m_mediaDrmOnKeyChangeListener.get());
+  if (xbmc_jnienv()->ExceptionCheck())
+  {
+    xbmc_jnienv()->ExceptionClear();
+    LOG::LogF(LOGERROR, "Failed to create CMediaDrmOnKeyStatusChangeListener");
     m_cdmAdapter->release();
     return;
   }
@@ -199,6 +231,46 @@ void CWVCdmAdapterA::OnMediaDrmEvent(const CJNIMediaDrm& mediaDrm,
   NotifyObservers(cdmMsg);
 }
 
+void CWVCdmAdapterA::OnKeyStatusChange(const CJNIMediaDrm& mediaDrm,
+                                       const std::vector<char>& sessionId,
+                                       const CJNIList<CJNIMediaDrmKeyStatus>& keyInformation,
+                                       bool hasNewUsableKey)
+{
+  std::vector<DRM::KeyInfo> adpKeysInfo;
+
+  for (int i = 0; i < keyInformation.size(); ++i)
+  {
+    CJNIMediaDrmKeyStatus keyInfo = keyInformation.get(i);
+
+    DRM::KeyInfo adpKeyInfo;
+    adpKeyInfo.kid = keyInfo.getKeyId();
+
+    const int statusCode = keyInfo.getStatusCode();
+
+    if (statusCode == CJNIMediaDrmKeyStatus::STATUS_USABLE)
+      adpKeyInfo.status = KeyStatus::USABLE;
+    else if (statusCode == CJNIMediaDrmKeyStatus::STATUS_EXPIRED)
+      adpKeyInfo.status = KeyStatus::EXPIRED;
+    else if (statusCode == CJNIMediaDrmKeyStatus::STATUS_OUTPUT_NOT_ALLOWED)
+      adpKeyInfo.status = KeyStatus::OUTPUT_NOT_ALLOWED;
+    else if (statusCode == CJNIMediaDrmKeyStatus::STATUS_PENDING)
+      adpKeyInfo.status = KeyStatus::PENDING;
+    else if (statusCode == CJNIMediaDrmKeyStatus::STATUS_INTERNAL_ERROR)
+      adpKeyInfo.status = KeyStatus::INTERNAL_ERROR;
+    else if (statusCode == CJNIMediaDrmKeyStatus::STATUS_USABLE_IN_FUTURE)
+      adpKeyInfo.status = KeyStatus::USABLE_IN_FUTURE;
+    else
+    {
+      LOG::LogF(LOGERROR, "Unhandled getStatusCode %i, KID ignored", statusCode);
+      continue;
+    }
+
+    adpKeysInfo.emplace_back(adpKeyInfo);
+  }
+
+  NotifyOnKeyStatusChange({sessionId.cbegin(), sessionId.cend()}, adpKeysInfo);
+}
+
 void CWVCdmAdapterA::SaveServiceCertificate()
 {
   const std::vector<uint8_t> sc = m_cdmAdapter->getPropertyByteArray("serviceCertificate");
@@ -262,5 +334,16 @@ void CWVCdmAdapterA::NotifyObservers(const CdmMessage& message)
   {
     if (observer)
       observer->OnNotify(message);
+  }
+}
+
+void CWVCdmAdapterA::NotifyOnKeyStatusChange(const std::string& sessionId,
+                                             const std::vector<DRM::KeyInfo>& keysInfo)
+{
+  std::lock_guard<std::mutex> lock(m_observer_mutex);
+  for (IWVObserver* observer : m_observers)
+  {
+    if (observer)
+      observer->OnKeyStatusChangeNotify(sessionId, keysInfo);
   }
 }

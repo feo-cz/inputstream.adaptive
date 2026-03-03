@@ -14,6 +14,7 @@
 #include <androidjni/ClassLoader.h>
 #include <androidjni/MediaDrm.h>
 #include <androidjni/MediaDrmOnEventListener.h>
+#include <androidjni/MediaDrmOnKeyStatusChangeListener.h>
 
 #ifdef INPUTSTREAM_TEST_BUILD
 #include "test/KodiStubs.h"
@@ -62,7 +63,43 @@ private:
   CMediaDrmOnEventCallback* m_decrypterEventCallback;
 };
 
+class CMediaDrmOnKeyStatusChangeCallback
+{
+public:
+  CMediaDrmOnKeyStatusChangeCallback() = default;
+  virtual ~CMediaDrmOnKeyStatusChangeCallback() = default;
+
+  virtual void OnKeyStatusChange(const CJNIMediaDrm& mediaDrm,
+                                 const std::vector<char>& sessionId,
+                                 const CJNIList<CJNIMediaDrmKeyStatus>& keyInformation,
+                                 bool hasNewUsableKey) = 0;
+};
+
+/*!
+ * \brief This class is derived from CJNIMediaDrmOnKeyStatusChangeListener to allow us
+ *        to initialize the base class at later time, since the constructors
+ *        of CJNIMediaDrmOnKeyStatusChangeListener need to access to the global
+ *        xbmc_jnienv method immediately.
+ */
+class CMediaDrmOnKeyStatusChangeListener : public CJNIMediaDrmOnKeyStatusChangeListener
+{
+public:
+  CMediaDrmOnKeyStatusChangeListener(
+      CMediaDrmOnKeyStatusChangeCallback* decrypterOnKeyStatusChangeCallback,
+      std::shared_ptr<CJNIClassLoader> classLoader);
+  virtual ~CMediaDrmOnKeyStatusChangeListener() = default;
+
+  virtual void onKeyStatusChange(const CJNIMediaDrm& mediaDrm,
+                                 const std::vector<char>& sessionId,
+                                 const CJNIList<CJNIMediaDrmKeyStatus>& keyInformation,
+                                 bool hasNewUsableKey) override;
+
+private:
+  CMediaDrmOnKeyStatusChangeCallback* m_decrypterOnKeyStatusChangeCallback;
+};
+
 class ATTR_DLL_LOCAL CWVCdmAdapterA : public CMediaDrmOnEventCallback,
+                                      public CMediaDrmOnKeyStatusChangeCallback,
                                       public IWVCdmAdapter<CJNIMediaDrm>
 {
 public:
@@ -85,6 +122,8 @@ public:
   void AttachObserver(IWVObserver* observer) override;
   void DetachObserver(IWVObserver* observer) override;
   void NotifyObservers(const CdmMessage& message) override;
+  void NotifyOnKeyStatusChange(const std::string& sessionId,
+                               const std::vector<DRM::KeyInfo>& keysInfo) override;
 
 private:
   void LoadServiceCertificate();
@@ -96,6 +135,12 @@ private:
                        int extra,
                        const std::vector<char>& data) override;
 
+  // CMediaDrmOnKeyStatusChangeCallback interface methods
+  void OnKeyStatusChange(const CJNIMediaDrm& mediaDrm,
+                         const std::vector<char>& sessionId,
+                         const CJNIList<CJNIMediaDrmKeyStatus>& keyInformation,
+                         bool hasNewUsableKey) override;
+
   DRM::Config m_config;
   std::shared_ptr<CJNIMediaDrm> m_cdmAdapter;
   std::list<IWVObserver*> m_observers;
@@ -103,6 +148,7 @@ private:
 
   std::string m_keySystem;
   std::unique_ptr<CMediaDrmOnEventListener> m_mediaDrmEventListener;
+  std::unique_ptr<CMediaDrmOnKeyStatusChangeListener> m_mediaDrmOnKeyChangeListener;
   std::string m_strBasePath;
   CWVDecrypterA* m_host;
 };

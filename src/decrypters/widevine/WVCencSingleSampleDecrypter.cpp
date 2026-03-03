@@ -173,7 +173,7 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
   if ((caps.flags & DecrypterCapabilites::SSD_SUPPORTS_DECODING) != 0)
   {
     AP4_UI32 poolId(AddPool());
-    m_fragmentPool[poolId].m_key = keyId.empty() ? m_keys.front().m_keyId : keyId;
+    m_fragmentPool[poolId].m_key = keyId.empty() ? m_keys.front().kid : keyId;
     m_fragmentPool[poolId].m_cryptoInfo.m_mode = m_EncryptionMode;
 
     AP4_DataBuffer in;
@@ -391,32 +391,36 @@ void CWVCencSingleSampleDecrypter::OnNotify(const CdmMessage& message)
   {
     SetSession(message.sessionId, message.data.data(), message.data.size());
   }
-  else if (message.type == CdmMessageType::SESSION_KEY_CHANGE)
-  {
-    AddSessionKey(message.data.data(), message.data.size(), message.status);
-  }
 }
 
-void CWVCencSingleSampleDecrypter::AddSessionKey(const uint8_t* data,
-                                                 size_t dataSize,
-                                                 uint32_t status)
+void CWVCencSingleSampleDecrypter::OnKeyStatusChangeNotify(const std::string& sessionId, const std::vector<DRM::KeyInfo>& keysInfo)
 {
-  WVSKEY key;
-  key.m_keyId.assign(data, data + dataSize);
+  if (!m_strSession.empty() && m_strSession != sessionId)
+    return;
 
-  std::vector<WVSKEY>::iterator res;
-  if ((res = std::find(m_keys.begin(), m_keys.end(), key)) == m_keys.end())
-    res = m_keys.insert(res, key);
-  res->status = static_cast<cdm::KeyStatus>(status);
+  // Updates the local status of session keys
+  //! @todo: this code does not check keys that are no longer listed in the session, should to be removed
+
+  for (const DRM::KeyInfo& keyInfo : keysInfo)
+  {
+    LOG::Log(LOGDEBUG, "OnKeyStatusChangeNotify: KID %s, status %s",
+             STRING::ToHexadecimal(keyInfo.kid).c_str(), KeyStatusToStr(keyInfo.status));
+
+    auto keyFound = std::find(m_keys.begin(), m_keys.end(), keyInfo);
+    if (keyFound != m_keys.end())
+      *keyFound = keyInfo; // update properties
+    else
+      m_keys.emplace_back(keyInfo);
+  }
 }
 
 bool CWVCencSingleSampleDecrypter::HasKeyId(const std::vector<uint8_t>& keyid)
 {
   if (!keyid.empty())
   {
-    for (const WVSKEY& key : m_keys)
+    for (const DRM::KeyInfo& key : m_keys)
     {
-      if (key.m_keyId == keyid)
+      if (key.kid == keyid)
         return true;
     }
   }
@@ -1043,9 +1047,9 @@ void CWVCencSingleSampleDecrypter::SetDefaultKeyId(const std::vector<uint8_t>& k
 
 void CWVCencSingleSampleDecrypter::AddKeyId(const std::vector<uint8_t>& keyId)
 {
-  WVSKEY key;
-  key.m_keyId = keyId;
-  key.status = cdm::KeyStatus::kUsable;
+  DRM::KeyInfo key;
+  key.kid = keyId;
+  key.status = DRM::KeyStatus::USABLE;
 
   if (std::find(m_keys.begin(), m_keys.end(), key) == m_keys.end())
   {
