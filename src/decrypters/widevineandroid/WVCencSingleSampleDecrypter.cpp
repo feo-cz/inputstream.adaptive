@@ -166,6 +166,19 @@ std::vector<uint8_t> CWVCencSingleSampleDecrypterA::GetChallengeData()
   return m_keyRequestData;
 }
 
+bool CWVCencSingleSampleDecrypterA::HasKeyId(const std::vector<uint8_t>& keyid)
+{
+  if (!keyid.empty())
+  {
+    for (const DRM::KeyInfo& key : m_keys)
+    {
+      if (key.kid == keyid)
+        return true;
+    }
+  }
+  return false;
+}
+
 void CWVCencSingleSampleDecrypterA::GetCapabilities(const std::vector<uint8_t>& keyId,
                                                     DRM::DecrypterCapabilites& caps)
 {
@@ -195,6 +208,28 @@ void CWVCencSingleSampleDecrypterA::OnNotify(const CdmMessage& message)
   if (message.type == CdmMessageType::EVENT_KEY_REQUIRED)
   {
     RequestNewKeys();
+  }
+}
+
+void CWVCencSingleSampleDecrypterA::OnKeyStatusChangeNotify(
+    const std::string& sessionId, const std::vector<DRM::KeyInfo>& keysInfo)
+{
+  if (!m_sessionId.empty() && m_sessionId != sessionId)
+    return;
+
+  // Updates the local status of session keys
+  //! @todo: this code does not check keys that are no longer listed in the session, should to be removed
+
+  for (const DRM::KeyInfo& keyInfo : keysInfo)
+  {
+    LOG::Log(LOGDEBUG, "OnKeyStatusChangeNotify: KID %s, status %s",
+             STRING::ToHexadecimal(keyInfo.kid).c_str(), KeyStatusToStr(keyInfo.status));
+
+    auto keyFound = std::find(m_keys.begin(), m_keys.end(), keyInfo);
+    if (keyFound != m_keys.end())
+      *keyFound = keyInfo; // update properties
+    else
+      m_keys.emplace_back(keyInfo);
   }
 }
 
@@ -448,7 +483,8 @@ bool CWVCencSingleSampleDecrypterA::SendSessionMessage(const std::vector<uint8_t
     FILESYS::SaveFile(debugFilePath, respData, true);
   }
 
-  m_keySetId = m_cdmAdapter->GetCDM()->provideKeyResponse(
+  // if offline request, will return keysetid for offline keys, otherwise empty
+  std::vector<uint8_t> keySetId = m_cdmAdapter->GetCDM()->provideKeyResponse(
       m_sessionIdVec, std::vector<uint8_t>(respData.data(), respData.data() + respData.size()));
   if (xbmc_jnienv()->ExceptionCheck())
   {

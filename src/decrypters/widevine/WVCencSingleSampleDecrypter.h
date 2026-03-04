@@ -45,7 +45,6 @@ public:
 
   void SetSession(const std::string sessionId, const uint8_t* data, const size_t dataSize);
 
-  void AddSessionKey(const uint8_t* data, size_t dataSize, uint32_t status);
   bool HasKeyId(const std::vector<uint8_t>& keyid);
 
   virtual AP4_Result SetFragmentInfo(AP4_UI32 poolId,
@@ -87,6 +86,8 @@ public:
 
   // IWVObserver interface
   void OnNotify(const CdmMessage& message) override;
+  void OnKeyStatusChangeNotify(const std::string& sessionId,
+                               const std::vector<DRM::KeyInfo>& keysInfo) override;
 
 private:
   void CheckLicenseRenewal();
@@ -97,13 +98,7 @@ private:
   std::vector<uint8_t> m_pssh;
   AP4_DataBuffer m_challenge;
   std::vector<uint8_t> m_defaultKeyId;
-  struct WVSKEY
-  {
-    bool operator==(WVSKEY const& other) const { return m_keyId == other.m_keyId; };
-    std::vector<uint8_t> m_keyId;
-    cdm::KeyStatus status;
-  };
-  std::vector<WVSKEY> m_keys;
+  std::vector<DRM::KeyInfo> m_keys;
 
   uint16_t m_hdcpVersion{DRM::HDCP_V_MAX};
   int m_hdcpLimit{0};

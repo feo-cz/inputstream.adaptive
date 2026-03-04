@@ -341,6 +341,14 @@ void CdmAdapter::SendClientMessage(const char* session, uint32_t session_size, C
     client_->OnCDMMessage(session, session_size, msg, data, data_size, status);
 }
 
+void CdmAdapter::SendOnKeyStatusChange(const std::string& sessionId,
+                                       const std::vector<CdmAdapterClient::KeyInfo>& keysInfo)
+{
+  std::lock_guard<std::mutex> guard(client_mutex_);
+  if (client_)
+    client_->OnKeyStatusChange(sessionId, keysInfo);
+}
+
 void CdmAdapter::RemoveClient()
 {
   std::lock_guard<std::mutex> guard(client_mutex_);
@@ -663,23 +671,64 @@ void CdmAdapter::OnResolveNewSessionPromise(uint32_t promise_id,
 }
 
 void CdmAdapter::OnSessionKeysChange(const char* session_id,
-                                  uint32_t session_id_size,
-                                  bool has_additional_usable_key,
-                                  const cdm::KeyInformation* keys_info,
-                                  uint32_t keys_info_count)
+                                     uint32_t session_id_size,
+                                     bool has_additional_usable_key,
+                                     const cdm::KeyInformation* keys_info,
+                                     uint32_t keys_info_count)
 {
+  const std::string sessionId{session_id, session_id_size};
+  std::vector<CdmAdapterClient::KeyInfo> keysInfo;
+
   for (uint32_t i(0); i < keys_info_count; ++i)
   {
-    char buffer[128];
-    char* bufferPtr{buffer};
-    for (uint32_t j{0}; j < keys_info[i].key_id_size; ++j)
-      bufferPtr += std::snprintf(bufferPtr, 3, "%02X", (int)keys_info[i].key_id[j]);
-    Log(LogLevel::DEBUG, "OnSessionKeysChange: KID %s, Status: %d, System code: %u", buffer,
-        keys_info[i].status, keys_info[i].system_code);
+    const cdm::KeyInformation cdmKeyInfo = keys_info[i];
 
-    SendClientMessage(session_id, session_id_size, CdmAdapterClient::kSessionKeysChange,
-      keys_info[i].key_id, keys_info[i].key_id_size, keys_info[i].status);
+    if (cdmKeyInfo.system_code != 0)
+    {
+      char buffer[128];
+      char* bufferPtr{buffer};
+      for (uint32_t j{0}; j < keys_info[i].key_id_size; ++j)
+        bufferPtr += std::snprintf(bufferPtr, 3, "%02X", (int)keys_info[i].key_id[j]);
+      Log(LogLevel::WARNING, "OnSessionKeysChange: KID %s with status %d has error system code: %u",
+          buffer, cdmKeyInfo.status, cdmKeyInfo.system_code);
+    }
+
+    CdmAdapterClient::KeyInfo keyInfo;
+    keyInfo.kid.assign(cdmKeyInfo.key_id, cdmKeyInfo.key_id + cdmKeyInfo.key_id_size);
+
+    switch (cdmKeyInfo.status)
+    {
+      case cdm::KeyStatus::kUsable:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kUsable;
+        break;
+      case cdm::KeyStatus::kInternalError:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kInternalError;
+        break;
+      case cdm::KeyStatus::kExpired:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kExpired;
+        break;
+      case cdm::KeyStatus::kOutputRestricted:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kOutputRestricted;
+        break;
+      case cdm::KeyStatus::kOutputDownscaled:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kOutputDownscaled;
+        break;
+      case cdm::KeyStatus::kStatusPending:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kStatusPending;
+        break;
+      case cdm::KeyStatus::kReleased:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kReleased;
+        break;
+      default:
+        Log(LogLevel::ERROR, "OnSessionKeysChange: Unhandled KeyStatus %i, KID ignored",
+            cdmKeyInfo.status);
+        continue;
+    }
+
+    keysInfo.emplace_back(keyInfo);
   }
+
+  SendOnKeyStatusChange(sessionId, keysInfo);
 }
 
 void CdmAdapter::OnSessionKeysChange(const char* session_id,
@@ -688,19 +737,62 @@ void CdmAdapter::OnSessionKeysChange(const char* session_id,
                                      const cdm::KeyInformation_2* keys_info,
                                      uint32_t keys_info_count)
 {
+  const std::string sessionId{session_id, session_id_size};
+  std::vector<CdmAdapterClient::KeyInfo> keysInfo;
+
   for (uint32_t i(0); i < keys_info_count; ++i)
   {
-    char buffer[128];
-    char* bufferPtr{buffer};
-    for (uint32_t j{0}; j < keys_info[i].key_id_size; ++j)
-      bufferPtr += std::snprintf(bufferPtr, 3, "%02X", (int)keys_info[i].key_id[j]);
-    Log(LogLevel::DEBUG, "OnSessionKeysChange: KID %s, Status: %d, System code: %u", buffer,
-        keys_info[i].status, keys_info[i].system_code);
+    const cdm::KeyInformation_2 cdmKeyInfo = keys_info[i];
 
-    SendClientMessage(session_id, session_id_size, CdmAdapterClient::kSessionKeysChange,
-                      keys_info[i].key_id, keys_info[i].key_id_size,
-                      static_cast<uint32_t>(keys_info[i].status));
+    if (cdmKeyInfo.system_code != 0)
+    {
+      char buffer[128];
+      char* bufferPtr{buffer};
+      for (uint32_t j{0}; j < keys_info[i].key_id_size; ++j)
+        bufferPtr += std::snprintf(bufferPtr, 3, "%02X", (int)keys_info[i].key_id[j]);
+      Log(LogLevel::WARNING, "OnSessionKeysChange: KID %s with status %d has error system code: %u",
+          buffer, cdmKeyInfo.status, cdmKeyInfo.system_code);
+    }
+
+    CdmAdapterClient::KeyInfo keyInfo;
+    keyInfo.kid.assign(cdmKeyInfo.key_id, cdmKeyInfo.key_id + cdmKeyInfo.key_id_size);
+
+    switch (cdmKeyInfo.status)
+    {
+      case cdm::KeyStatus_2::kUsable:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kUsable;
+        break;
+      case cdm::KeyStatus_2::kInternalError:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kInternalError;
+        break;
+      case cdm::KeyStatus_2::kExpired:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kExpired;
+        break;
+      case cdm::KeyStatus_2::kOutputRestricted:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kOutputRestricted;
+        break;
+      case cdm::KeyStatus_2::kOutputDownscaled:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kOutputDownscaled;
+        break;
+      case cdm::KeyStatus_2::kStatusPending:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kStatusPending;
+        break;
+      case cdm::KeyStatus_2::kReleased:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kReleased;
+        break;
+      case cdm::KeyStatus_2::kUsableInFuture:
+        keyInfo.status = CdmAdapterClient::CDMKeyStatus::kUsableInFuture;
+        break;
+      default:
+        Log(LogLevel::ERROR, "OnSessionKeysChange: Unhandled KeyStatus_2 %i, KID ignored",
+            cdmKeyInfo.status);
+        continue;
+    }
+
+    keysInfo.emplace_back(keyInfo);
   }
+
+  SendOnKeyStatusChange(sessionId, keysInfo);
 }
 
 void CdmAdapter::OnExpirationChange(const char* session_id,

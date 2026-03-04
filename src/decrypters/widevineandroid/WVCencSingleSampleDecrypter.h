@@ -31,6 +31,8 @@ public:
   virtual std::string GetSessionId() override;
   std::vector<uint8_t> GetChallengeData();
 
+  bool HasKeyId(const std::vector<uint8_t>& keyid);
+
   virtual AP4_Result SetFragmentInfo(AP4_UI32 poolId,
                                      const std::vector<uint8_t>& keyId,
                                      const AP4_UI08 nalLengthSize,
@@ -64,6 +66,8 @@ public:
 
   // IWVObserver interface
   void OnNotify(const CdmMessage& message) override;
+  void OnKeyStatusChangeNotify(const std::string& sessionId,
+                               const std::vector<DRM::KeyInfo>& keysInfo) override;
 
 private:
   struct FINFO
@@ -102,8 +106,8 @@ private:
 
   std::string m_sessionId;
   std::vector<char> m_sessionIdVec;
-  std::vector<uint8_t> m_keySetId;
   std::vector<uint8_t> m_keyRequestData;
+  std::vector<DRM::KeyInfo> m_keys;
 
   bool m_isProvisioningRequested;
   bool m_isKeyUpdateRequested;

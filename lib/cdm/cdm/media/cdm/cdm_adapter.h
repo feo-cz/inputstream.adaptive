@@ -41,7 +41,28 @@ public:
     kLegacySessionError
   };
 
+  // \brief Common Key status enum values (depending on the CDM version there are different enums)
+  enum class CDMKeyStatus
+  {
+    kUsable,
+    kInternalError,
+    kExpired,
+    kOutputRestricted,
+    kOutputDownscaled,
+    kStatusPending,
+    kReleased,
+    kUsableInFuture,
+  };
+
+  struct KeyInfo
+  {
+    std::vector<uint8_t> kid;
+    CDMKeyStatus status;
+  };
+
   virtual void OnCDMMessage(const char* session, uint32_t session_size, CDMADPMSG msg, const uint8_t *data, size_t data_size, uint32_t status) = 0;
+  virtual void OnKeyStatusChange(const std::string& sessionId,
+                                 const std::vector<CdmAdapterClient::KeyInfo>& keysInfo) = 0;
   virtual cdm::Buffer *AllocateBuffer(size_t sz) = 0;
 };
 
@@ -250,6 +271,8 @@ private:
   DeinitializeCdmModuleFunc deinit_cdm_func{nullptr};
 
   void SendClientMessage(const char* session, uint32_t session_size, CdmAdapterClient::CDMADPMSG msg, const uint8_t *data, size_t data_size, uint32_t status);
+  void SendOnKeyStatusChange(const std::string& sessionId,
+                             const std::vector<CdmAdapterClient::KeyInfo>& keysInfo);
 
   // Keep a reference to the CDM.
   base::NativeLibrary library_{nullptr};

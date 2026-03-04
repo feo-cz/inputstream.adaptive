@@ -133,7 +133,7 @@ std::optional<bool> CWVDecrypter::HasLicenseKey(
   else
     LOG::LogF(LOGFATAL, "Cannot cast the decrypter shared pointer.");
 
-  return false;
+  return std::nullopt;
 }
 
 std::string CWVDecrypter::GetChallengeB64Data(

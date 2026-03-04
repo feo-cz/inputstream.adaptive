@@ -56,6 +56,10 @@ public:
                                DRM::DecrypterCapabilites& caps,
                                DRM::DRMMediaType mediaType) override;
 
+  virtual std::optional<bool> HasLicenseKey(
+      std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
+      const std::vector<uint8_t>& keyId) override;
+
   virtual std::string GetChallengeB64Data(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter) override;
 
   virtual bool IsInitialised() override { return m_WVCdmAdapter != nullptr; }

@@ -39,6 +39,8 @@ public:
                             const uint8_t* data,
                             size_t data_size,
                             uint32_t status) override;
+  virtual void OnKeyStatusChange(const std::string& sessionId,
+                                 const std::vector<CdmAdapterClient::KeyInfo>& keysInfo) override;
   virtual cdm::Buffer* AllocateBuffer(size_t sz) override;
 
   // IWVCdmAdapter interface methods
@@ -55,6 +57,8 @@ public:
   void AttachObserver(IWVObserver* observer) override;
   void DetachObserver(IWVObserver* observer) override;
   void NotifyObservers(const CdmMessage& message) override;
+  void NotifyOnKeyStatusChange(const std::string& sessionId,
+                               const std::vector<DRM::KeyInfo>& keysInfo) override;
 
 private:
   DRM::Config m_config;

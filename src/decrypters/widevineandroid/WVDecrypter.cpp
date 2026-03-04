@@ -106,6 +106,21 @@ void CWVDecrypterA::GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDec
     LOG::LogF(LOGFATAL, "Cannot cast the decrypter shared pointer.");
 }
 
+std::optional<bool> CWVDecrypterA::HasLicenseKey(
+    std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
+    const std::vector<uint8_t>& keyId)
+{
+  auto wvDecrypter = std::dynamic_pointer_cast<CWVCencSingleSampleDecrypterA>(decrypter);
+  if (wvDecrypter)
+  {
+    return wvDecrypter->HasKeyId(keyId);
+  }
+  else
+    LOG::LogF(LOGFATAL, "Cannot cast the decrypter shared pointer.");
+
+  return std::nullopt;
+}
+
 std::string CWVDecrypterA::GetChallengeB64Data(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter)
 {
   auto wvDecrypter = std::dynamic_pointer_cast<CWVCencSingleSampleDecrypterA>(decrypter);
