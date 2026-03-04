@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: translations@kodi.tv\n"
-"PO-Revision-Date: 2025-05-13 14:17+0000\n"
+"PO-Revision-Date: 2026-02-26 17:22+0000\n"
 "Last-Translator: Daniel Nylander <daniel@danielnylander.se>\n"
 "Language-Team: Swedish <https://kodi.weblate.cloud/projects/kodi-add-ons-videoplayer-inputstream/inputstream-adaptive/sv_se/>\n"
 "Language: sv_se\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.11.3\n"
+"X-Generator: Weblate 5.16.1\n"
 
 msgctxt "Addon Summary"
 msgid "InputStream client for adaptive streams"
@@ -302,7 +302,7 @@ msgstr "Växla efter segment"
 #. Stand for video stream segments, referred to setting with label #30234
 msgctxt "#30235"
 msgid "Video segments (set 0 to disable)"
-msgstr ""
+msgstr "Videosegment (ställ in till 0 för att inaktivera)"
 
 #. Category group title
 msgctxt "#30236"
@@ -392,7 +392,7 @@ msgstr "Ingen ljud/videoström kan spelas upp."
 #. Stand for audio stream segments, referred to setting with label #30234
 msgctxt "#30350"
 msgid "Audio segments (set 0 to disable)"
-msgstr ""
+msgstr "Ljudsegment (ställ in till 0 för att inaktivera)"
 
 #~ msgctxt "#30235"
 #~ msgid "Segments"
