@@ -151,9 +151,8 @@ bool CWVDecrypterA::Initialize()
     return false;
   }
 
-  //JNIEnv* env = static_cast<JNIEnv*>(m_androidSystem.GetJNIEnv());
   CJNIBase::SetSDKVersion(m_androidSystem.GetSDKVersion());
-  //CJNIBase::SetBaseClassName(m_androidSystem.GetClassName()); ---> unused
+  CJNIBase::SetBaseClassName(m_androidSystem.GetClassName());
   LOG::Log(LOGDEBUG, "WVDecrypter JNI, SDK version: %d", m_androidSystem.GetSDKVersion());
 
   const char* apkEnv = getenv("XBMC_ANDROID_APK");
