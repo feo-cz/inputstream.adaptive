@@ -151,24 +151,23 @@ bool CWVDecrypterA::Initialize()
     return false;
   }
 
-  //JNIEnv* env = static_cast<JNIEnv*>(m_androidSystem.GetJNIEnv());
+  LOG::Log(LOGDEBUG, "WVDecrypter JNI, SDK version: %d, Base class name: %s",
+           m_androidSystem.GetSDKVersion(), m_androidSystem.GetClassName().c_str());
+
   CJNIBase::SetSDKVersion(m_androidSystem.GetSDKVersion());
-  //CJNIBase::SetBaseClassName(m_androidSystem.GetClassName()); ---> unused
-  LOG::Log(LOGDEBUG, "WVDecrypter JNI, SDK version: %d", m_androidSystem.GetSDKVersion());
+  CJNIBase::SetBaseClassName(m_androidSystem.GetClassName());
 
-  const char* apkEnv = getenv("XBMC_ANDROID_APK");
-  if (!apkEnv)
-    apkEnv = getenv("KODI_ANDROID_APK");
+  const char* apkPath = getenv("XBMC_ANDROID_APK");
+  if (!apkPath)
+    apkPath = getenv("KODI_ANDROID_APK");
 
-  if (!apkEnv)
+  if (!apkPath)
   {
     LOG::LogF(LOGERROR, "Cannot get enviroment XBMC_ANDROID_APK/KODI_ANDROID_APK value");
     return false;
   }
 
-  std::string apkPath = apkEnv;
-
-  m_classLoader = std::make_shared<CJNIClassLoader>(apkEnv);
+  m_classLoader = std::make_shared<CJNIClassLoader>(apkPath);
   if (xbmc_jnienv()->ExceptionCheck())
   {
     LOG::LogF(LOGERROR, "Failed to create ClassLoader");
