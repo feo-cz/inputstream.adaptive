@@ -1,1 +1,1 @@
-libandroidjni https://github.com/xbmc/libandroidjni/archive/8e59504d0b914ad7cb4bed3acfce846aff1c375e.tar.gz
+libandroidjni https://github.com/xbmc/libandroidjni/archive/2f8346bbe794cc3bd41b4195a59f0470470aa52e.tar.gz
