@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: translations@kodi.tv\n"
-"PO-Revision-Date: 2025-05-27 07:14+0000\n"
+"PO-Revision-Date: 2026-03-04 07:47+0000\n"
 "Last-Translator: Kai Sommerfeld <ksooo@users.noreply.kodi.weblate.cloud>\n"
 "Language-Team: German <https://kodi.weblate.cloud/projects/kodi-add-ons-videoplayer-inputstream/inputstream-adaptive/de_de/>\n"
 "Language: de_de\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.11.4\n"
+"X-Generator: Weblate 5.16.1\n"
 
 msgctxt "Addon Summary"
 msgid "InputStream client for adaptive streams"
@@ -302,7 +302,7 @@ msgstr "Umschalten anhand Segmenten"
 #. Stand for video stream segments, referred to setting with label #30234
 msgctxt "#30235"
 msgid "Video segments (set 0 to disable)"
-msgstr ""
+msgstr "Videosegmente (0 = deaktiviert)"
 
 #. Category group title
 msgctxt "#30236"
@@ -392,7 +392,7 @@ msgstr "Es kann kein Audio-/Videostream wiedergegeben werden."
 #. Stand for audio stream segments, referred to setting with label #30234
 msgctxt "#30350"
 msgid "Audio segments (set 0 to disable)"
-msgstr ""
+msgstr "Audiosegmente (0 = deaktiviert)"
 
 #~ msgctxt "#30235"
 #~ msgid "Segments"
