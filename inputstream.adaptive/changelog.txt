@@ -1,3 +1,8 @@
+v22.3.10 (2026-03-09)
+- [widevine][android] Implemented KID status change callbacks
+- [widevine][android] Fix crash due to custom Kodi package name
+- Updated translations
+
 v22.3.9 (2026-02-26)
 - Fix problem detecting resolution change (adaptive stream selection)
 - Fix audio deadlock during quality change
