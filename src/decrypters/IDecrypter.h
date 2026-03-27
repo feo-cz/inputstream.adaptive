@@ -76,18 +76,18 @@ public:
   virtual ~IDecrypter() {}
 
   /*
+   * \brief Return a short name for the decrypter implementation
+   */
+  virtual const std::string GetName() const { return "Unknown"; }
+
+  /*
    * \brief Initialize the decrypter library
    * \return True if has success, otherwise false
    */
   virtual bool Initialize() { return true; }
 
-  /*
-   * \brief Initialise the DRM system
-   * \param config The DRM configuration
-   * \return true on success 
-   */
-  virtual SResult OpenDRMSystem(const DRM::Config& config) = 0;
-  
+  virtual bool IsKeySystemSupported(std::string_view keySystem) = 0;
+
   /*
    * \brief Creates a Single Sample Decrypter for decrypting content 
    * \param initData The data for initialising the decrypter (e.g. PSSH)
@@ -98,10 +98,8 @@ public:
    * \return The single sample decrypter if successfully created
    */
   virtual std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CreateSingleSampleDecrypter(
-      const std::vector<uint8_t>& initData,
+      const DRM::Config& config,
       const std::vector<uint8_t>& defaultKeyId,
-      std::string_view licenseUrl,
-      bool skipSessionMessage,
       CryptoMode cryptoMode) = 0;
 
   /*
@@ -128,12 +126,6 @@ public:
   {
     return std::nullopt;
   }
-
-  /*
-   * \brief Check if the decrypter has been initialised (OpenDRMSystem called)
-   * \return True if decrypter has been initialised otherwise false
-   */
-  virtual bool IsInitialised() = 0;
 
   /*
    * \brief Retrieve license challenge data

@@ -20,6 +20,26 @@
 using namespace DRM;
 using namespace UTILS;
 
+namespace
+{
+CJNIUUID UuidToJNIUUID(const uint8_t* systemUuid)
+{
+  int64_t mostSigBits(0);
+  int64_t leastSigBits(0);
+
+  for (unsigned int i(0); i < 8; ++i)
+  {
+    mostSigBits = (mostSigBits << 8) | systemUuid[i];
+  }
+  for (unsigned int i(8); i < 16; ++i)
+  {
+    leastSigBits = (leastSigBits << 8) | systemUuid[i];
+  }
+
+  return CJNIUUID(mostSigBits, leastSigBits);
+}
+} // unnamed namespace
+
 CMediaDrmOnEventListener::CMediaDrmOnEventListener(
     CMediaDrmOnEventCallback* decrypterEventCallback,
     std::shared_ptr<CJNIClassLoader> classLoader)
@@ -76,20 +96,14 @@ CWVCdmAdapterA::CWVCdmAdapterA(std::string_view keySystem,
   basePath += FILESYS::SEPARATOR;
   m_strBasePath = basePath;
 
-  int64_t mostSigBits(0), leastSigBits(0);
   const uint8_t* systemUuid = DRM::KeySystemToUUID(m_keySystem);
   if (!systemUuid)
   {
     LOG::LogF(LOGERROR, "Unable to get the system UUID");
     return;
   }
-  for (unsigned int i(0); i < 8; ++i)
-    mostSigBits = (mostSigBits << 8) | systemUuid[i];
-  for (unsigned int i(8); i < 16; ++i)
-    leastSigBits = (leastSigBits << 8) | systemUuid[i];
 
-  CJNIUUID uuid(mostSigBits, leastSigBits);
-  m_cdmAdapter = std::make_shared<CJNIMediaDrm>(uuid);
+  m_cdmAdapter = std::make_shared<CJNIMediaDrm>(UuidToJNIUUID(systemUuid));
   if (xbmc_jnienv()->ExceptionCheck() || !*m_cdmAdapter.get())
   {
     LOG::LogF(LOGERROR, "Unable to initialize MediaDrm");
@@ -346,4 +360,15 @@ void CWVCdmAdapterA::NotifyOnKeyStatusChange(const std::string& sessionId,
     if (observer)
       observer->OnKeyStatusChangeNotify(sessionId, keysInfo);
   }
+}
+
+bool CWVCdmAdapterA::IsKeySystemSupported(std::string_view keySystem)
+{
+  const uint8_t* systemUuid = DRM::KeySystemToUUID(keySystem);
+  if (!systemUuid)
+  {
+    LOG::LogF(LOGERROR, "Unable to get the system UUID");
+    return false;
+  }
+  return CJNIMediaDrm::isCryptoSchemeSupported(UuidToJNIUUID(systemUuid));
 }

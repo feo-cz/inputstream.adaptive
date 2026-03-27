@@ -22,9 +22,12 @@ class ATTR_DLL_LOCAL CWVCencSingleSampleDecrypterA : public Adaptive_CencSingleS
 {
 public:
   CWVCencSingleSampleDecrypterA(IWVCdmAdapter<CJNIMediaDrm>* cdmAdapter,
-                                const std::vector<uint8_t>& pssh,
                                 const std::vector<uint8_t>& defaultKeyId);
   virtual ~CWVCencSingleSampleDecrypterA();
+
+  virtual SResult CreateSession(const std::vector<uint8_t>& pssh,
+                                std::string_view licenseUrl,
+                                bool skipSessionMessage) override;
 
   bool StartSession(bool skipSessionMessage) { return KeyUpdateRequest(true, skipSessionMessage); };
 

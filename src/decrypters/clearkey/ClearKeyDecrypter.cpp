@@ -12,18 +12,14 @@
 #include "decrypters/Helpers.h"
 #include "utils/log.h"
 
-SResult CClearKeyDecrypter::OpenDRMSystem(const DRM::Config& config)
+bool CClearKeyDecrypter::IsKeySystemSupported(std::string_view keySystem)
 {
-  m_config = config;
-  m_isInitialized = true;
-  return SResultCode::OK;
+  return keySystem == KS_CLEARKEY;
 }
 
 std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CClearKeyDecrypter::CreateSingleSampleDecrypter(
-    const std::vector<uint8_t>& initData,
+    const DRM::Config& config,
     const std::vector<uint8_t>& defaultkeyid,
-    std::string_view licenseUrl,
-    bool skipSessionMessage,
     CryptoMode cryptoMode)
 {
   if (cryptoMode != CryptoMode::AES_CTR && cryptoMode != CryptoMode::AES_CBC)
@@ -33,28 +29,7 @@ std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CClearKeyDecrypter::CreateSi
     return nullptr;
   }
 
-  std::shared_ptr<CClearKeyCencSingleSampleDecrypter> decrypter;
-
-  // NOTE: dont look at m_config.license configuration, since CDRMEngine::ConfigureClearKey takes care of that
-  const DRM::Config::License& licConfig = m_config.license;
-
-  if (initData.empty())
-  {
-    // Assume that the license URI is provided by manifest or Kodi properties (props can be with keys or URL)
-    decrypter = std::make_shared<CClearKeyCencSingleSampleDecrypter>(
-        licenseUrl, licConfig.reqHeaders, defaultkeyid, this);
-  }
-  else
-  {
-    // Keys should be provided by the manifest
-    decrypter = std::make_shared<CClearKeyCencSingleSampleDecrypter>(initData, defaultkeyid, this);
-  }
-
-  if (!decrypter->HasKeys())
-  {
-    return nullptr;
-  }
-  return decrypter;
+  return std::make_shared<CClearKeyCencSingleSampleDecrypter>(defaultkeyid, this);
 }
 
 std::optional<bool> CClearKeyDecrypter::HasLicenseKey(

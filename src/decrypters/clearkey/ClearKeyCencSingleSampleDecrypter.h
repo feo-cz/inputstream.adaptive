@@ -19,14 +19,13 @@ class CClearKeyDecrypter;
 class CClearKeyCencSingleSampleDecrypter : public Adaptive_CencSingleSampleDecrypter
 {
 public:
-  CClearKeyCencSingleSampleDecrypter(std::string_view licenseUri,
-                                     const std::map<std::string, std::string>& licenseHeaders,
-                                     const std::vector<uint8_t>& defaultKeyId,
-                                     CClearKeyDecrypter* host);
-  CClearKeyCencSingleSampleDecrypter(const std::vector<uint8_t>& initdata,
-                                     const std::vector<uint8_t>& defaultKeyId,
+  CClearKeyCencSingleSampleDecrypter(const std::vector<uint8_t>& defaultKeyId,
                                      CClearKeyDecrypter* host);
   virtual ~CClearKeyCencSingleSampleDecrypter(){};
+
+  virtual SResult CreateSession(const std::vector<uint8_t>& pssh,
+                                std::string_view licenseUrl,
+                                bool skipSessionMessage) override;
 
   bool HasKeyId(const std::vector<uint8_t>& keyid);
   virtual AP4_UI32 AddPool() override;
@@ -81,6 +80,8 @@ private:
   // \brif Decrypter pool
   std::map<AP4_UI32, PINFO> m_pool; // ID - Pool info
 
+  DRM::Config m_config;
+  std::vector<uint8_t> m_defaultKeyId;
   std::string m_sessionId;
   static uint32_t g_sessionIdCount;
 };

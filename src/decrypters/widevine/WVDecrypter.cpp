@@ -26,6 +26,8 @@ using namespace UTILS;
 
 CWVDecrypter::~CWVDecrypter()
 {
+  m_WVCdmAdapter.reset();
+
 #if defined(__linux__) && (defined(__aarch64__) || defined(__arm64__))
   if (m_hdlLibLoader)
     dlclose(m_hdlLibLoader);
@@ -60,45 +62,29 @@ bool CWVDecrypter::Initialize()
   return true;
 }
 
-SResult CWVDecrypter::OpenDRMSystem(const DRM::Config& config)
+bool CWVDecrypter::IsKeySystemSupported(std::string_view keySystem)
 {
-  if (config.license.serverUri.empty())
-  {
-    LOG::LogF(LOGERROR, "The DRM license server url has not been configured");
-    return SResult::Error(GUI::GetLocalizedString(30306));
-  }
-
-  auto cdmAdapter = std::make_shared<CWVCdmAdapter>();
-  const SResult ret = cdmAdapter->Initialize(config, this);
-
-  if (ret.IsFailed())
-    m_WVCdmAdapter = nullptr;
-  else
-    m_WVCdmAdapter = cdmAdapter;
-
-  return ret;
+  return keySystem == KS_WIDEVINE;
 }
 
 std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CWVDecrypter::CreateSingleSampleDecrypter(
-    const std::vector<uint8_t>& initData,
+    const DRM::Config& config,
     const std::vector<uint8_t>& defaultKeyId,
-    std::string_view licenseUrl,
-    bool skipSessionMessage,
     CryptoMode cryptoMode)
 {
   if (!m_WVCdmAdapter)
   {
-    LOG::LogF(LOGERROR, "Cannot create decrypter, adapter not initialized");
-    return nullptr;
-  }
+    auto cdmAdapter = std::make_shared<CWVCdmAdapter>();
+    const SResult ret = cdmAdapter->Initialize(config, this);
 
-  auto decrypter = std::make_shared<CWVCencSingleSampleDecrypter>(
-      m_WVCdmAdapter.get(), initData, defaultKeyId, skipSessionMessage, cryptoMode);
-  if (decrypter->GetSessionId().empty())
-  {
-    return nullptr;
+    if (ret.IsFailed())
+      return nullptr;
+
+    m_WVCdmAdapter = cdmAdapter;
   }
-  return decrypter;
+  
+  return std::make_shared<CWVCencSingleSampleDecrypter>(m_WVCdmAdapter.get(), defaultKeyId,
+                                                        cryptoMode);
 }
 
 void CWVDecrypter::GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,

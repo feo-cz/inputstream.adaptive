@@ -18,14 +18,15 @@ public:
   CWVDecrypter() = default;
   virtual ~CWVDecrypter() override;
 
+  virtual const std::string GetName() const override { return "Widevine-CDM"; }
+
   virtual bool Initialize() override;
 
-  virtual SResult OpenDRMSystem(const DRM::Config& config) override;
+  virtual bool IsKeySystemSupported(std::string_view keySystem) override;
+
   virtual std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CreateSingleSampleDecrypter(
-      const std::vector<uint8_t>& initData,
+      const DRM::Config& config,
       const std::vector<uint8_t>& defaultKeyId,
-      std::string_view licenseUrl,
-      bool skipSessionMessage,
       CryptoMode cryptoMode) override;
 
   virtual void GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
@@ -35,7 +36,7 @@ public:
   virtual std::optional<bool> HasLicenseKey(
       std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
       const std::vector<uint8_t>& keyId) override;
-  virtual bool IsInitialised() override { return m_WVCdmAdapter != nullptr; }
+
   virtual std::string GetChallengeB64Data(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter) override;
   virtual bool OpenVideoDecoder(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
                                 const VIDEOCODEC_INITDATA* initData) override;

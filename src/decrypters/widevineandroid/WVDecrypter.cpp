@@ -13,6 +13,7 @@
 #include "common/AdaptiveDecrypter.h"
 #include "decrypters/Helpers.h"
 #include "utils/Base64Utils.h"
+#include "utils/StringUtils.h"
 #include "utils/GUIUtils.h"
 #include "utils/log.h"
 
@@ -36,6 +37,8 @@ CWVDecrypterA::CWVDecrypterA()
 
 CWVDecrypterA::~CWVDecrypterA()
 {
+  m_wvAdapters.clear();
+
 #ifdef DRMTHREAD
   m_jniCondition.notify_one();
   m_jniWorker->join();
@@ -53,37 +56,38 @@ void JNIThread(JavaVM* vm)
 }
 #endif
 
-SResult CWVDecrypterA::OpenDRMSystem(const DRM::Config& config)
+bool CWVDecrypterA::IsKeySystemSupported(std::string_view keySystem)
 {
-  if (config.license.serverUri.empty())
-  {
-    LOG::LogF(LOGERROR, "The DRM license server url has not been configured");
-    return SResult::Error(GUI::GetLocalizedString(30306));
-  }
-
-  m_WVCdmAdapter = std::make_shared<CWVCdmAdapterA>(config.keySystem, config, m_classLoader, this);
-
-  if (!m_WVCdmAdapter->GetCDM())
-    return SResultCode::ERROR;
-
-  return SResultCode::OK;
+  return CWVCdmAdapterA::IsKeySystemSupported(keySystem);
 }
 
 std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CWVDecrypterA::CreateSingleSampleDecrypter(
-    const std::vector<uint8_t>& initData,
+    const DRM::Config& config,
     const std::vector<uint8_t>& defaultKeyId,
-    std::string_view licenseUrl,
-    bool skipSessionMessage,
     CryptoMode cryptoMode)
 {
-  std::shared_ptr<CWVCencSingleSampleDecrypterA> decrypter =
-      std::make_shared<CWVCencSingleSampleDecrypterA>(m_WVCdmAdapter.get(), initData, defaultKeyId);
+  const std::string& keySystem = config.keySystem;
+  std::shared_ptr<CWVCdmAdapterA> wvAdapter;
 
-  if (!(!decrypter->GetSessionId().empty() && decrypter->StartSession(skipSessionMessage)))
+  // Reuse existing adapters
+  if (STRING::KeyExists(m_wvAdapters, keySystem))
   {
-    return nullptr;
+    wvAdapter = m_wvAdapters[keySystem];
   }
-  return decrypter;
+  else
+  {
+    wvAdapter = std::make_shared<CWVCdmAdapterA>(keySystem, config, m_classLoader, this);
+
+    if (!wvAdapter->GetCDM())
+    {
+      LOG::LogF(LOGERROR, "Widevine adapter not created");
+      return nullptr;
+    }
+
+    m_wvAdapters.emplace(keySystem, wvAdapter);
+  }
+
+  return std::make_shared<CWVCencSingleSampleDecrypterA>(wvAdapter.get(), defaultKeyId);
 }
 
 void CWVDecrypterA::GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,

@@ -40,11 +40,6 @@ public:
   virtual ~CDRMEngine() = default;
 
   /*!
-   * \brief Initialize the DRM engine.
-   */
-  void Initialize();
-
-  /*!
    * \brief Pre-initialize a DRM before to download a manifest and create a session.
    * \param session[OUT] The opened session
    * \return True if has been pre-initialized, otherwise false
@@ -100,6 +95,11 @@ public:
 
 private:
   /*!
+   * \brief Initialize the DRM engine.
+   */
+  bool Initialize();
+
+  /*!
    * \brief Configure DRM ClearKey, by replacing manifest DRM info when needed.
    */
   bool ConfigureClearKey(std::vector<DRM::DRMInfo>& drmInfos);
@@ -121,9 +121,11 @@ private:
   // \brief Check if a Key System is supported
   bool HasKeySystemSupport(std::string_view keySystem) const;
 
-  std::vector<std::string> m_supportedKs; // Supported key systems, the lower index has higher priority
+  // \brief Get a DRM instance for the specified key system, it will return nullptr if not found
+  std::shared_ptr<DRM::IDecrypter> GetDrmInstance(std::string_view ks) const;
+
   std::string m_keySystem; // Choosen key system
-  std::map<std::string, std::shared_ptr<DRM::IDecrypter>> m_drms; // KeySystem - DRM instance
+  std::vector<DRMInstance> m_drms;
   std::vector<DRMSession> m_sessions;
 
   EngineStatus m_status{EngineStatus::NONE};

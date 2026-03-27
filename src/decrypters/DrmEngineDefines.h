@@ -123,6 +123,22 @@ struct DRMInfo
   std::vector<uint8_t> serverCert; // Server certificate
 };
 
+struct DRMInstance
+{
+  std::string keySystem;
+  std::shared_ptr<DRM::IDecrypter> drm;
+
+  DRMInstance(std::string_view ks, std::shared_ptr<DRM::IDecrypter> d)
+    : keySystem(ks), drm(d)
+  {
+  }
+
+  bool operator==(const DRMInstance& other) const
+  {
+    return (keySystem == other.keySystem) && (drm == other.drm);
+  }
+};
+
 struct DRMSession
 {
   std::string id; // DRM session ID
