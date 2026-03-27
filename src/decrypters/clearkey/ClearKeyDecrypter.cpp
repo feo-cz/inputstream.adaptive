@@ -46,5 +46,5 @@ std::optional<bool> CClearKeyDecrypter::HasLicenseKey(
     else
       LOG::LogF(LOGFATAL, "Cannot cast the decrypter shared pointer.");
   }
-  return false;
+  return std::nullopt;
 }
