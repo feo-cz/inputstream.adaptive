@@ -27,5 +27,6 @@ DRM::Config CreateDRMConfig(std::string_view keySystem, const ADP::KODI_PROPS::D
 namespace FACTORY
 {
 std::shared_ptr<DRM::IDecrypter> GetDecrypter(STREAM_CRYPTO_KEY_SYSTEM keySystem);
+std::vector<std::shared_ptr<DRM::IDecrypter>> GetDecrypters();
 }
 } // namespace DRM

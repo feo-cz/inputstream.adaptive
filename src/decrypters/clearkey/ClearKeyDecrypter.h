@@ -16,12 +16,14 @@ class CClearKeyDecrypter : public IDecrypter
 public:
   CClearKeyDecrypter(){};
   virtual ~CClearKeyDecrypter() override{};
-  virtual SResult OpenDRMSystem(const DRM::Config& config) override;
+
+  virtual const std::string GetName() const override { return "ClearKey-SW"; }
+
+  virtual bool IsKeySystemSupported(std::string_view keySystem) override;
+
   virtual std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CreateSingleSampleDecrypter(
-      const std::vector<uint8_t>& initData,
+      const DRM::Config& config,
       const std::vector<uint8_t>& defaultkeyid,
-      std::string_view licenseUrl,
-      bool skipSessionMessage,
       CryptoMode cryptoMode) override;
 
   virtual void GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
@@ -33,7 +35,7 @@ public:
   virtual std::optional<bool> HasLicenseKey(
       std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
       const std::vector<uint8_t>& keyid) override;
-  virtual bool IsInitialised() override { return m_isInitialized; }
+
   virtual std::string GetChallengeB64Data(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter) override
   {
     return "";
@@ -64,7 +66,6 @@ public:
   virtual std::string_view GetLibraryPath() const override { return m_libraryPath; }
 
 private:
-  bool m_isInitialized{false};
   DRM::Config m_config;
   std::string m_libraryPath;
 };

@@ -99,8 +99,6 @@ SResult SESSION::CSession::Initialize(std::string manifestUrl)
   auto& kodiProps = CSrvBroker::GetKodiProps();
   std::map<std::string, std::string> manifestHeaders = kodiProps.GetManifestHeaders();
 
-  m_drmEngine.Initialize();
-
   DRM::DRMSession session;
   // Pre-initialize the DRM allow to generate the challenge and session ID data
   // used to make licensed manifest requests

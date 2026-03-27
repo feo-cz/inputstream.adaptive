@@ -16,6 +16,7 @@
 #include "utils/CurlUtils.h"
 #include "utils/DigestMD5Utils.h"
 #include "utils/FileUtils.h"
+#include "utils/GUIUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/log.h"
 
@@ -28,34 +29,15 @@ using namespace UTILS;
 
 CWVCencSingleSampleDecrypterA::CWVCencSingleSampleDecrypterA(
     IWVCdmAdapter<CJNIMediaDrm>* cdmAdapter,
-    const std::vector<uint8_t>& pssh,
     const std::vector<uint8_t>& defaultKeyId)
   : m_cdmAdapter(cdmAdapter),
-    m_pssh(pssh),
     m_isProvisioningRequested(false),
     m_isKeyUpdateRequested(false),
     m_defaultKeyId{defaultKeyId}
 {
   SetParentIsOwner(false);
 
-  if (pssh.size() < 4 || pssh.size() > 65535)
-  {
-    LOG::LogF(LOGERROR, "PSSH init data with length %zu seems not to be cenc init data",
-              pssh.size());
-    return;
-  }
-
   m_cdmAdapter->AttachObserver(this);
-
-  if (CSrvBroker::GetSettings().IsDebugLicense())
-  {
-    std::string fileName =
-        STRING::ToUpper(DRM::KeySystemToUUIDstr(m_cdmAdapter->GetKeySystem())) + ".init";
-    std::string debugFilePath = FILESYS::PathCombine(m_cdmAdapter->GetLibraryPath(), fileName);
-    FILESYS::SaveFile(debugFilePath, {m_pssh.cbegin(), m_pssh.cend()}, true);
-  }
-
-  m_initialPssh = m_pssh;
 
   if (m_cdmAdapter->GetKeySystem() == DRM::KS_PLAYREADY)
   {
@@ -75,54 +57,6 @@ CWVCencSingleSampleDecrypterA::CWVCencSingleSampleDecrypterA(
     m_optParams["CDMID"] = encoded;
   }
   */
-
-  bool L3FallbackRequested = false;
-RETRY_OPEN:
-  m_sessionIdVec = m_cdmAdapter->GetCDM()->openSession();
-  m_sessionId.assign(m_sessionIdVec.cbegin(), m_sessionIdVec.cend());
-  if (xbmc_jnienv()->ExceptionCheck())
-  {
-    xbmc_jnienv()->ExceptionClear();
-    if (!m_isProvisioningRequested)
-    {
-      LOG::LogF(LOGWARNING, "Exception during open session - provisioning...");
-      m_isProvisioningRequested = true;
-      if (!ProvisionRequest())
-      {
-        if (!L3FallbackRequested &&
-            m_cdmAdapter->GetCDM()->getPropertyString("securityLevel") == "L1")
-        {
-          LOG::LogF(LOGWARNING, "L1 provisioning failed - retrying with L3...");
-          L3FallbackRequested = true;
-          m_isProvisioningRequested = false;
-          m_cdmAdapter->GetCDM()->setPropertyString("securityLevel", "L3");
-          goto RETRY_OPEN;
-        }
-        else
-          return;
-      }
-      goto RETRY_OPEN;
-    }
-    else
-    {
-      LOG::LogF(LOGERROR, "Exception during open session - abort");
-      return;
-    }
-  }
-
-  if (m_sessionId.empty())
-  {
-    LOG::LogF(LOGERROR, "Unable to open DRM session");
-    return;
-  }
-
-  if (m_cdmAdapter->GetKeySystem() != DRM::KS_PLAYREADY)
-  {
-    int maxSecuritylevel = m_cdmAdapter->GetCDM()->getMaxSecurityLevel();
-    xbmc_jnienv()->ExceptionClear();
-
-    LOG::Log(LOGDEBUG, "Session ID: %s, Max security level: %d", m_sessionId.c_str(), maxSecuritylevel);
-  }
 }
 
 CWVCencSingleSampleDecrypterA::~CWVCencSingleSampleDecrypterA()
@@ -154,6 +88,90 @@ CWVCencSingleSampleDecrypterA::~CWVCencSingleSampleDecrypterA()
   }
 
   m_cdmAdapter->DetachObserver(this);
+}
+
+SResult CWVCencSingleSampleDecrypterA::CreateSession(const std::vector<uint8_t>& pssh,
+                                                     std::string_view licenseUrl,
+                                                     bool skipSessionMessage)
+{
+  if (m_cdmAdapter->GetConfig().license.serverUri.empty())
+  {
+    LOG::LogF(LOGERROR, "The DRM license server url has not been configured");
+    return SResult::Error(GUI::GetLocalizedString(30306));
+  }
+
+  if (pssh.size() < 4 || pssh.size() > 4096)
+  {
+    LOG::LogF(LOGERROR, "Cannot request license, PSSH init data has unexpected size (%zu)",
+              pssh.size());
+    return SResult::Error(GUI::GetLocalizedString(30303));
+  }
+
+  m_pssh = pssh;
+
+  if (CSrvBroker::GetSettings().IsDebugLicense())
+  {
+    std::string fileName =
+        STRING::ToUpper(DRM::KeySystemToUUIDstr(m_cdmAdapter->GetKeySystem())) + ".init";
+    std::string debugFilePath = FILESYS::PathCombine(m_cdmAdapter->GetLibraryPath(), fileName);
+    FILESYS::SaveFile(debugFilePath, {m_pssh.cbegin(), m_pssh.cend()}, true);
+  }
+
+  m_initialPssh = m_pssh;
+
+  bool L3FallbackRequested = false;
+RETRY_OPEN:
+  m_sessionIdVec = m_cdmAdapter->GetCDM()->openSession();
+  m_sessionId.assign(m_sessionIdVec.cbegin(), m_sessionIdVec.cend());
+  if (xbmc_jnienv()->ExceptionCheck())
+  {
+    xbmc_jnienv()->ExceptionClear();
+    if (!m_isProvisioningRequested)
+    {
+      LOG::LogF(LOGWARNING, "Exception during open session - provisioning...");
+      m_isProvisioningRequested = true;
+      if (!ProvisionRequest())
+      {
+        if (!L3FallbackRequested &&
+            m_cdmAdapter->GetCDM()->getPropertyString("securityLevel") == "L1")
+        {
+          LOG::LogF(LOGWARNING, "L1 provisioning failed - retrying with L3...");
+          L3FallbackRequested = true;
+          m_isProvisioningRequested = false;
+          m_cdmAdapter->GetCDM()->setPropertyString("securityLevel", "L3");
+          goto RETRY_OPEN;
+        }
+        else
+          return SResult::Error(GUI::GetLocalizedString(30303));
+      }
+      goto RETRY_OPEN;
+    }
+    else
+    {
+      LOG::LogF(LOGERROR, "Exception during open session - abort");
+      return SResult::Error(GUI::GetLocalizedString(30303));
+    }
+  }
+
+  if (m_sessionId.empty())
+  {
+    LOG::LogF(LOGERROR, "No session ID available");
+    return SResult::Error(GUI::GetLocalizedString(30303));
+  }
+
+  if (m_cdmAdapter->GetKeySystem() != DRM::KS_PLAYREADY)
+  {
+    int maxSecuritylevel = m_cdmAdapter->GetCDM()->getMaxSecurityLevel();
+    xbmc_jnienv()->ExceptionClear();
+
+    LOG::Log(LOGDEBUG, "Session ID: %s, Max security level: %d", m_sessionId.c_str(),
+             maxSecuritylevel);
+  }
+
+  if (StartSession(skipSessionMessage))
+    return SResult::Ok();
+  else
+    return SResult::Error(GUI::GetLocalizedString(30303));
 }
 
 std::string CWVCencSingleSampleDecrypterA::GetSessionId()

@@ -20,6 +20,7 @@
 #include "utils/CurlUtils.h"
 #include "utils/DigestMD5Utils.h"
 #include "utils/FileUtils.h"
+#include "utils/GUIUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/Utils.h"
 #include "utils/log.h"
@@ -62,12 +63,9 @@ void CWVCencSingleSampleDecrypter::SetSession(const std::string sessionId,
 
 CWVCencSingleSampleDecrypter::CWVCencSingleSampleDecrypter(
     IWVCdmAdapter<media::CdmAdapter>* cdmAdapter,
-    const std::vector<uint8_t>& pssh,
     const std::vector<uint8_t>& defaultKeyId,
-    bool skipSessionMessage,
     CryptoMode cryptoMode)
   : m_cdmAdapter(cdmAdapter),
-    m_pssh(pssh),
     m_promiseId(1),
     m_defaultKeyId(defaultKeyId),
     m_isDrained(true),
@@ -75,14 +73,37 @@ CWVCencSingleSampleDecrypter::CWVCencSingleSampleDecrypter(
 {
   SetParentIsOwner(false);
 
-  if (pssh.size() < 4 || pssh.size() > 4096)
+  m_cdmAdapter->AttachObserver(this);
+}
+
+CWVCencSingleSampleDecrypter::~CWVCencSingleSampleDecrypter()
+{
+  // This decrypter can be used/shared with more streams "sessions"
+  // since it is used wrapped in a shared_ptr the destructor will be called only
+  // when the last stream "session" will be deleted, and so it can close the CDM session.
+  CloseSessionId();
+
+  m_cdmAdapter->DetachObserver(this);
+}
+
+SResult CWVCencSingleSampleDecrypter::CreateSession(const std::vector<uint8_t>& pssh,
+                                                    std::string_view licenseUrl,
+                                                    bool skipSessionMessage)
+{
+  if (m_cdmAdapter->GetConfig().license.serverUri.empty())
   {
-    LOG::LogF(LOGERROR, "PSSH init data with length %zu seems not to be cenc init data",
-              pssh.size());
-    return;
+    LOG::LogF(LOGERROR, "The DRM license server url has not been configured");
+    return SResult::Error(GUI::GetLocalizedString(30306));
   }
 
-  m_cdmAdapter->AttachObserver(this);
+  if (pssh.size() < 4 || pssh.size() > 4096)
+  {
+    LOG::LogF(LOGERROR, "Cannot request license, PSSH init data has unexpected size (%zu)",
+              pssh.size());
+    return SResult::Error(GUI::GetLocalizedString(30303));
+  }
+
+  m_pssh = pssh;
 
   if (CSrvBroker::GetSettings().IsDebugLicense())
   {
@@ -108,31 +129,23 @@ CWVCencSingleSampleDecrypter::CWVCencSingleSampleDecrypter(
   catch (const std::exception& e)
   {
     LOG::LogF(LOGERROR, "Session creation failed: %s", e.what());
-    return;
+    return SResult::Error(GUI::GetLocalizedString(30303));
   }
 
   if (m_strSession.empty())
   {
-    LOG::LogF(LOGERROR, "Cannot perform License update, no session available");
-    return;
+    LOG::LogF(LOGERROR, "No session ID available");
+    return SResult::Error(GUI::GetLocalizedString(30303));
   }
 
   if (skipSessionMessage)
-    return;
+    return SResult::Ok();
 
   //! @todo: this loop is not so clear
   while (m_challenge.GetDataSize() > 0 && SendSessionMessage())
     ;
-}
 
-CWVCencSingleSampleDecrypter::~CWVCencSingleSampleDecrypter()
-{
-  // This decrypter can be used/shared with more streams "sessions"
-  // since it is used wrapped in a shared_ptr the destructor will be called only
-  // when the last stream "session" will be deleted, and so it can close the CDM session.
-  CloseSessionId();
-
-  m_cdmAdapter->DetachObserver(this);
+  return SResult::Ok();
 }
 
 void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& keyId,

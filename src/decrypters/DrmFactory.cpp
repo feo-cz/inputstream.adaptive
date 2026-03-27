@@ -129,3 +129,21 @@ std::shared_ptr<DRM::IDecrypter> DRM::FACTORY::GetDecrypter(STREAM_CRYPTO_KEY_SY
 
   return nullptr;
 }
+
+std::vector<std::shared_ptr<DRM::IDecrypter>> DRM::FACTORY::GetDecrypters()
+{
+  std::vector<std::shared_ptr<DRM::IDecrypter>> drms;
+
+  drms.emplace_back(std::make_shared<CClearKeyDecrypter>());
+
+#if ANDROID
+  drms.emplace_back(std::make_shared<CWVDecrypterA>());
+#else
+// Darwin embedded are apple platforms different than MacOS (e.g. IOS)
+#ifndef TARGET_DARWIN_EMBEDDED
+  drms.emplace_back(std::make_shared<CWVDecrypter>());
+#endif
+#endif
+
+  return drms;
+}

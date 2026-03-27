@@ -125,6 +125,8 @@ public:
   void NotifyOnKeyStatusChange(const std::string& sessionId,
                                const std::vector<DRM::KeyInfo>& keysInfo) override;
 
+  static bool IsKeySystemSupported(std::string_view keySystem);
+
 private:
   void LoadServiceCertificate();
 

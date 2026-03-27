@@ -46,35 +46,6 @@ STREAM_CRYPTO_KEY_SYSTEM KSToCryptoKeySystem(std::string_view keySystem)
     return STREAM_CRYPTO_KEY_SYSTEM_NONE;
 }
 
-SResult CreateDRM(std::string_view keySystem, std::shared_ptr<DRM::IDecrypter>& drm)
-{
-  std::string decrypterPath = CSrvBroker::GetSettings().GetDecrypterPath();
-  if (decrypterPath.empty())
-  {
-    LOG::LogF(LOGERROR, "No decrypter path set in the add-on settings");
-    return SResult::Error(GUI::GetLocalizedString(30302));
-  }
-
-  drm = DRM::FACTORY::GetDecrypter(KSToCryptoKeySystem(keySystem));
-
-  if (!drm)
-  {
-    LOG::LogF(LOGERROR, "Unable to create the DRM decrypter");
-    return SResult::Error(GUI::GetLocalizedString(30303));
-  }
-
-  drm->SetLibraryPath(decrypterPath);
-
-  if (!drm->Initialize())
-  {
-    drm = nullptr;
-    LOG::LogF(LOGERROR, "Unable to initialize the DRM decrypter");
-    return SResult::Error(GUI::GetLocalizedString(30303));
-  }
-
-  return SResultCode::OK;
-}
-
 /*!
  * \brief Get a DRMInfo by Key System
  * \param drmInfos The manifest DRM info
@@ -128,56 +99,104 @@ bool GetCapabilities(const std::optional<bool> isForceSecureDecoder,
 }
 } // unnamed namespace
 
-void DRM::CDRMEngine::Initialize()
+bool DRM::CDRMEngine::Initialize()
 {
-  // Build the list of the supported DRM's by KeySystem,
-  // the list depends on the operative system used,
-  // the order of addition also defines the DRM priority (always prefer real DRM's over ClearKey)
-  // in future could be improved to take in account also the DRM capability on the target system
+  if (!m_drms.empty())
+    return true; // assume as already initialized
 
-  // Widevine currently always preferred as first because on android can reach 4k on L1 devices
-  m_supportedKs.emplace_back(KS_WIDEVINE);
-#if ANDROID
-  m_supportedKs.emplace_back(KS_PLAYREADY);
-  m_supportedKs.emplace_back(KS_WISEPLAY);
-#endif
-  m_supportedKs.emplace_back(KS_CLEARKEY);
+  if (m_status == EngineStatus::DRM_ERROR)
+    return false; // something wrong with a previous initialization
 
-  // Sort key systems based on priorities
+  //! @todo: to test a way to initialize DRM when manifest is downloaded/parsed
+  //! in the hoping to have a more smoother playback transition from unencrypted->to->encrypted periods
+
+  // This is the list of keysystems supported by at least one DRM
+  // are ordered by priority where the lower index has higher priority
+  // by default ClearKey has the lowest priority since real DRMs should be preferred
+  std::vector<std::string_view> keySystemsPrio = {KS_WIDEVINE, KS_PLAYREADY, KS_WISEPLAY, KS_CLEARKEY};
+
   const auto& kodiProps = CSrvBroker::GetKodiProps();
-
+  // Reorder the keysystems list by using the custom DRM configuration, if any
   for (auto& [ks, cfg] : kodiProps.GetDrmConfigs())
   {
     if (cfg.priority.has_value() && *cfg.priority != 0)
     {
-      auto it = std::find(m_supportedKs.begin(), m_supportedKs.end(), ks);
-      if (it != m_supportedKs.end())
+      auto it = std::find(keySystemsPrio.begin(), keySystemsPrio.end(), ks);
+      if (it != keySystemsPrio.end())
       {
-        m_supportedKs.erase(it);
+        keySystemsPrio.erase(it);
 
         size_t index = *cfg.priority - 1;
-        if (index >= m_supportedKs.size())
-          index = m_supportedKs.size() - 1;
+        if (index >= keySystemsPrio.size())
+          index = keySystemsPrio.size() - 1;
 
-        m_supportedKs.insert(m_supportedKs.begin() + index, ks);
+        keySystemsPrio.insert(keySystemsPrio.begin() + index, ks);
       }
     }
   }
+
+  // Get all DRM supported by the platform in use to determine which keysystems are supported
+  std::vector<std::shared_ptr<DRM::IDecrypter>> drms = FACTORY::GetDecrypters();
+
+  std::string decrypterPath = CSrvBroker::GetSettings().GetDecrypterPath();
+  if (decrypterPath.empty())
+  {
+    LOG::LogF(LOGERROR,
+              "Cannot initialize DrmEngine, no decrypter path set in the add-on settings");
+    m_status = EngineStatus::DRM_ERROR;
+    return false;
+  }
+
+  // Initialize DRMs
+  for (auto it = drms.begin(); it != drms.end();)
+  {
+    (*it)->SetLibraryPath(decrypterPath);
+
+    if (!(*it)->Initialize()) // Failed to initialize DRM, delete it and go on
+    {
+      LOG::LogF(LOGERROR, "Unable to initialize %s DRM", (*it)->GetName().c_str());
+      it = drms.erase(it);
+    }
+    else
+      ++it;
+  }
+
+  // Check what keysystems are supported by DRMs by priority order
+  // and so add the supported one to the DRM list
+  for (std::string_view ks : keySystemsPrio)
+  {
+    for (auto& drm : drms)
+    {
+      if (drm->IsKeySystemSupported(ks))
+        m_drms.emplace_back(ks, drm);
+    }
+  }
+
+  if (m_drms.empty())
+  {
+    LOG::LogF(LOGWARNING, "No DRM available");
+    return false;
+  }
+
+  return true;
 }
 
 bool DRM::CDRMEngine::PreInitializeDRM(DRMSession& session)
 {
   auto& kodiProps = CSrvBroker::GetKodiProps();
 
-  // Pre-initialize the DRM is available for Widevine only.
-  // Since the manifest will be downloaded later its assumed that
-  // the manifest support the DRM and that the priority is set to 1.
-  if (std::find(m_supportedKs.cbegin(), m_supportedKs.cend(), KS_WIDEVINE) == m_supportedKs.cend())
-    return false;
-
   const auto propDrmCfg = kodiProps.GetDrmConfig(KS_WIDEVINE);
 
   if (!propDrmCfg.priority.has_value() || propDrmCfg.priority != 1 || propDrmCfg.preInitData.empty())
+    return false;
+
+  if (!Initialize())
+    return false;
+
+  // Pre-initialize the DRM is available for Widevine only.
+  // Since the manifest will be downloaded later its assumed that
+  // the manifest support the DRM and that the priority is set to 1.
+  if (!HasKeySystemSupport(KS_WIDEVINE))
     return false;
 
   LOG::Log(LOGDEBUG, "Pre-initialize crypto session");
@@ -201,39 +220,37 @@ bool DRM::CDRMEngine::PreInitializeDRM(DRMSession& session)
 
   m_keySystem = KS_WIDEVINE;
 
-  std::shared_ptr<DRM::IDecrypter> drm;
-  SResult ret = CreateDRM(m_keySystem, drm);
-  if (ret.IsFailed())
+  std::shared_ptr<DRM::IDecrypter> drm = GetDrmInstance(m_keySystem);
+  if (!drm)
   {
     m_status = EngineStatus::DRM_ERROR;
-    LOG::LogF(LOGERROR, "%s", ret.Message().c_str());
-    GUI::ErrorDialog(ret.Message());
-    return false;
-  }
-
-  DRM::Config drmCfg = CreateDRMConfig(m_keySystem, kodiProps.GetDrmConfig(m_keySystem));
-
-  ret = drm->OpenDRMSystem(drmCfg);
-  if (ret.IsFailed())
-  {
-    LOG::LogF(LOGERROR, "Failed to open the DRM");
-    m_status = EngineStatus::DRM_ERROR;
-    GUI::ErrorDialog(ret.Message());
+    LOG::LogF(LOGERROR, "Cannot get the DRM instance for keysystem %s", m_keySystem.c_str());
+    GUI::ErrorDialog(GUI::GetLocalizedString(30303));
     return false;
   }
 
   LOG::LogF(LOGDEBUG, "Initializing session with KID: %s", STRING::ToHexadecimal(kidData).c_str());
 
-  auto dec = drm->CreateSingleSampleDecrypter(initData, kidData, "", true, CryptoMode::AES_CTR);
+  DRM::Config drmCfg = CreateDRMConfig(m_keySystem, kodiProps.GetDrmConfig(m_keySystem));
+
+  auto dec = drm->CreateSingleSampleDecrypter(drmCfg, kidData, CryptoMode::AES_CTR);
 
   if (!dec)
   {
-    LOG::LogF(LOGERROR, "Failed to initialize the decrypter");
+    LOG::Log(LOGERROR, "Failed to initialize the %s DRM decrypter", drm->GetName().c_str());
     m_status = EngineStatus::DECRYPTER_ERROR;
     return false;
   }
 
-  m_drms.emplace(m_keySystem, drm);
+  const SResult ret = dec->CreateSession(initData, "", true);
+
+  if (ret.IsFailed())
+  {
+    LOG::LogF(LOGERROR, "Failed to create the DRM session");
+    m_status = EngineStatus::DRM_ERROR;
+    GUI::ErrorDialog(ret.Message());
+    return false;
+  }
 
   session.id = dec->GetSessionId();
   session.challenge = drm->GetChallengeB64Data(dec);
@@ -260,6 +277,9 @@ bool DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> drmInfos,
                                         DRM::DRMInfo& initDrmInfo)
 {
   if (drmInfos.empty())
+    return false;
+
+  if (!Initialize())
     return false;
 
   LOG::Log(LOGDEBUG, "Initialize crypto session");
@@ -345,24 +365,6 @@ bool DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> drmInfos,
     ExtractStreamProtectionData(repr, adp, drmInfo);
   }
 
-  // Create the DRM decrypter
-  if (!STRING::KeyExists(m_drms, m_keySystem))
-  {
-    //! @todo: to test a way to preinitialize DRM when manifest is downloaded/parsed
-    //! in the hoping to have a more smoother playback transition
-    //! this can be tested with multiperiods video where first period is unencrypted and second one DRM crypted
-    std::shared_ptr<DRM::IDecrypter> drm;
-    SResult ret = CreateDRM(m_keySystem, drm);
-    if (ret.IsFailed())
-    {
-      m_status = EngineStatus::DRM_ERROR;
-      LOG::LogF(LOGERROR, "%s", ret.Message().c_str());
-      GUI::ErrorDialog(ret.Message());
-      return false;
-    }
-    m_drms.emplace(m_keySystem, drm);
-  }
-
   const std::vector<uint8_t> drmInfoKidBytes = DRM::ConvertKidStrToBytes(drmInfo.defaultKid);
 
   if (m_isPreinitialized && m_sessions.size() == 1)
@@ -411,31 +413,43 @@ bool DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> drmInfos,
     if (canCleanupSessions)
       DeleteSessionsByType(mediaType);
 
+    std::shared_ptr<DRM::IDecrypter> drm = GetDrmInstance(m_keySystem);
+    if (!drm)
+    {
+      m_status = EngineStatus::DRM_ERROR;
+      LOG::LogF(LOGERROR, "Cannot get the DRM instance for keysystem %s", m_keySystem.c_str());
+      GUI::ErrorDialog(GUI::GetLocalizedString(30303));
+      return false;
+    }
+
     DRMSession newSes;
-    newSes.drm = m_drms[m_keySystem];
+    newSes.drm = drm;
     newSes.mediaType = mediaType;
     newSes.kid = drmInfo.defaultKid;
 
-    if (!newSes.drm->IsInitialised())
-    {
-      DRM::Config drmCfg = DRM::CreateDRMConfig(m_keySystem, drmPropCfg);
-      const SResult ret = newSes.drm->OpenDRMSystem(drmCfg);
-      if (ret.IsFailed())
-      {
-        LOG::LogF(LOGERROR, "Failed to open the DRM");
-        m_status = EngineStatus::DRM_ERROR;
-        GUI::ErrorDialog(ret.Message());
-        return false;
-      }
-    }
+    DRM::Config drmCfg = DRM::CreateDRMConfig(m_keySystem, drmPropCfg);
 
     newSes.decrypter = newSes.drm->CreateSingleSampleDecrypter(
-        drmInfo.initData, drmInfoKidBytes, drmInfo.licenseServerUri, false,
+        drmCfg, drmInfoKidBytes,
         drmInfo.cryptoMode == CryptoMode::NONE ? CryptoMode::AES_CTR : drmInfo.cryptoMode);
+
     if (!newSes.decrypter)
     {
-      LOG::Log(LOGERROR, "Failed to initialize the decrypter");
       m_status = EngineStatus::DECRYPTER_ERROR;
+      LOG::Log(LOGERROR, "Failed to initialize the %s DRM decrypter",
+               newSes.drm->GetName().c_str());
+      GUI::ErrorDialog(GUI::GetLocalizedString(30303));
+      return false;
+    }
+
+    const SResult ret =
+        newSes.decrypter->CreateSession(drmInfo.initData, drmInfo.licenseServerUri, false);
+
+    if (ret.IsFailed())
+    {
+      LOG::LogF(LOGERROR, "Failed to create the DRM session");
+      m_status = EngineStatus::DRM_ERROR;
+      GUI::ErrorDialog(ret.Message());
       return false;
     }
 
@@ -631,13 +645,14 @@ bool DRM::CDRMEngine::SelectDRM(std::vector<DRM::DRMInfo>& drmInfos)
   // Iterate supported DRM Key System's to find a match with the drmInfo's,
   // the supported DRM's are ordered by priority
   // the lower index have the higher priority
-  for (const std::string& ks : m_supportedKs)
+  for (auto& drm : m_drms)
   {
-    const DRM::DRMInfo* drmInfo = GetDRMInfoByKS(drmInfos, ks);
+    const DRM::DRMInfo* drmInfo = GetDRMInfoByKS(drmInfos, drm.keySystem);
 
     if (drmInfo)
     {
-      m_keySystem = ks;
+      m_keySystem = drm.keySystem;
+      LOG::LogF(LOGDEBUG, "Selected DRM key system: %s", m_keySystem.c_str());
       break;
     }
   }
@@ -755,7 +770,15 @@ void DRM::CDRMEngine::DeleteSessionsByType(const DRMMediaType mediaType)
 
 bool DRM::CDRMEngine::HasKeySystemSupport(std::string_view keySystem) const
 {
-  return std::find(m_supportedKs.cbegin(), m_supportedKs.cend(), keySystem) != m_supportedKs.cend();
+  return std::any_of(m_drms.cbegin(), m_drms.cend(),
+                     [&keySystem](const DRMInstance& a) { return a.keySystem == keySystem; });
+}
+
+std::shared_ptr<DRM::IDecrypter> DRM::CDRMEngine::GetDrmInstance(std::string_view ks) const
+{
+  auto it = std::find_if(m_drms.cbegin(), m_drms.cend(),
+                         [&ks](const DRMInstance& d) { return d.keySystem == ks; });
+  return it != m_drms.cend() ? it->drm : nullptr;
 }
 
 void DRM::CDRMEngine::Dispose()

@@ -14,6 +14,7 @@
 #include "utils/Base64Utils.h"
 #include "utils/CurlUtils.h"
 #include "utils/FileUtils.h"
+#include "utils/GUIUtils.h"
 #include "utils/StringUtils.h"
 #include "utils/UrlUtils.h"
 #include "utils/log.h"
@@ -28,55 +29,10 @@ using namespace UTILS;
 uint32_t CClearKeyCencSingleSampleDecrypter::g_sessionIdCount = 1;
 
 CClearKeyCencSingleSampleDecrypter::CClearKeyCencSingleSampleDecrypter(
-    std::string_view licenseUri,
-    const std::map<std::string, std::string>& licenseHeaders,
     const std::vector<uint8_t>& defaultKeyId,
     CClearKeyDecrypter* host)
-  : m_host(host)
+  : m_host(host), m_defaultKeyId(defaultKeyId)
 {
-  if (licenseUri.empty())
-  {
-    LOG::LogF(LOGERROR, "Cannot decrypt, the license server URI is missing");
-    return;
-  }
-
-  // Make license request to get KID/KEY pairs
-  std::vector<uint8_t> licenseData;
-
-  // Check if provided license data in URI format, otherwise make the license request
-  if (!URL::GetUriByteData(licenseUri, licenseData))
-  {
-    if (!MakeLicenseRequest(std::string(licenseUri), licenseHeaders, defaultKeyId, licenseData))
-      return;
-  }
-
-  if (!ParseLicenseResponse(licenseData))
-  {
-    LOG::LogF(LOGERROR, "Could not parse the license data");
-    return;
-  }
-
-  if (!STRING::KeyExists(m_kidPairs, defaultKeyId))
-  {
-    LOG::LogF(LOGERROR, "License data does not have the required KID");
-    m_kidPairs.clear();
-    return;
-  }
-
-  InitDecrypter();
-}
-
-CClearKeyCencSingleSampleDecrypter::CClearKeyCencSingleSampleDecrypter(
-    const std::vector<uint8_t>& initData,
-    const std::vector<uint8_t>& defaultKeyId,
-    CClearKeyDecrypter* host)
-  : m_host(host)
-{
-  // Currently HLS manifest only support this
-  // the initData should contain only the key
-  m_kidPairs.emplace(defaultKeyId, initData);
-
-  InitDecrypter();
 }
 
 void CClearKeyCencSingleSampleDecrypter::InitDecrypter()
@@ -85,6 +41,60 @@ void CClearKeyCencSingleSampleDecrypter::InitDecrypter()
 
   // Define a session id
   m_sessionId = "ck_" + std::to_string(g_sessionIdCount++);
+}
+
+SResult CClearKeyCencSingleSampleDecrypter::CreateSession(const std::vector<uint8_t>& pssh,
+                                                          std::string_view licenseUrl,
+                                                          bool skipSessionMessage)
+{
+  // NOTE: dont look at m_config.license configuration, since CDRMEngine::ConfigureClearKey takes care of that
+  const DRM::Config::License& licConfig = m_config.license;
+
+  if (pssh.empty())
+  {
+    // Assume that the license URI is provided by manifest or Kodi properties (props can be with keys or URL)
+    if (licenseUrl.empty())
+    {
+      LOG::LogF(LOGERROR, "Cannot decrypt, the license server URI is missing");
+      return SResult::Error(GUI::GetLocalizedString(30306));
+    }
+
+    // Make license request to get KID/KEY pairs
+    std::vector<uint8_t> licenseData;
+
+    // Check if provided license data in URI format, otherwise make the license request
+    if (!URL::GetUriByteData(licenseUrl, licenseData))
+    {
+      if (!MakeLicenseRequest(std::string(licenseUrl), licConfig.reqHeaders, m_defaultKeyId,
+                              licenseData))
+      {
+        return SResult::Error(GUI::GetLocalizedString(30303));
+      }
+    }
+
+    if (!ParseLicenseResponse(licenseData))
+    {
+      LOG::LogF(LOGERROR, "Could not parse the license data");
+      return SResult::Error(GUI::GetLocalizedString(30303));
+    }
+
+    if (!STRING::KeyExists(m_kidPairs, m_defaultKeyId))
+    {
+      LOG::LogF(LOGERROR, "License data does not have the required KID");
+      m_kidPairs.clear();
+      return SResult::Error(GUI::GetLocalizedString(30303));
+    }
+  }
+  else // Keys should be provided by the manifest
+  {
+    // Currently HLS manifest only support this
+    // the initData should contain only the key
+    m_kidPairs.emplace(m_defaultKeyId, pssh);
+  }
+
+  InitDecrypter();
+
+  return HasKeys() ? SResult::Ok() : SResult::Error(GUI::GetLocalizedString(30303));
 }
 
 bool CClearKeyCencSingleSampleDecrypter::HasKeyId(const std::vector<uint8_t>& keyid)

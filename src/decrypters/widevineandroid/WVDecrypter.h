@@ -12,6 +12,7 @@
 
 #include <memory>
 #include <mutex>
+#include <unordered_map>
 
 #ifdef DRMTHREAD
 #include <thread>
@@ -29,6 +30,8 @@ public:
   CWVDecrypterA();
   ~CWVDecrypterA();
 
+  virtual const std::string GetName() const override { return "Widevine"; }
+
   bool Initialize() override;
 
 #ifdef DRMTHREAD
@@ -42,13 +45,11 @@ public:
   }
 #endif
 
-  virtual SResult OpenDRMSystem(const DRM::Config& config) override;
+  virtual bool IsKeySystemSupported(std::string_view keySystem) override;
 
   virtual std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CreateSingleSampleDecrypter(
-      const std::vector<uint8_t>& initData,
+      const DRM::Config& config,
       const std::vector<uint8_t>& defaultKeyId,
-      std::string_view licenseUrl,
-      bool skipSessionMessage,
       CryptoMode cryptoMode) override;
 
   virtual void GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
@@ -61,8 +62,6 @@ public:
       const std::vector<uint8_t>& keyId) override;
 
   virtual std::string GetChallengeB64Data(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter) override;
-
-  virtual bool IsInitialised() override { return m_WVCdmAdapter != nullptr; }
 
   virtual bool OpenVideoDecoder(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
                                 const VIDEOCODEC_INITDATA* initData) override
@@ -93,7 +92,7 @@ public:
 private:
   std::string m_libraryPath;
   kodi::platform::CInterfaceAndroidSystem m_androidSystem;
-  std::shared_ptr<CWVCdmAdapterA> m_WVCdmAdapter;
+  std::unordered_map<std::string, std::shared_ptr<CWVCdmAdapterA>> m_wvAdapters; // KeySystem - Adapter instance
   std::shared_ptr<CJNIClassLoader> m_classLoader;
   std::string m_retvalHelper;
 #ifdef DRMTHREAD

@@ -10,6 +10,7 @@
 
 #include "decrypters/DrmEngineDefines.h"
 #include "utils/CryptoUtils.h"
+#include "utils/ResultType.h"
 
 #include <cstdint>
 #include <stdexcept>
@@ -58,6 +59,17 @@ public:
 
   virtual AP4_UI32 AddPool() { return 0; }
   virtual void RemovePool(AP4_UI32 poolId) {}
+
+  /*
+   * \brief Create a DRM session.
+   * \param pssh[OPT] A PSSH to make the license request, its use depends on DRM.
+   * \param licenseUrl[OPT] A license URL or URI to make the license request, its use depends on DRM.
+   * \param skipSessionMessage[OPT] Skip the session message to avoid make a license request, by default should be set false.
+   * \return SResult::Ok on success, otherwise a SResult failed status.
+   */
+  virtual SResult CreateSession(const std::vector<uint8_t>& pssh,
+                                std::string_view licenseUrl,
+                                bool skipSessionMessage) = 0;
 
   /*!
    * \brief The session ID, is mandatory to distinguish sessions.
