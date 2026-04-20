@@ -263,6 +263,14 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
     return false;
   }
 
+  if (stream->GetReader()->GetType() == ISampleReader::Type::WebM &&
+      !stream->m_info.GetCryptoSession().GetSessionId().empty())
+  {
+    //! @todo: it should be implemented on the WebM demuxer side and verify if appropriate changes are required on CDM
+    LOG::LogF(LOGERROR, "WebM container with DRM encrypted stream is not supported");
+    return false;
+  }
+
   stream->GetReader()->SetStreamId(stream->m_info.GetStreamType(), streamid);
 
   // In case of video quality change (OSD)
