@@ -223,6 +223,9 @@ cdm::Buffer* CWVCdmAdapter::AllocateBuffer(size_t sz)
 {
   VIDEOCODEC_PICTURE pic;
   pic.decodedDataSize = sz;
+  // Video format is used by GetBuffer to get a free buffer from video buffer pool cache
+  // but we cant set the real format here because we dont know it yet
+  pic.videoFormat = VIDEOCODEC_FORMAT_YV12;
   if (m_host->GetBuffer(m_codecInstance, pic))
   {
     CdmFixedBuffer* buf = new CdmFixedBuffer;
