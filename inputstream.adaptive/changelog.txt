@@ -1,3 +1,9 @@
+v22.3.11 (2026-05-11)
+- [Android] Fix crashes caused by attempts to use unsupported DRMs
+- [WebM] Block playback and add explicit log message to unsupported encrypted streams
+- Kodi inputstream API update to videocodec version 2.2.0
+- Updated translations
+
 v22.3.10 (2026-03-09)
 - [widevine][android] Implemented KID status change callbacks
 - [widevine][android] Fix crash due to custom Kodi package name
