@@ -20,6 +20,8 @@
 #include <kodi/addon-instance/Inputstream.h>
 #endif
 
+#include <cstdint>
+#include <optional>
 #include <future>
 
 class Adaptive_CencSingleSampleDecrypter;
@@ -77,7 +79,12 @@ public:
   virtual uint64_t DTS() const = 0;
   virtual uint64_t PTS() const = 0;
   virtual uint64_t DTSorPTS() const { return DTS() < PTS() ? DTS() : PTS(); };
-  virtual AP4_Result Start(bool& bStarted) = 0;
+  /*!
+   * \brief Start the reader by reading the first packet.
+   * \param pts[OPT] The PTS where to start reading.
+   * \return AP4_SUCCESS if reader is started or was already started, otherwise an error result.
+   */
+  virtual AP4_Result Start(std::optional<uint64_t> pts = std::nullopt) = 0;
   virtual AP4_Result ReadSample() = 0;
   virtual void Reset(bool bEOS) = 0;
   virtual bool GetInformation(kodi::addon::InputstreamInfo& info) = 0;

@@ -25,13 +25,19 @@ bool CWebmSampleReader::Initialize(SESSION::CStream* stream)
   return ret;
 }
 
-AP4_Result CWebmSampleReader::Start(bool& bStarted)
+AP4_Result CWebmSampleReader::Start(std::optional<uint64_t> pts)
 {
-  bStarted = false;
   if (m_started)
     return AP4_SUCCESS;
-  m_started = bStarted = true;
-  return ReadSample();
+
+  AP4_Result ret;
+  if (pts.has_value())
+    TimeSeek(*pts) ? ret = AP4_SUCCESS : ret = AP4_ERROR_EOS;
+  else
+    ret = ReadSample();
+
+  m_started = AP4_SUCCEEDED(ret);
+  return ret;
 }
 
 AP4_Result CWebmSampleReader::ReadSample()
@@ -61,6 +67,9 @@ void CWebmSampleReader::Reset(bool bEOS)
 
 bool CWebmSampleReader::TimeSeek(uint64_t pts)
 {
+  // compensate the pts diff with the manifest timing
+  pts += m_ptsDiff;
+
   AP4_UI64 seekPos((pts * 9) / 100);
   if (WebmReader::SeekTime(seekPos))
   {

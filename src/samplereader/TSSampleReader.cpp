@@ -48,9 +48,8 @@ bool CTSSampleReader::RemoveStreamType(INPUTSTREAM_TYPE type)
   return m_typeMask == 0;
 }
 
-AP4_Result CTSSampleReader::Start(bool& bStarted)
+AP4_Result CTSSampleReader::Start(std::optional<uint64_t> pts)
 {
-  bStarted = false;
   if (m_started)
     return AP4_SUCCESS;
 
@@ -60,9 +59,14 @@ AP4_Result CTSSampleReader::Start(bool& bStarted)
     return AP4_ERROR_CANNOT_OPEN_FILE;
   }
 
-  m_started = true;
-  bStarted = true;
-  return ReadSample();
+  AP4_Result ret;
+  if (pts.has_value())
+    TimeSeek(*pts) ? ret = AP4_SUCCESS : ret = AP4_ERROR_EOS;
+  else
+    ret = ReadSample();
+
+  m_started = AP4_SUCCEEDED(ret);
+  return ret;
 }
 
 AP4_Result CTSSampleReader::ReadSample()
@@ -106,6 +110,8 @@ bool CTSSampleReader::TimeSeek(uint64_t pts)
 {
   if (!StartStreaming(m_typeMask))
     return false;
+  // compensate the pts diff with the manifest timing
+  pts += m_ptsDiff;
 
   AP4_UI64 seekPos((pts * 9) / 100);
   if (TSReader::SeekTime(seekPos))

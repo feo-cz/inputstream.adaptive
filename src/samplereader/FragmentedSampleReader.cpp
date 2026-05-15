@@ -143,15 +143,19 @@ void CFragmentedSampleReader::SetDecrypter(std::shared_ptr<Adaptive_CencSingleSa
   }
 }
 
-AP4_Result CFragmentedSampleReader::Start(bool& bStarted)
+AP4_Result CFragmentedSampleReader::Start(std::optional<uint64_t> pts)
 {
-  bStarted = false;
   if (m_started)
     return AP4_SUCCESS;
 
-  m_started = true;
-  bStarted = true;
-  return ReadSample();
+  AP4_Result ret;
+  if (pts.has_value())
+    TimeSeek(*pts) ? ret = AP4_SUCCESS : ret = AP4_ERROR_EOS;
+  else
+    ret = ReadSample();
+
+  m_started = AP4_SUCCEEDED(ret);
+  return ret;
 }
 
 AP4_Result CFragmentedSampleReader::ReadSample()
@@ -307,10 +311,13 @@ bool CFragmentedSampleReader::GetInformation(kodi::addon::InputstreamInfo& info)
 
 bool CFragmentedSampleReader::TimeSeek(uint64_t pts)
 {
+  // compensate the pts diff with the manifest timing
+  pts += m_ptsDiff;
+
   AP4_Ordinal sampleIndex;
   AP4_UI64 seekPos(static_cast<AP4_UI64>((pts * m_timeBaseInt) / m_timeBaseExt));
 
-  AP4_Result result = m_lReader->SeekSample(m_track->GetId(), seekPos, sampleIndex);
+  AP4_Result result = m_lReader->SeekSample(this, m_track->GetId(), seekPos, sampleIndex);
   if (AP4_FAILED(result))
   {
     if (result != AP4_ERROR_EOS)
@@ -817,7 +824,10 @@ AP4_Movie& CLinearReader::GetMovie()
   return AP4_LinearReader::m_Movie;
 }
 
-AP4_Result CLinearReader::SeekSample(AP4_UI32 track_id, AP4_UI64 ts, AP4_Ordinal& sample_index)
+AP4_Result CLinearReader::SeekSample(CLinearReaderCB* lReaderCB,
+                                     AP4_UI32 track_id,
+                                     AP4_UI64 ts,
+                                     AP4_Ordinal& sample_index)
 {
   // we only support fragmented sources for now
   if (!m_HasFragments)
@@ -827,6 +837,12 @@ AP4_Result CLinearReader::SeekSample(AP4_UI32 track_id, AP4_UI64 ts, AP4_Ordinal
   {
     return AP4_ERROR_NO_SUCH_ITEM;
   }
+
+  // Protect call to SeekSample until method exit,
+  // to ensure appropriate callback to ProcessMoof from Advance
+  // with the specified reader (CLinearReaderCB) instance
+  std::lock_guard<std::mutex> lock(m_readerMtx);
+  SetCallback(lReaderCB);
 
   // look for a sample from a specific track
   Tracker* tracker = FindTracker(track_id);

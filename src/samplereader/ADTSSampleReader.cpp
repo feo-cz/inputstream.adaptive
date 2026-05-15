@@ -15,14 +15,19 @@ CADTSSampleReader::CADTSSampleReader(AP4_ByteStream* input)
 {
 }
 
-AP4_Result CADTSSampleReader::Start(bool& bStarted)
+AP4_Result CADTSSampleReader::Start(std::optional<uint64_t> pts)
 {
-  bStarted = false;
   if (m_started)
     return AP4_SUCCESS;
-  bStarted = true;
-  m_started = true;
-  return ReadSample();
+
+  AP4_Result ret;
+  if (pts.has_value())
+    TimeSeek(*pts) ? ret = AP4_SUCCESS : ret = AP4_ERROR_EOS;
+  else
+    ret = ReadSample();
+
+  m_started = AP4_SUCCEEDED(ret);
+  return ret;
 }
 
 AP4_Result CADTSSampleReader::ReadSample()
@@ -57,6 +62,9 @@ void CADTSSampleReader::Reset(bool bEOS)
 
 bool CADTSSampleReader::TimeSeek(uint64_t pts)
 {
+  // compensate the pts diff with the manifest timing
+  pts += m_ptsDiff;
+
   AP4_UI64 seekPos{(pts * 9) / 100};
   if (ADTSReader::SeekTime(seekPos))
   {
