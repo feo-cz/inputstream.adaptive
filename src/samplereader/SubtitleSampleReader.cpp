@@ -108,7 +108,7 @@ bool CSubtitleSampleReader::InitializeFile(std::string url)
   return true;
 }
 
-AP4_Result CSubtitleSampleReader::Start(bool& bStarted)
+AP4_Result CSubtitleSampleReader::Start(std::optional<uint64_t> pts)
 {
   if (!m_codecHandler)
   {
@@ -119,8 +119,14 @@ AP4_Result CSubtitleSampleReader::Start(bool& bStarted)
   if (m_started)
     return AP4_SUCCESS;
 
-  m_started = true;
-  return ReadSample();
+  AP4_Result ret;
+  if (pts.has_value())
+    TimeSeek(*pts) ? ret = AP4_SUCCESS : ret = AP4_ERROR_EOS;
+  else
+    ret = ReadSample();
+
+  m_started = AP4_SUCCEEDED(ret);
+  return ret;
 }
 
 bool CSubtitleSampleReader::IsReady()

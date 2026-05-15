@@ -37,7 +37,7 @@ public:
   bool IsReady() override;
   uint64_t DTS() const override { return m_pts; }
   uint64_t PTS() const override { return m_pts; }
-  AP4_Result Start(bool& bStarted) override;
+  AP4_Result Start(std::optional<uint64_t> pts) override;
   AP4_Result ReadSample() override;
   void Reset(bool bEOS) override;
   bool GetInformation(kodi::addon::InputstreamInfo& info) override;

@@ -70,7 +70,10 @@ public:
   // \brief Get AP4_LinearReader::m_Movie
   AP4_Movie& GetMovie();
 
-  AP4_Result SeekSample(AP4_UI32 track_id, AP4_UI64 ts, AP4_Ordinal& sample_index);
+  AP4_Result SeekSample(CLinearReaderCB* lReaderCB,
+                        AP4_UI32 track_id,
+                        AP4_UI64 ts,
+                        AP4_Ordinal& sample_index);
 
 protected:
   // AP4_LinearReader implementations
@@ -97,7 +100,7 @@ public:
                             const DRM::DecrypterCapabilites& dcaps,
                             const std::vector<uint8_t>& defaultKid) override;
 
-  AP4_Result Start(bool& bStarted) override;
+  AP4_Result Start(std::optional<uint64_t> pts) override;
   AP4_Result ReadSample() override;
   void Reset(bool bEOS) override;
   bool EOS() const override { return m_eos; }

@@ -955,19 +955,23 @@ bool SESSION::CSession::SeekTime(double seekTime, bool& isError)
       seekTime = delayPtsSecs;
   }
 
-  // Helper lambda to check if reader is started,
-  // since after seeking across chapters/periods the reader is not started yet
-  auto CheckReaderRunning = [this](CStream& stream) -> bool
+  // Helper lambda to perform the seek on stream reader
+  auto SeekReader = [this](CStream& stream, uint64_t seekTimePts) -> bool
   {
     auto reader = stream.GetReader();
+    // Seeking across chapters/periods the reader is not started yet
     if (!reader->IsStarted())
     {
-      bool isStarted = false;
-      if (AP4_FAILED(reader->Start(isStarted)))
+      if (AP4_FAILED(reader->Start(seekTimePts)))
         return false;
 
-      if (isStarted && reader->GetInformation(stream.m_info))
+      if (reader->GetInformation(stream.m_info))
         m_changed = true;
+    }
+    else
+    {
+      if (!reader->TimeSeek(seekTimePts))
+        return false;
     }
     return true;
   };
@@ -987,43 +991,6 @@ bool SESSION::CSession::SeekTime(double seekTime, bool& isError)
 
   // correct for starting segment pts value of chapter and chapter offset within program
   uint64_t seekTimeCorrected{static_cast<uint64_t>(seekTime * STREAM_TIME_BASE)};
-  int64_t ptsDiff{0};
-
-  // If we have a timing stream, ensure it is started first and compute ptsDiff /
-  // corrected seek base that will be used by all other streams.
-  if (m_timingStream)
-  {
-    ISampleReader* timingReader{m_timingStream->GetReader()};
-    if (!timingReader)
-    {
-      LOG::LogF(LOGERROR, "Cannot get the stream sample reader of timing stream");
-      return false;
-    }
-
-    timingReader->WaitReadSampleAsyncComplete();
-
-    seekTimeCorrected += m_timingStream->m_adStream.GetAbsolutePTSOffset();
-
-    const double seekSecs = static_cast<double>(seekTimeCorrected) / STREAM_TIME_BASE;
-
-    if (!SeekAdStream(*m_timingStream, seekSecs))
-    {
-      isError = true;
-      return false;
-    }
-
-    // Note: The following "running" check will download/read the package right now
-    // allowing you to read the PTS diff from stream reader
-    if (!CheckReaderRunning(*m_timingStream))
-      return false;
-
-    ptsDiff = timingReader->GetPTSDiff();
-
-    if (ptsDiff < 0 && seekTimeCorrected + ptsDiff > seekTimeCorrected)
-      seekTimeCorrected = 0;
-    else
-      seekTimeCorrected += ptsDiff;
-  }
 
   // Note: At the end of the seek operations, you may notice on Kodi debug log "dropping packets" prints
   // this happens because we cannot always guarantee a precise seek, for example
@@ -1032,6 +999,8 @@ bool SESSION::CSession::SeekTime(double seekTime, bool& isError)
   // but the sync sample (packet) at least for the video track is usually not available for all PTS
   // so we try choose the sample/package closest to the requested "seek" PTS, causing "dropping packets"
 
+  // NOTE: It is assumed that the streams are ordered by video type (on m_streams), so we will seek first the video stream
+  // to get the closest sample PTS to the requested seek time, then we will use to seek/align the other streams
   for (auto& stream : m_streams)
   {
     ISampleReader* streamReader{stream->GetReader()};
@@ -1042,15 +1011,17 @@ bool SESSION::CSession::SeekTime(double seekTime, bool& isError)
     if (!stream->IsEnabled())
       continue;
 
+    const uint64_t seekTimePts = seekTimeCorrected + stream->m_adStream.GetAbsolutePTSOffset();
+
     // With FMP4 audio stream included to video stream you must not seek with AdaptiveStream
     // segments are managed by AdaptiveStream of the video stream
     // so CFragmentedSampleReader read data from the reader of the video stream
     const bool hasAdStream = !(streamReader->GetType() == ISampleReader::Type::FMP4 &&
                                stream->m_adStream.getRepresentation()->IsIncludedStream());
 
-    if (hasAdStream && m_timingStream != stream) // Do not "seek time" on "timing stream" already done above
+    if (hasAdStream)
     {
-      const double seekSecs{static_cast<double>(seekTimeCorrected - ptsDiff) / STREAM_TIME_BASE};
+      const double seekSecs{static_cast<double>(seekTimePts) / STREAM_TIME_BASE};
 
       if (!SeekAdStream(*stream, seekSecs))
       {
@@ -1062,10 +1033,7 @@ bool SESSION::CSession::SeekTime(double seekTime, bool& isError)
       }
     }
 
-    if (!CheckReaderRunning(*stream))
-      return false;
-
-    if (!streamReader->TimeSeek(seekTimeCorrected))
+    if (!SeekReader(*stream, seekTimePts))
     {
       streamReader->Reset(true);
 
@@ -1077,13 +1045,14 @@ bool SESSION::CSession::SeekTime(double seekTime, bool& isError)
     }
     else
     {
-      double destTime{static_cast<double>(PTSToElapsed(streamReader->PTS())) / STREAM_TIME_BASE};
+      const uint64_t destTimePts = PTSToElapsed(streamReader->PTS());
+      const double destTimeSecs{static_cast<double>(destTimePts) / STREAM_TIME_BASE};
 
       // Note: TS sample reader with included streams have a dynamic streamId,
       // so could be that will be printed on log stream id referred to audio or video,
       // maybe this could be improved on sample reader to always start the seek from a video packet
       LOG::Log(LOGINFO, "Seek time %0.1lf for stream: %i continues at %0.1lf (PTS: %llu)", seekTime,
-               streamReader->GetStreamId(), destTime, streamReader->PTS());
+               streamReader->GetStreamId(), destTimeSecs, streamReader->PTS());
 
       // We replace the seek time PTS initially requested with the PTS of the video sample found
       // in order to search the audio/subtitle sample packet more accurately.
@@ -1093,8 +1062,14 @@ bool SESSION::CSession::SeekTime(double seekTime, bool& isError)
       // Then get the nearest PTS found for the video, then align the audio/subtitles with it.
       if (stream->m_info.GetStreamType() == INPUTSTREAM_TYPE_VIDEO)
       {
-        seekTime = destTime;
-        seekTimeCorrected = streamReader->PTS();
+        seekTime = destTimeSecs;
+
+        if (seekTimeCorrected != destTimePts)
+        {
+          LOG::Log(LOGINFO, "Corrected seek time PTS from %llu to %llu", seekTimeCorrected,
+                   destTimePts);
+          seekTimeCorrected = destTimePts;
+        }
       }
     }
   }
