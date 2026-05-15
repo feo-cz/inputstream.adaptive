@@ -42,8 +42,7 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            Review this pull request for issues while following code guidelines available at: https://github.com/xbmc/xbmc/blob/master/docs/CODE_GUIDELINES.md
-            Be extremely concise.
+            Review this pull request for issues. Be extremely concise.
 
             Check for:
             - Bugs, crashes, undefined behavior
