@@ -17,6 +17,8 @@ class ATTR_DLL_LOCAL CADTSSampleReader : public ISampleReader, public ADTSReader
 public:
   CADTSSampleReader(AP4_ByteStream* input);
 
+  bool Initialize(SESSION::CStream* stream) override;
+
   Type GetType() const override { return Type::ADTS; }
 
   bool IsStarted() const override { return m_started; }

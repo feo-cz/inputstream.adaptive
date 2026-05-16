@@ -350,39 +350,44 @@ void ADTSReader::Reset()
   m_frameParser.reset();
 }
 
-bool ADTSReader::GetInformation(kodi::addon::InputstreamInfo& info)
+void ADTSReader::FetchStreamInfo()
 {
   m_id3TagParser.SkipID3Data(m_stream);
-  ADTSFrame::ADTSFrameInfo frameInfo = m_frameParser.GetFrameInfo(m_stream);
-
+  m_frameInfo = m_frameParser.GetFrameInfo(m_stream);
   m_stream->Seek(0); // Seek back because data has been consumed
+}
 
-  if (frameInfo.m_codecType == AdtsType::NONE)
+bool ADTSReader::GetInformation(kodi::addon::InputstreamInfo& info)
+{
+  if (!m_frameInfo.has_value())
+    FetchStreamInfo();
+
+  if (m_frameInfo->m_codecType == AdtsType::NONE)
     return false;
 
   std::string codecName;
   STREAMCODEC_PROFILE codecProfile{CodecProfileUnknown};
 
-  if (frameInfo.m_codecType == AdtsType::AAC)
+  if (m_frameInfo->m_codecType == AdtsType::AAC)
   {
     codecName = CODEC::NAME_AAC;
-    if (frameInfo.m_codecProfile == AP4_AAC_PROFILE_MAIN)
+    if (m_frameInfo->m_codecProfile == AP4_AAC_PROFILE_MAIN)
       codecProfile = AACCodecProfileMAIN;
-    else if (frameInfo.m_codecProfile == AP4_AAC_PROFILE_LC)
+    else if (m_frameInfo->m_codecProfile == AP4_AAC_PROFILE_LC)
       codecProfile = AACCodecProfileLOW;
-    else if (frameInfo.m_codecProfile == AP4_AAC_PROFILE_SSR)
+    else if (m_frameInfo->m_codecProfile == AP4_AAC_PROFILE_SSR)
       codecProfile = AACCodecProfileSSR;
-    else if (frameInfo.m_codecProfile == AP4_AAC_PROFILE_LTP)
+    else if (m_frameInfo->m_codecProfile == AP4_AAC_PROFILE_LTP)
       codecProfile = AACCodecProfileLTP;
   }
-  else if (frameInfo.m_codecType == AdtsType::AC3)
+  else if (m_frameInfo->m_codecType == AdtsType::AC3)
   {
     codecName = CODEC::NAME_AC3;
   }
-  else if (frameInfo.m_codecType == AdtsType::EAC3)
+  else if (m_frameInfo->m_codecType == AdtsType::EAC3)
   {
     codecName = CODEC::NAME_EAC3;
-    if ((frameInfo.m_codecFlags & ADTSFrame::CODEC_FLAG_ATMOS) == ADTSFrame::CODEC_FLAG_ATMOS)
+    if ((m_frameInfo->m_codecFlags & ADTSFrame::CODEC_FLAG_ATMOS) == ADTSFrame::CODEC_FLAG_ATMOS)
       codecProfile = DDPlusCodecProfileAtmos;
   }
 
@@ -398,16 +403,18 @@ bool ADTSReader::GetInformation(kodi::addon::InputstreamInfo& info)
     info.SetCodecProfile(codecProfile);
     isChanged = true;
   }
-  if (info.GetChannels() != frameInfo.m_channels)
+  if (info.GetChannels() != m_frameInfo->m_channels)
   {
-    info.SetChannels(frameInfo.m_channels);
+    info.SetChannels(m_frameInfo->m_channels);
     isChanged = true;
   }
-  if (info.GetSampleRate() != frameInfo.m_sampleRate)
+  if (info.GetSampleRate() != m_frameInfo->m_sampleRate)
   {
-    info.SetSampleRate(frameInfo.m_sampleRate);
+    info.SetSampleRate(m_frameInfo->m_sampleRate);
     isChanged = true;
   }
+
+  m_frameInfo.reset();
 
   return isChanged;
 }

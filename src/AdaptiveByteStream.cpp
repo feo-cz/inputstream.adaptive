@@ -71,3 +71,8 @@ void CAdaptiveByteStream::SetSegmentFileOffset(uint64_t offset)
 {
   m_adStream->SetSegmentFileOffset(offset);
 }
+
+void CAdaptiveByteStream::AllowBufferQueue(bool isAllowed)
+{
+  m_adStream->AllowBufferQueue(isAllowed);
+}

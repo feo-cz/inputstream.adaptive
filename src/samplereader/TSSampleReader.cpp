@@ -24,7 +24,12 @@ void CTSSampleReader::SetStreamId(INPUTSTREAM_TYPE type, int streamId)
 
 bool CTSSampleReader::Initialize(SESSION::CStream* stream)
 {
-  return TSReader::Initialize();
+  // This is a workaround to avoid start buffering many segments
+  // when the sample reader is initialized just to retrieve the stream info
+  m_adByteStream->AllowBufferQueue(false);
+  bool ret = TSReader::Initialize();
+  m_adByteStream->AllowBufferQueue(true);
+  return ret;
 }
 
 void CTSSampleReader::AddStreamType(INPUTSTREAM_TYPE type, int streamId)

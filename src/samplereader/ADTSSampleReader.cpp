@@ -15,6 +15,16 @@ CADTSSampleReader::CADTSSampleReader(AP4_ByteStream* input)
 {
 }
 
+bool CADTSSampleReader::Initialize(SESSION::CStream* stream)
+{
+  // This is a workaround to avoid start buffering many segments
+  // when the sample reader is initialized just to retrieve the stream info
+  m_adByteStream->AllowBufferQueue(false);
+  ADTSReader::FetchStreamInfo();
+  m_adByteStream->AllowBufferQueue(true);
+  return true;
+}
+
 AP4_Result CADTSSampleReader::Start(std::optional<uint64_t> pts)
 {
   if (m_started)

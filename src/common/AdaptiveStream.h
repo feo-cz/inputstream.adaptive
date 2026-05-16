@@ -127,6 +127,7 @@ enum class EVENT_TYPE
     uint64_t GetAbsolutePTSOffset() const { return absolutePTSOffset_; }
     bool waitingForSegment() const;
     void FixateInitialization(bool on);
+    void AllowBufferQueue(bool isAllowed) { m_isAllowedBufferQueue = isAllowed; }
     void SetSegmentFileOffset(uint64_t offset) { m_segmentFileOffset = offset; };
     bool StreamChanged() { return m_startEvent == EVENT_TYPE::REP_CHANGE; }
 
@@ -279,6 +280,7 @@ enum class EVENT_TYPE
     uint64_t absolutePTSOffset_{0};
 
     bool m_fixateInitialization{false};
+    bool m_isAllowedBufferQueue{true};
     uint64_t m_segmentFileOffset{0};
 
     // Defines the event to start the stream, the status will be resetted by start stream method.
