@@ -1,3 +1,7 @@
+v22.3.12 (2026-05-18)
+- Fix WebM video resume bug
+- Updated translations
+
 v22.3.11 (2026-05-11)
 - [Android] Fix crashes caused by attempts to use unsupported DRMs
 - [WebM] Block playback and add explicit log message to unsupported encrypted streams
