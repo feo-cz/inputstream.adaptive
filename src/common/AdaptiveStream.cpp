@@ -945,6 +945,12 @@ bool adaptive::AdaptiveStream::ensureSegment()
         //           clsId, queueSegment->m_number, queueSegment->startPTS_);
         m_segBuffers.Push(std::move(segBuffer));
 
+        // Some sample reader dont use initialization segment so when they are in initialization phase
+        // in order to get info need to parse a media segment, but we want avoid downloading more segments,
+        // this is a workaround, for more info see todo "InputStream resume playback design problem" in the main.cpp
+        if (!m_isAllowedBufferQueue)
+          break;
+
         // Check if there is a following segment (add it to the queue at next iteration)
         if (!m_segBuffers.IsBufferFull())
           queueSegment = newRep->Timeline().GetNext(*queueSegment);

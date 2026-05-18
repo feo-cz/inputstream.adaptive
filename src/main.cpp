@@ -157,6 +157,33 @@ void CInputStreamAdaptive::EnableStream(int streamid, bool enable)
   }
 }
 
+//! @todo: InputStream "resume" playback design problem for multi-period/chapter streams case:
+//! Currently, Kodi VideoPlayer operates in this order:
+//!  1. "Open" callback (open the add-on)
+//!  2. ... "GetStreamIds" callback, etc ...
+//!  3. "OpenStream" callbacks (open the streams, and mandatory to provide the extradata when required)
+//!  4. "PosTime" callback (in case of resuming video / seek stream operations)
+//!  5. ... "DemuxRead" callbacks (start to feed data to Kodi core)
+//!
+//! As you can see from the flow when kodi request to open a stream "OpenStream" callbacks you have no way
+//! to know if the playback is starting from the beginning or is resuming from a specific time position,
+//! because "PosTime" callback is called only after "OpenStream" callbacks
+//!
+//! This lead that the add-on start to open all the streams from the beginning of the first chapter/period,
+//! but if the playback is resuming from a chapter/period different from the first one, this is a big problem because we are
+//! performing tons of useless work such as initialize unused streams, download and parse unused segment data, initialize decrypters...
+//!
+//! As workaround when we receive the "PosTime" callback with the position where to start the playback
+//! we send the "DEMUX_SPECIALID_STREAMCHANGE" to VP to force VP to reopen all the streams from the right chapter/period,
+//! but this is a bad design. We should open a stream from the appropriate chapter/period and position since the beginning
+//! but we need a way to know if the playback is starting from the beginning or is resuming from a specific time position.
+//! Related to this problem there is also another workaround applied on some sample readers that use
+//! the AdaptiveStream::m_isAllowedBufferQueue to prevent to start downloading too much uneeded data.
+//! Another side effect of "OpenStream" with TS/ADTS sample readers
+//! since these streams dont have init segment, readers will parse a media segment to extract the stream info/extradata
+//! but since we dont know the resume time, this segment is downloaded from the beginning of the first chapter/period
+//! ofc this is not so good because cause network congestion (repeated downloads) and so worse execution time
+
 // OpenStream method notes:
 // - This method is called:
 //    - At playback start

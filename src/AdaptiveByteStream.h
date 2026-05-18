@@ -51,6 +51,7 @@ public:
   bool waitingForSegment() const;
   void FixateInitialization(bool on);
   void SetSegmentFileOffset(uint64_t offset);
+  void AllowBufferQueue(bool isAllowed);
 
 protected:
   adaptive::AdaptiveStream* m_adStream;

@@ -13,6 +13,8 @@
 #include <bento4/Ap4DataBuffer.h>
 #include <kodi/addon-instance/Inputstream.h>
 
+#include <optional>
+
 // Forwards
 class AP4_ByteStream;
 
@@ -104,6 +106,7 @@ public:
   void Reset();
   bool SeekTime(uint64_t timeInTs);
 
+  void FetchStreamInfo();
   bool GetInformation(kodi::addon::InputstreamInfo& info);
   bool ReadPacket();
 
@@ -118,6 +121,7 @@ private:
   AP4_ByteStream *m_stream;
   ID3TAG m_id3TagParser;
   ADTSFrame m_frameParser;
+  std::optional<ADTSFrame::ADTSFrameInfo> m_frameInfo;
   uint64_t m_basePts{0};
   uint64_t m_pts{0};
 };
