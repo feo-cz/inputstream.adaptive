@@ -339,9 +339,9 @@ menu_data = {
                 'stream_config': {
                     'manifest_url': 'https://test.playready.microsoft.com/media/dash/APPLEENC_CBCS_BBB_1080p/1080p.mpd',
                     'license_type': 'com.microsoft.playready',
-                    'license_key': 'https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aescbc)',
-                    'drm_legacy': 'com.microsoft.playready|https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aescbc)',
-                    'drm': '{"com.microsoft.playready": {"license": {"server_url": "https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aescbc)"}}}'
+                    'license_key': 'https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aes128bitcbc)',
+                    'drm_legacy': 'com.microsoft.playready|https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aes128bitcbc)',
+                    'drm': '{"com.microsoft.playready": {"license": {"server_url": "https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aes128bitcbc)"}}}'
                 }
             },
             'Axiom v7multiDRM [clear key, license url embedded]': {
@@ -547,9 +547,9 @@ menu_data = {
                 SI_CONFIG: {
                     'manifest_url': 'https://test.playready.microsoft.com/media/dash/APPLEENC_CBCS_BBB_1080p/1080p_alternate.m3u8',
                     'license_type': 'com.microsoft.playready',
-                    'license_key': 'https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aescbc)',
-                    'drm_legacy': 'com.microsoft.playready|https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aescbc)',
-                    'drm': '{"com.microsoft.playready": {"license": {"server_url": "https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aescbc)"}}}'
+                    'license_key': 'https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aes128bitcbc)',
+                    'drm_legacy': 'com.microsoft.playready|https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aes128bitcbc)',
+                    'drm': '{"com.microsoft.playready": {"license": {"server_url": "https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aes128bitcbc)"}}}'
                 }
             },
             'Google angel one [clear key, keys on manifest]': {
