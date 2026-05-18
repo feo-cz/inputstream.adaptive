@@ -305,11 +305,14 @@ menu_data = {
             'Bitmovin art of motion parkour': {
                 SI_ENCRYPT: 'DRMWV',
                 SI_CONFIG: {
-                    'manifest_url': 'https://bitmovin-a.akamaihd.net/content/art-of-motion_drm/mpds/11331.mpd',
+                    'manifest_url': 'https://cdn.bitmovin.com/content/assets/art-of-motion_drm/mpds/11331.mpd',
                     'license_type': 'com.widevine.alpha',
-                    'license_key': 'https://cwip-shaka-proxy.appspot.com/no_auth|R{SSM}|R',
-                    'drm_legacy': 'com.widevine.alpha|https://cwip-shaka-proxy.appspot.com/no_auth',
-                    'drm': '{"com.widevine.alpha": {"license": {"server_url": "https://cwip-shaka-proxy.appspot.com/no_auth"}}}'
+                    'license_key': 'https://cwip-shaka-proxy.appspot.com/no_auth|Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cwip-shaka-proxy.appspot.com|R{SSM}|R',
+                    'drm_legacy': 'com.widevine.alpha|https://cwip-shaka-proxy.appspot.com/no_auth|Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cwip-shaka-proxy.appspot.com',
+                    'drm': '{"com.widevine.alpha": {"license": {"server_url": "https://cwip-shaka-proxy.appspot.com/no_auth", "req_headers": "Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cwip-shaka-proxy.appspot.com"}}}',
+                    'manifest_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cdn.bitmovin.com',
+                    'stream_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cdn.bitmovin.com',
+                    'common_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cdn.bitmovin.com',
                 }
             },
             'Google sintel [key rotation]': {
@@ -352,13 +355,16 @@ menu_data = {
                     'drm': '{"org.w3.clearkey": {"license": {"keyids": {"feedf00deedeadbeeff0baadf00dd00d": "00112233445566778899aabbccddeeff", "1234f00deedeadbeeff0baadf00dd00d": "8899aabbccddeeff8899aabbccddeeff"}}}}',
                 }
             },
-            'Bitmovin art of motion [WV to CK, keys on property]': {
+            'Bitmovin art of motion parkour [WV to CK, keys on property]': {
                 SI_ENCRYPT: 'DRMCK',
                 SI_INFO: 'Override widevine content protection to use clear key',
                 SI_CONFIG: {
                     'manifest_url': 'https://cdn.bitmovin.com/content/assets/art-of-motion_drm/mpds/11331.mpd',
                     'drm_legacy': 'org.w3.clearkey|eb676abbcb345e96bbcf616630f1a3da:100b6c20940f779a4589152b57d2dacb',
                     'drm': '{"org.w3.clearkey": {"license": {"keyids": {"eb676abbcb345e96bbcf616630f1a3da": "100b6c20940f779a4589152b57d2dacb"}}}}',
+                    'manifest_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cdn.bitmovin.com',
+                    'stream_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cdn.bitmovin.com',
+                    'common_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cdn.bitmovin.com',
                 }
             },
             'Axiom v9multiFormat [clear key, keys on property]': {
