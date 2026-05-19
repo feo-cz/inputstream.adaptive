@@ -120,16 +120,6 @@ menu_data = {
                     'manifest_url': 'https://ott.dolby.com/OnDelKits/DDP/Dolby_Digital_Plus_Online_Delivery_Kit_v1.5/Test_Signals/example_streams/DASH/OnDemand/MPD/Holi_25fps_example_1_clean.mpd'
                 }
             },
-            'Radiant 4k-av1-avc': {
-                SI_FEATURE: 'ADP,CMP4,CWEBM',
-                SI_CODECS: 'av01,avc1,opus',
-                SI_INFO: 'Two video tracks AV1 (WEBM) and AVC (MP4), audio OPUS (WEBM)',
-                SI_CONFIG: {
-                    'manifest_url': 'https://www.radiantmediaplayer.com/media/dash/4k-av1-avc/manifest.mpd',
-                    'manifest_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:98.0) Gecko/20100101 Firefox/98.0&Host=www.radiantmediaplayer.com&Accept=text/html,application/xhtml+xml,application/xml&Upgrade-Insecure-Requests=1&Accept-Encoding=gzip,defalte,br&Connection=keep-alive',
-                    'stream_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:98.0) Gecko/20100101 Firefox/98.0&Host=www.radiantmediaplayer.com&Accept=text/html,application/xhtml+xml,application/xml&Upgrade-Insecure-Requests=1&Accept-Encoding=gzip,defalte,br&Connection=keep-alive',
-                }
-            },
             'Bitmovin "av01"': {
                 SI_FEATURE: 'ADPV,CWEBM',
                 SI_CODECS: 'av01,opus',
@@ -315,11 +305,14 @@ menu_data = {
             'Bitmovin art of motion parkour': {
                 SI_ENCRYPT: 'DRMWV',
                 SI_CONFIG: {
-                    'manifest_url': 'https://bitmovin-a.akamaihd.net/content/art-of-motion_drm/mpds/11331.mpd',
+                    'manifest_url': 'https://cdn.bitmovin.com/content/assets/art-of-motion_drm/mpds/11331.mpd',
                     'license_type': 'com.widevine.alpha',
-                    'license_key': 'https://cwip-shaka-proxy.appspot.com/no_auth|R{SSM}|R',
-                    'drm_legacy': 'com.widevine.alpha|https://cwip-shaka-proxy.appspot.com/no_auth',
-                    'drm': '{"com.widevine.alpha": {"license": {"server_url": "https://cwip-shaka-proxy.appspot.com/no_auth"}}}'
+                    'license_key': 'https://cwip-shaka-proxy.appspot.com/no_auth|Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cwip-shaka-proxy.appspot.com|R{SSM}|R',
+                    'drm_legacy': 'com.widevine.alpha|https://cwip-shaka-proxy.appspot.com/no_auth|Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cwip-shaka-proxy.appspot.com',
+                    'drm': '{"com.widevine.alpha": {"license": {"server_url": "https://cwip-shaka-proxy.appspot.com/no_auth", "req_headers": "Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cwip-shaka-proxy.appspot.com"}}}',
+                    'manifest_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cdn.bitmovin.com',
+                    'stream_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cdn.bitmovin.com',
+                    'common_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cdn.bitmovin.com',
                 }
             },
             'Google sintel [key rotation]': {
@@ -339,9 +332,9 @@ menu_data = {
                 'stream_config': {
                     'manifest_url': 'https://test.playready.microsoft.com/media/dash/APPLEENC_CBCS_BBB_1080p/1080p.mpd',
                     'license_type': 'com.microsoft.playready',
-                    'license_key': 'https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aescbc)',
-                    'drm_legacy': 'com.microsoft.playready|https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aescbc)',
-                    'drm': '{"com.microsoft.playready": {"license": {"server_url": "https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aescbc)"}}}'
+                    'license_key': 'https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aes128bitcbc)',
+                    'drm_legacy': 'com.microsoft.playready|https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aes128bitcbc)',
+                    'drm': '{"com.microsoft.playready": {"license": {"server_url": "https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aes128bitcbc)"}}}'
                 }
             },
             'Axiom v7multiDRM [clear key, license url embedded]': {
@@ -362,13 +355,16 @@ menu_data = {
                     'drm': '{"org.w3.clearkey": {"license": {"keyids": {"feedf00deedeadbeeff0baadf00dd00d": "00112233445566778899aabbccddeeff", "1234f00deedeadbeeff0baadf00dd00d": "8899aabbccddeeff8899aabbccddeeff"}}}}',
                 }
             },
-            'Bitmovin art of motion [WV to CK, keys on property]': {
+            'Bitmovin art of motion parkour [WV to CK, keys on property]': {
                 SI_ENCRYPT: 'DRMCK',
                 SI_INFO: 'Override widevine content protection to use clear key',
                 SI_CONFIG: {
                     'manifest_url': 'https://cdn.bitmovin.com/content/assets/art-of-motion_drm/mpds/11331.mpd',
                     'drm_legacy': 'org.w3.clearkey|eb676abbcb345e96bbcf616630f1a3da:100b6c20940f779a4589152b57d2dacb',
                     'drm': '{"org.w3.clearkey": {"license": {"keyids": {"eb676abbcb345e96bbcf616630f1a3da": "100b6c20940f779a4589152b57d2dacb"}}}}',
+                    'manifest_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cdn.bitmovin.com',
+                    'stream_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cdn.bitmovin.com',
+                    'common_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://bitmovin.com&Referer=https://bitmovin.com/&Host=cdn.bitmovin.com',
                 }
             },
             'Axiom v9multiFormat [clear key, keys on property]': {
@@ -509,6 +505,16 @@ menu_data = {
                     'manifest_url': 'https://travelxp-travelxp-1-eu.xiaomi.wurl.tv/playlist.m3u8'
                 }
             },
+            'Radiant theater mode demo': {
+                SI_FEATURE: 'ADP,CMP4',
+                SI_CODECS: 'av01,avc1,mp4a',
+                SI_INFO: 'Until 4k',
+                SI_CONFIG: {
+                    'manifest_url': 'https://cdn.radiantmediatechs.com/rmp/media/samples-for-rmp-site/04052024-lac-de-bimont/hls/playlist.m3u8',
+                    'manifest_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://www.radiantmediaplayer.com&Referer=https://www.radiantmediaplayer.com/&Host=cdn.radiantmediatechs.com',
+                    'stream_headers': 'User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0&Origin=https://www.radiantmediaplayer.com&Referer=https://www.radiantmediaplayer.com/&Host=cdn.radiantmediatechs.com',
+                }
+            },
         },
         'HLS VOD with DRM': {
             MI_CONFIG: {},
@@ -547,9 +553,9 @@ menu_data = {
                 SI_CONFIG: {
                     'manifest_url': 'https://test.playready.microsoft.com/media/dash/APPLEENC_CBCS_BBB_1080p/1080p_alternate.m3u8',
                     'license_type': 'com.microsoft.playready',
-                    'license_key': 'https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aescbc)',
-                    'drm_legacy': 'com.microsoft.playready|https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aescbc)',
-                    'drm': '{"com.microsoft.playready": {"license": {"server_url": "https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aescbc)"}}}'
+                    'license_key': 'https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aes128bitcbc)',
+                    'drm_legacy': 'com.microsoft.playready|https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aes128bitcbc)',
+                    'drm': '{"com.microsoft.playready": {"license": {"server_url": "https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,ck:W31bfVt9W31bfVt9W31bfQ==,ckt:aes128bitcbc)"}}}'
                 }
             },
             'Google angel one [clear key, keys on manifest]': {
