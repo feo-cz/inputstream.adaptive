@@ -157,14 +157,11 @@ bool SESSION::CSession::CheckPlayableStreams(PLAYLIST::CPeriod* period)
 {
   auto& kodiPropCfg = CSrvBroker::GetKodiProps().GetConfig();
 
-  /*! @todo: Code commented, see todo below about: "Secure path on audio stream is not implemented"
-   *
   if (kodiPropCfg.resolutionLimit == 0 &&
       kodiPropCfg.hdcpCheck == ADP::KODI_PROPS::HdcpCheckType::DEFAULT)
   {
-    return;
+    return true;
   }
-  */
 
   for (auto& adp : period->GetAdaptationSets())
   {
@@ -173,10 +170,8 @@ bool SESSION::CSession::CheckPlayableStreams(PLAYLIST::CPeriod* period)
 
     for (auto& repr : adp->GetRepresentations())
     {
-      //! @todo: Code changed, see todo below about: "Secure path on audio stream is not implemented"
-      // if (kodiPropCfg.hdcpCheck == ADP::KODI_PROPS::HdcpCheckType::LICENSE &&
-      //     !m_adaptiveTree->IsReqPrepareStream())
-      if (!m_adaptiveTree->IsReqPrepareStream())
+      if (kodiPropCfg.hdcpCheck == ADP::KODI_PROPS::HdcpCheckType::LICENSE &&
+          !m_adaptiveTree->IsReqPrepareStream())
       {
         // The LICENSE method assume that a service provide in the license response the HDCP parameters
         // currently a comparison is made between the license HDCP values and the one provided by the manifest.
@@ -215,18 +210,17 @@ bool SESSION::CSession::CheckPlayableStreams(PLAYLIST::CPeriod* period)
                 // HDCP check should be done by the DRM where in case of problems should block key's
                 // for example with Widevine you will get "output-restricted" to key status
                 // the following it's an additional check for custom manifest's
-                if (kodiPropCfg.hdcpCheck == ADP::KODI_PROPS::HdcpCheckType::LICENSE)
+                auto& caps = session->capabilities;
+
+                if (repr->GetHdcpVersion() > caps.hdcpVersion ||
+                    (caps.hdcpLimit > 0 && repr->GetWidth() * repr->GetHeight() > caps.hdcpLimit))
                 {
-                  if (repr->GetHdcpVersion() > caps.hdcpVersion ||
-                      (caps.hdcpLimit > 0 && repr->GetWidth() * repr->GetHeight() > caps.hdcpLimit))
-                  {
-                    LOG::Log(
-                        LOGWARNING,
-                        "Disabled stream repr ID \"%s\", AdpSet ID \"%s\", as not HDCP compliant",
-                        repr->GetId().c_str(), adp->GetId().c_str());
-                    repr->isPlayable = false;
-                    continue;
-                  }
+                  LOG::Log(
+                      LOGWARNING,
+                      "Disabled stream repr ID \"%s\", AdpSet ID \"%s\", as not HDCP compliant",
+                      repr->GetId().c_str(), adp->GetId().c_str());
+                  repr->isPlayable = false;
+                  continue;
                 }
               }
             }
