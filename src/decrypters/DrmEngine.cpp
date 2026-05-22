@@ -282,6 +282,9 @@ bool DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> drmInfos,
   if (!Initialize())
     return false;
 
+  // Reset status before to start a new initialization
+  m_status = EngineStatus::NONE;
+
   LOG::Log(LOGDEBUG, "Initialize crypto session");
 
   ConfigureClearKey(drmInfos);
@@ -502,6 +505,17 @@ bool DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> drmInfos,
   }
 
   auto& caps = session->capabilities;
+
+  //! @todo: Secure decoder on audio stream is not implemented on CDM Widevine (non-android)
+  //! since audio streams that require Secure path decoder cannot be played
+  //! we have no way to distinguish which ones they are other than to do a KID test with the DRM
+  if (!session->drm->IsSecureDecoderAudioSupported() && session->mediaType == DRMMediaType::AUDIO &&
+      caps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH)
+  {
+    LOG::Log(LOGWARNING, "Secure decoder on audio stream is not supported");
+    m_status = EngineStatus::NOT_SUPPORTED;
+    return false;
+  }
 
   // Create crypto session
   kodi::addon::StreamCryptoSession cryptoSession;

@@ -211,28 +211,6 @@ bool SESSION::CSession::CheckPlayableStreams(PLAYLIST::CPeriod* period)
                                                           initDrmInfo.defaultKid);
               if (session)
               {
-                //! @todo: HACK REQUIRED BECAUSE ---> Secure path on audio stream is not implemented for CDM Widevine ONLY (non-android) <---
-                //! since audio streams that require Secure path decoder cannot be played
-                //! we have no way to distinguish which ones they are other than to do a KID test with the DRM for each stream,
-                //! this is an expensive method that could open many DRM sessions which will not be unused for playback.
-                //! When in a future this will be implemented, all this code should be cleanup and removed
-                //! and then leave it to CInputStreamAdaptive::OpenStream -> PrepareStream
-                //! the task to initialize DRM session only to the requested streams.
-                //! It can be tested e.g. with some Am@zon videos
-                auto& caps = session->capabilities;
-
-                if (!session->drm->IsSecureDecoderAudioSupported() &&
-                    adp->GetStreamType() == StreamType::AUDIO &&
-                    caps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH)
-                {
-                  LOG::Log(LOGWARNING,
-                           "Disabled stream repr ID \"%s\", AdpSet ID \"%s\", "
-                           "Secure path decoder on audio stream is not supported",
-                           repr->GetId().c_str(), adp->GetId().c_str());
-                  repr->isPlayable = false;
-                  continue;
-                }
-
                 // Note to HDCP check:
                 // HDCP check should be done by the DRM where in case of problems should block key's
                 // for example with Widevine you will get "output-restricted" to key status
@@ -249,14 +227,21 @@ bool SESSION::CSession::CheckPlayableStreams(PLAYLIST::CPeriod* period)
                     repr->isPlayable = false;
                     continue;
                   }
-
                 }
               }
             }
           }
           else
           {
-            if (m_drmEngine.GetStatus() == DRM::EngineStatus::DRM_ERROR ||
+            if (m_drmEngine.GetStatus() == DRM::EngineStatus::NOT_SUPPORTED)
+            {
+              LOG::Log(LOGWARNING,
+                       "Disabled stream repr ID \"%s\", AdpSet ID \"%s\", due to unsupported DRM feature",
+                       repr->GetId().c_str(), adp->GetId().c_str());
+              repr->isPlayable = false;
+              continue;
+            }
+            else if (m_drmEngine.GetStatus() == DRM::EngineStatus::DRM_ERROR ||
                 m_drmEngine.GetStatus() == DRM::EngineStatus::DECRYPTER_ERROR)
             {
               return false; // return here, a bad status dont allow you to play streams
@@ -1124,6 +1109,20 @@ void SESSION::CSession::OnStreamChange(adaptive::AdaptiveStream* adStream)
 
 bool SESSION::CSession::OnGetStream(int streamid, kodi::addon::InputstreamInfo& info)
 {
+  if (m_drmEngine.GetStatus() == DRM::EngineStatus::NOT_SUPPORTED)
+  {
+    auto stream = GetStream(GetStreamIndexFromId(streamid));
+    if (!stream)
+      return false;
+
+    CAdaptationSet* adp{stream->m_adStream.getAdaptationSet()};
+    CRepresentation* repr{stream->m_adStream.getRepresentation()};
+    LOG::Log(
+        LOGERROR,
+        "Stream repr ID \"%s\", AdpSet ID \"%s\", cant be played due to unsupported DRM feature",
+        repr->GetId().c_str(), adp->GetId().c_str());
+    return false;
+  }
   if (m_drmEngine.GetStatus() == DRM::EngineStatus::DRM_ERROR ||
       m_drmEngine.GetStatus() == DRM::EngineStatus::DECRYPTER_ERROR)
   {
