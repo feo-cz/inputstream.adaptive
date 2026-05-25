@@ -103,6 +103,7 @@ enum class EngineStatus
   NONE,
   DRM_ERROR, // Unsupported DRM, or a problem in the initialization of DRM
   DECRYPTER_ERROR, // A DRM decrypter error
+  NOT_SUPPORTED, // The content is not supported by the DRM (e.g. unsupported crypto mode)
 };
 
 enum class DRMMediaType
