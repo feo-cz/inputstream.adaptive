@@ -592,9 +592,13 @@ bool DRM::CDRMEngine::ConfigureClearKey(std::vector<DRM::DRMInfo>& drmInfos)
   if (drmCfg.license.serverUri.empty() && drmCfg.license.keys.empty())
     return false;
 
-  // Get info from any drm info item, since should be the same
-  const CryptoMode cryptoMode = drmInfos[0].cryptoMode;
-  const std::string defaultKid = drmInfos[0].defaultKid;
+  // Copy common info from the first DRMInfo with a default KID
+  auto it = std::find_if(drmInfos.begin(), drmInfos.end(),
+                         [](const DRM::DRMInfo& s) { return !s.defaultKid.empty(); });
+  DRMInfo& drmInfoBase = (it != drmInfos.end()) ? *it : drmInfos.front();
+
+  const CryptoMode cryptoMode = drmInfoBase.cryptoMode;
+  const std::string defaultKid = drmInfoBase.defaultKid;
 
   if (kodiProps.GetDrmConfigs().size() == 1) // Single config (CK)
   {
