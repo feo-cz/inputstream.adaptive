@@ -11,6 +11,7 @@
 #include "ClearKeyDecrypter.h"
 #include "CompSettings.h"
 #include "SrvBroker.h"
+#include "decrypters/Helpers.h"
 #include "utils/Base64Utils.h"
 #include "utils/CurlUtils.h"
 #include "utils/FileUtils.h"
@@ -87,6 +88,11 @@ SResult CClearKeyCencSingleSampleDecrypter::CreateSession(const std::vector<uint
   }
   else // Keys should be provided by the manifest
   {
+    if (DRM::IsValidPsshHeader(pssh))
+    {
+      LOG::LogF(LOGERROR, "Unable to determine the key using the provided PSSH data");
+      return SResult::Error(GUI::GetLocalizedString(30303));
+    }
     // Currently HLS manifest only support this
     // the initData should contain only the key
     m_kidPairs.emplace(m_defaultKeyId, pssh);
