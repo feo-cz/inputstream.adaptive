@@ -1,3 +1,12 @@
+v22.3.13 (2026-05-29)
+- DRM sessions will now be created by default for streams that are actually used only
+- DRM info from media init segments now takes precedence, otherwise fallback to manifest info
+- [inputstream.adaptive.config] check_hdcp parameter is now effective and disabled by default
+- [inputstream.adaptive.manifest_config] removed ignore_fmp4_defaultkid parameter, issue solved
+- [inputstream.adaptive.manifest_config] new ignore_media_defaultkid parameter, see wiki
+- Fix possible ClearKey decryption problem using custom license parameters
+- Fix regression that prevent to use DRM on older Android OS
+
 v22.3.12 (2026-05-18)
 - Fix WebM video resume bug
 - Updated translations
