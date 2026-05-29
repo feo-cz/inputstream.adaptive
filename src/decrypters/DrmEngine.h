@@ -23,13 +23,6 @@
 #include <string>
 #include <vector>
 
-// forwards
-namespace PLAYLIST
-{
-class CRepresentation;
-class CAdaptationSet;
-} // namespace PLAYLIST
-
 namespace DRM
 {
 
@@ -52,20 +45,15 @@ public:
    * \param mediaType The type of media involved in the session
    * \param isForceSecureDecoder[OPT] To force the Secure Decoder, this setting coming from the manifest
    * \param streamInfo The InputstreamInfo where set the DRM configuration
-   * \param repr The representation of the stream refer to drmInfos
-   * \param adp The adaptation set of the representation
    * \param canCleanupSessions Delete existing sessions before to create a new one
-   * \param initDrmInfo[OUT] Set the DRMInfo used to initialize, otherwise the value is unchanged
-   * \return True if has success, otherwise false
+   * \return The DRM session if has success, otherwise nullptr
    */
-  bool InitializeSession(std::vector<DRM::DRMInfo> drmInfos,
-                         DRM::DRMMediaType mediaType,
-                         std::optional<bool> isForceSecureDecoder,
-                         kodi::addon::InputstreamInfo& streamInfo,
-                         PLAYLIST::CRepresentation* repr,
-                         PLAYLIST::CAdaptationSet* adp,
-                         bool canCleanupSessions,
-                         DRM::DRMInfo& initDrmInfo);
+  const DRMSession* InitializeSession(std::vector<DRM::DRMInfo> manifestDrmInfos,
+                                      std::vector<DRM::DRMInfo> mediaDrmInfos,
+                                      DRM::DRMMediaType mediaType,
+                                      std::optional<bool> isForceSecureDecoder,
+                                      kodi::addon::InputstreamInfo& streamInfo,
+                                      bool canCleanupSessions);
 
   /*!
    * \brief Get the session by ID (dont take in account KID).
@@ -110,10 +98,6 @@ private:
    * \return True if a match was found, otherwise false
    */
   bool SelectDRM(std::vector<DRM::DRMInfo>& drmInfos);
-
-  void ExtractStreamProtectionData(PLAYLIST::CRepresentation* repr,
-                                   PLAYLIST::CAdaptationSet* adp,
-                                   DRM::DRMInfo& drmInfo);
 
   // \brief Delete all sessions by media type
   void DeleteSessionsByType(const DRMMediaType type);

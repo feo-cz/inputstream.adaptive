@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "decrypters/DrmEngineDefines.h"
 #include "utils/CryptoUtils.h"
 #include "utils/ThreadPool.h"
 
@@ -25,10 +26,7 @@
 #include <future>
 
 class Adaptive_CencSingleSampleDecrypter;
-namespace DRM
-{
-struct DecrypterCapabilites;
-}
+
 namespace SESSION
 {
 class CStream;
@@ -60,9 +58,11 @@ public:
   virtual Type GetType() const = 0;
 
   virtual bool Initialize(SESSION::CStream* stream) { return true; }
+
+  virtual std::vector<DRM::DRMInfo> GetInitDRMInfo() { return {}; }
+
   virtual void SetDecrypter(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> ssd,
-                            const DRM::DecrypterCapabilites& dcaps,
-                            const std::vector<uint8_t>& defaultKid)
+                            const DRM::DecrypterCapabilites& dcaps)
   {
   }
 

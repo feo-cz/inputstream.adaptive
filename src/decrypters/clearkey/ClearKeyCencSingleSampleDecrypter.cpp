@@ -146,14 +146,16 @@ AP4_Result CClearKeyCencSingleSampleDecrypter::SetFragmentInfo(AP4_UI32 poolId,
   PINFO& pInfo = m_pool[poolId];
   FINFO& fInfo = pInfo.fInfo;
 
+  const std::vector<uint8_t>& currentKid = keyId.empty() ? m_defaultKeyId : keyId;
+
   // Compare the encryption info from the previous fragment to see if it has been changed,
   // if so, the decrypter will have to be recreated
-  pInfo.isChanged = fInfo.kid != keyId || fInfo.cryptoInfo.m_mode != cryptoInfo.m_mode ||
+  pInfo.isChanged = fInfo.kid != currentKid || fInfo.cryptoInfo.m_mode != cryptoInfo.m_mode ||
                     fInfo.cryptoInfo.m_cryptBlocks != cryptoInfo.m_cryptBlocks ||
                     fInfo.cryptoInfo.m_skipBlocks != cryptoInfo.m_skipBlocks;
 
   // Update with the current fragment info
-  fInfo.kid = keyId;
+  fInfo.kid = currentKid;
   fInfo.cryptoInfo = cryptoInfo;
 
   return AP4_SUCCESS;

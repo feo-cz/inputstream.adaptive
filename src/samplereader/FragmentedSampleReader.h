@@ -96,9 +96,11 @@ public:
   Type GetType() const override { return Type::FMP4; }
 
   virtual bool Initialize(SESSION::CStream* stream) override;
+
+  virtual std::vector<DRM::DRMInfo> GetInitDRMInfo() override;
+
   virtual void SetDecrypter(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> ssd,
-                            const DRM::DecrypterCapabilites& dcaps,
-                            const std::vector<uint8_t>& defaultKid) override;
+                            const DRM::DecrypterCapabilites& dcaps) override;
 
   AP4_Result Start(std::optional<uint64_t> pts) override;
   AP4_Result ReadSample() override;
@@ -155,7 +157,6 @@ private:
   AP4_Sample m_sample;
   AP4_DataBuffer m_sampleData;
   CodecHandler* m_codecHandler{nullptr};
-  std::vector<uint8_t> m_defaultKey;
   AP4_ProtectedSampleDescription* m_protectedDesc{nullptr};
   std::shared_ptr<Adaptive_CencSingleSampleDecrypter> m_singleSampleDecryptor{nullptr};
   std::unique_ptr<CAdaptiveCencSampleDecrypter> m_decrypter;
