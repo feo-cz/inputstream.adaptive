@@ -11,6 +11,7 @@
 #include "ClearKeyDecrypter.h"
 #include "CompSettings.h"
 #include "SrvBroker.h"
+#include "decrypters/Helpers.h"
 #include "utils/Base64Utils.h"
 #include "utils/CurlUtils.h"
 #include "utils/FileUtils.h"
@@ -87,6 +88,11 @@ SResult CClearKeyCencSingleSampleDecrypter::CreateSession(const std::vector<uint
   }
   else // Keys should be provided by the manifest
   {
+    if (DRM::IsValidPsshHeader(pssh))
+    {
+      LOG::LogF(LOGERROR, "Unable to determine the key using the provided PSSH data");
+      return SResult::Error(GUI::GetLocalizedString(30303));
+    }
     // Currently HLS manifest only support this
     // the initData should contain only the key
     m_kidPairs.emplace(m_defaultKeyId, pssh);
@@ -140,14 +146,16 @@ AP4_Result CClearKeyCencSingleSampleDecrypter::SetFragmentInfo(AP4_UI32 poolId,
   PINFO& pInfo = m_pool[poolId];
   FINFO& fInfo = pInfo.fInfo;
 
+  const std::vector<uint8_t>& currentKid = keyId.empty() ? m_defaultKeyId : keyId;
+
   // Compare the encryption info from the previous fragment to see if it has been changed,
   // if so, the decrypter will have to be recreated
-  pInfo.isChanged = fInfo.kid != keyId || fInfo.cryptoInfo.m_mode != cryptoInfo.m_mode ||
+  pInfo.isChanged = fInfo.kid != currentKid || fInfo.cryptoInfo.m_mode != cryptoInfo.m_mode ||
                     fInfo.cryptoInfo.m_cryptBlocks != cryptoInfo.m_cryptBlocks ||
                     fInfo.cryptoInfo.m_skipBlocks != cryptoInfo.m_skipBlocks;
 
   // Update with the current fragment info
-  fInfo.kid = keyId;
+  fInfo.kid = currentKid;
   fInfo.cryptoInfo = cryptoInfo;
 
   return AP4_SUCCESS;

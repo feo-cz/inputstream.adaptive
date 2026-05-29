@@ -121,6 +121,25 @@ std::string_view DRM::UrnToKeySystem(std::string_view urn)
     return "";
 }
 
+std::string_view DRM::SystemIdToKeySystem(const uint8_t* id)
+{
+  if (!id)
+    return {};
+
+  if (std::equal(id, id + 16, ID_WIDEVINE))
+    return KS_WIDEVINE;
+  else if (std::equal(id, id + 16, ID_PLAYREADY))
+    return KS_PLAYREADY;
+  else if (std::equal(id, id + 16, ID_WISEPLAY))
+    return KS_WISEPLAY;
+  else if (std::equal(id, id + 16, ID_CLEARKEY))
+    return KS_CLEARKEY;
+  else if (std::equal(id, id + 16, ID_FAIRPLAY))
+    return KS_FAIRPLAY;
+  else
+    return {};
+}
+
 std::string DRM::KeySystemToDrmName(std::string_view ks)
 {
   if (ks == KS_WIDEVINE)
@@ -178,6 +197,9 @@ bool DRM::IsValidKeySystem(std::string_view keySystem)
 
 std::vector<uint8_t> DRM::ConvertKidStrToBytes(std::string_view kidStr)
 {
+  if (kidStr.empty())
+    return {};
+
   if (kidStr.size() != 32)
   {
     LOG::LogF(LOGERROR, "Cannot convert KID \"%s\" as bytes due to wrong size", kidStr.data());

@@ -418,9 +418,9 @@ void ADP::KODI_PROPS::CCompKodiProps::ParseManifestConfig(const std::string& dat
         break;
       }
     }
-    else if (configName == "ignore_fmp4_defaultkid" && jValue.is_boolean())
+    else if (configName == "ignore_media_defaultkid" && jValue.is_boolean())
     {
-      m_manifestConfig.ignoreFMP4defaultKid = jValue.get<bool>();
+      m_manifestConfig.ignoreMediaDefaultKid = jValue.get<bool>();
     }
     else
     {
