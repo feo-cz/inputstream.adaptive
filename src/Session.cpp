@@ -639,7 +639,7 @@ void SESSION::CSession::UpdateStream(CStream& stream)
   stream.m_info.SetCodecInternalName(codecStr);
 }
 
-bool SESSION::CSession::PrepareStream(CStream& stream, uint64_t startPts)
+bool SESSION::CSession::PrepareStream(CStream& stream)
 {
   const EVENT_TYPE startEvent = stream.m_adStream.GetStartEvent();
   CPeriod* period = stream.m_adStream.getPeriod();
@@ -666,7 +666,7 @@ bool SESSION::CSession::PrepareStream(CStream& stream, uint64_t startPts)
   //!  and re-start downloads from the appropriate PTS,
   //!  this wastes time for the video seek and resources due to unnecessary downloads
   //!  more likely its more easy to see also cancelled downloads on log with TS streams
-  stream.m_adStream.start_stream(startPts);
+  stream.m_adStream.start_stream();
   stream.SetAdByteStream(std::make_unique<CAdaptiveByteStream>(&stream.m_adStream));
 
   ContainerType reprContainerType = repr->GetContainerType();

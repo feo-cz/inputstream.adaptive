@@ -285,7 +285,7 @@ bool CInputStreamAdaptive::OpenStream(int streamid)
     return true;
   }
 
-  if (!m_session->PrepareStream(*stream, m_lastPts))
+  if (!m_session->PrepareStream(*stream))
   {
     return false;
   }
@@ -347,7 +347,6 @@ DEMUX_PACKET* CInputStreamAdaptive::DemuxRead(void)
     if (m_session->CheckChange())
     {
       // Adaptive stream has switched stream (representation) quality
-      m_lastPts = PLAYLIST::NO_PTS_VALUE;
       p = AllocateDemuxPacket(0);
       p->iStreamId = DEMUX_SPECIALID_STREAMCHANGE;
       LOG::Log(LOGDEBUG, "DEMUX_SPECIALID_STREAMCHANGE (stream quality changed)");
@@ -386,7 +385,6 @@ DEMUX_PACKET* CInputStreamAdaptive::DemuxRead(void)
 
       if (srHaveData)
       {
-        m_lastPts = sr->DTSorPTSManifest();
         p->dts = static_cast<double>(sr->DTS());
         p->pts = static_cast<double>(sr->PTS());
         p->duration = static_cast<double>(sr->GetDuration());
@@ -415,7 +413,6 @@ DEMUX_PACKET* CInputStreamAdaptive::DemuxRead(void)
   if (m_session->SeekChapter(m_session->GetChapter() + 1))
   {
     // Switched to new period / chapter
-    m_lastPts = PLAYLIST::NO_PTS_VALUE;
     // Disable streams from the old period (kodi core never close/disable streams...)
     for (unsigned int i(0); i < INPUTSTREAM_MAX_STREAM_COUNT && i < m_session->GetStreamCount();
          ++i)

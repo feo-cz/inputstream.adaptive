@@ -76,7 +76,7 @@ public:
    * \brief Update stream's InputstreamInfo
    * \param stream The stream to prepare
    */
-  bool PrepareStream(CStream& stream, uint64_t startPts);
+  bool PrepareStream(CStream& stream);
 
   /*!
    * \brief Get a stream by index

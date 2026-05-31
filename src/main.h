@@ -58,10 +58,6 @@ public:
 private:
   std::shared_ptr<SESSION::CSession> m_session;
 
-  // The last PTS of the segment package fed to kodi.
-  // NO_PTS_VALUE only when playback starts or a new period starts
-  std::atomic<uint64_t> m_lastPts{PLAYLIST::NO_PTS_VALUE};
-
   bool m_checkCoreReopen{false}; // Check if Kodi core will reopen all streams
 };
 
