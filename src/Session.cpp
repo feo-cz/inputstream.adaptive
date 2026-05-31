@@ -46,6 +46,40 @@ uint32_t MakeUniqueId(uint16_t periodIndex, uint16_t streamIndex)
   assert(streamIndex <= 2047 && "streamIndex exceeds maximum for 11 bits (2047)");
   return (static_cast<uint32_t>(periodIndex) << 11) | (streamIndex & 0x7FFu);
 }
+
+/*!
+ * \brief Provide a pts value that represents the time elapsed from current stream window
+ * \param pts The pts value coming from the stream reader
+ * \param stream The stream where the reader belongs to, used to obtain the reader pts diff and the segment pts offset
+ * \return The adjusted pts value
+ */
+uint64_t PTSToElapsed(uint64_t pts, CStream* stream)
+{
+  if (!stream)
+  {
+    LOG::LogF(LOGERROR, "Cannot convert PTS to elapsed time, no stream specified");
+    return 0;
+  }
+
+  const ISampleReader* reader{stream->GetReader()};
+  if (!reader)
+  {
+    LOG::LogF(LOGERROR, "Cannot get the stream sample reader");
+    return 0;
+  }
+
+  // adjusted pts value taking the difference between segment's pts and reader pts
+  int64_t manifestTime{static_cast<int64_t>(pts) - reader->GetPTSDiff()};
+  if (manifestTime < 0)
+    manifestTime = 0;
+
+  const adaptive::AdaptiveStream& adStream = stream->m_adStream;
+
+  if (static_cast<uint64_t>(manifestTime) > adStream.GetAbsolutePTSOffset())
+    return static_cast<uint64_t>(manifestTime) - adStream.GetAbsolutePTSOffset();
+
+  return 0;
+}
 } // unnamed namespace
 
 SESSION::CSession::~CSession()
@@ -768,32 +802,6 @@ uint64_t SESSION::CSession::GetTotalTimeMs() const
     return m_adaptiveTree->m_totalTime;
 }
 
-uint64_t SESSION::CSession::PTSToElapsed(uint64_t pts)
-{
-  if (m_timingStream)
-  {
-    ISampleReader* timingReader{m_timingStream->GetReader()};
-    if (!timingReader)
-    {
-      LOG::LogF(LOGERROR, "Cannot get the stream sample reader");
-      return 0;
-    }
-
-    // adjusted pts value taking the difference between segment's pts and reader pts
-    int64_t manifest_time{static_cast<int64_t>(pts) - timingReader->GetPTSDiff()};
-    if (manifest_time < 0)
-      manifest_time = 0;
-
-    if (static_cast<uint64_t>(manifest_time) > m_timingStream->m_adStream.GetAbsolutePTSOffset())
-      return static_cast<uint64_t>(manifest_time) -
-             m_timingStream->m_adStream.GetAbsolutePTSOffset();
-
-    return 0ULL;
-  }
-  else
-    return pts;
-}
-
 uint64_t SESSION::CSession::GetTimeshiftBufferStart()
 {
   if (m_timingStream)
@@ -866,7 +874,7 @@ bool SESSION::CSession::GetNextSample(ISampleReader*& sampleReader)
     ISampleReader* sr{res->GetReader()};
 
     if (sr->PTS() != STREAM_NOPTS_VALUE)
-      m_elapsedTime = PTSToElapsed(sr->PTS()) + GetChapterStartTime();
+      m_elapsedTime = PTSToElapsed(sr->PTS(), res) + GetChapterStartTime();
 
     sampleReader = sr;
     return true;
@@ -1010,7 +1018,7 @@ bool SESSION::CSession::SeekTime(double seekTime, bool& isError)
     }
     else
     {
-      const uint64_t destTimePts = PTSToElapsed(streamReader->PTS());
+      const uint64_t destTimePts = PTSToElapsed(streamReader->PTS(), stream.get());
       const double destTimeSecs{static_cast<double>(destTimePts) / STREAM_TIME_BASE};
 
       // Note: TS sample reader with included streams have a dynamic streamId,
