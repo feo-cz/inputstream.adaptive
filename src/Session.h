@@ -119,12 +119,6 @@ public:
    */
   uint64_t GetElapsedTimeMs() const { return m_elapsedTime / 1000; };
 
-  /*! \brief Provide a pts value that represents the time elapsed from current stream window
-   *  \param pts The pts value coming from the stream reader
-   *  \return The adjusted pts value
-   */
-  uint64_t PTSToElapsed(uint64_t pts);
-
   /*! \brief Get the start pts of the first segment in the timing stream
    *       with the difference in manifest time and reader time added
    *  \return The reader's timeshift buffer starting pts
