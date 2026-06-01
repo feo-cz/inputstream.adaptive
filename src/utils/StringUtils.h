@@ -351,5 +351,16 @@ std::string ReplacePlaceholders(const std::string& text,
  */
 std::string Format(const char* fmt, ...);
 
+/*!
+ * \brief Convert a string to a map.
+ * \param str The string to convert
+ * \param delimiter The character separating the key from the value
+ * \param separator The character separating more key/value pairs
+ * \return The mapped string.
+ */
+std::map<std::string_view, std::string_view> ToMap(std::string_view str,
+                                                   const char delimiter,
+                                                   const char separator);
+
 } // namespace STRING
 } // namespace UTILS

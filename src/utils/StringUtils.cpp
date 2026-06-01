@@ -445,3 +445,31 @@ std::string UTILS::STRING::Format(const char* fmt, ...)
   return str;
 }
 
+
+std::map<std::string_view, std::string_view> UTILS::STRING::ToMap(std::string_view str,
+                                                                  const char delimiter,
+                                                                  const char separator)
+{
+  std::map<std::string_view, std::string_view> mapped;
+
+  size_t keyPos = 0;
+  size_t keyEnd;
+  size_t valPos;
+  size_t valEnd;
+
+  while ((keyEnd = str.find(delimiter, keyPos)) != std::string::npos)
+  {
+    valPos = str.find_first_not_of(delimiter, keyEnd);
+    if (valPos == std::string::npos)
+      break;
+
+    valEnd = str.find(separator, valPos);
+    mapped.emplace(str.substr(keyPos, keyEnd - keyPos), str.substr(valPos, valEnd - valPos));
+
+    keyPos = valEnd;
+    if (keyPos != std::string::npos)
+      ++keyPos;
+  }
+
+  return mapped;
+}
