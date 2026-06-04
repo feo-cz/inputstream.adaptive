@@ -588,8 +588,8 @@ bool adaptive::AdaptiveStream::parseIndexRange(PLAYLIST::CRepresentation* rep,
     }
 
     // Update period timeline duration
-    if (!rep->HasSegmentBase() && current_adp_->GetStreamType() == StreamType::VIDEO ||
-        current_adp_->GetStreamType() == StreamType::AUDIO)
+    if (!rep->HasSegmentBase() && (current_adp_->GetStreamType() == StreamType::VIDEO ||
+                                   current_adp_->GetStreamType() == StreamType::AUDIO))
     {
       if (rep->GetTimescale() == 0)
       {

@@ -1061,8 +1061,8 @@ void adaptive::CDashTree::ParseTagRepresentation(pugi::xml_node nodeRepr,
   repr->SetScaling();
 
   // Update period timeline duration
-  if (!repr->HasSegmentBase() && adpSet->GetStreamType() == StreamType::VIDEO ||
-      adpSet->GetStreamType() == StreamType::AUDIO)
+  if (!repr->HasSegmentBase() && (adpSet->GetStreamType() == StreamType::VIDEO ||
+      adpSet->GetStreamType() == StreamType::AUDIO))
   {
     if (repr->GetTimescale() == 0)
     {
@@ -1931,8 +1931,8 @@ void adaptive::CDashTree::InsertLiveSegment(PLAYLIST::CPeriod* currPeriod,
         }
 
         // Update period timeline duration
-        if (!rep->HasSegmentBase() && adpSet->GetStreamType() == StreamType::VIDEO ||
-            adpSet->GetStreamType() == StreamType::AUDIO)
+        if (!rep->HasSegmentBase() && (adpSet->GetStreamType() == StreamType::VIDEO ||
+            adpSet->GetStreamType() == StreamType::AUDIO))
         {
           if (rep->GetTimescale() == 0)
           {
