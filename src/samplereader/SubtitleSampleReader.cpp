@@ -173,7 +173,16 @@ AP4_Result CSubtitleSampleReader::ReadSample()
           AP4_UI32 duration =
               static_cast<AP4_UI32>((segDur * STREAM_TIME_BASE) / rep->GetTimescale());
 
-          const AP4_UI64 pts = (currentSegment->startPTS_ * STREAM_TIME_BASE) / rep->GetTimescale();
+          AP4_UI64 pts = (currentSegment->startPTS_ * STREAM_TIME_BASE) / rep->GetTimescale();
+
+          //! @todo: MPD PTO see also todo in the MPD parser
+          if (rep->HasSegmentTemplate() && rep->GetSegmentTemplate()->HasPresTimeOffset())
+          {
+            uint64_t pto = (rep->GetSegmentTemplate()->GetPresTimeOffset() * STREAM_TIME_BASE) /
+                           rep->GetSegmentTemplate()->GetTimescale();
+            if (pts >= pto)
+              pts -= pto;
+          }
 
           m_codecHandler->Transform(pts, duration, segData, 1000);
           if (m_codecHandler->ReadNextSample(m_sample, m_sampleData))
