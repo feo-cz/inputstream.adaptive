@@ -226,7 +226,7 @@ bool CSubtitleSampleReader::TimeSeek(uint64_t pts)
 {
   if (dynamic_cast<WebVTTCodecHandler*>(m_codecHandler.get()))
   {
-    return true;
+    return AP4_SUCCEEDED(ReadSample());
   }
   else
   {
