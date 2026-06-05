@@ -48,26 +48,26 @@ public:
    * \param canCleanupSessions Delete existing sessions before to create a new one
    * \return The DRM session if has success, otherwise nullptr
    */
-  const DRMSession* InitializeSession(std::vector<DRM::DRMInfo> manifestDrmInfos,
-                                      std::vector<DRM::DRMInfo> mediaDrmInfos,
-                                      DRM::DRMMediaType mediaType,
-                                      std::optional<bool> isForceSecureDecoder,
-                                      kodi::addon::InputstreamInfo& streamInfo,
-                                      bool canCleanupSessions);
+  const std::shared_ptr<DRMSession> InitializeSession(std::vector<DRM::DRMInfo> manifestDrmInfos,
+                                                      std::vector<DRM::DRMInfo> mediaDrmInfos,
+                                                      DRM::DRMMediaType mediaType,
+                                                      std::optional<bool> isForceSecureDecoder,
+                                                      kodi::addon::InputstreamInfo& streamInfo,
+                                                      bool canCleanupSessions);
 
   /*!
    * \brief Get the session by ID (dont take in account KID).
    * \param id The session ID
    * \return The session, otherwise nullptr if not found
    */
-  const DRMSession* GetSession(const std::string& id) const;
+  const std::shared_ptr<DRMSession> GetSession(const std::string& id) const;
 
   /*!
    * \brief Get the session by ID that match the specified KID.
    * \param id The session ID
    * \return The session, otherwise nullptr if not found
    */
-  const DRMSession* GetSession(const std::string& id, const std::string& kid) const;
+  const std::shared_ptr<DRMSession> GetSession(const std::string& id, const std::string& kid) const;
 
 
   /*!
@@ -110,7 +110,7 @@ private:
 
   std::string m_keySystem; // Choosen key system
   std::vector<DRMInstance> m_drms;
-  std::vector<DRMSession> m_sessions;
+  std::vector<std::shared_ptr<DRMSession>> m_sessions;
 
   EngineStatus m_status{EngineStatus::NONE};
   bool m_isPreinitialized{false};

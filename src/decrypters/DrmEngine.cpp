@@ -308,7 +308,7 @@ bool DRM::CDRMEngine::PreInitializeDRM(DRMSession& session)
 #ifndef ANDROID
   // On android is not possible add the default KID key used to open DRM
   // then dont add this DRM session, since must be reinitialized
-  m_sessions.emplace_back(session);
+  m_sessions.emplace_back(std::make_shared<DRMSession>(session));
 #endif
 
   m_isPreinitialized = true;
@@ -316,12 +316,13 @@ bool DRM::CDRMEngine::PreInitializeDRM(DRMSession& session)
   return true;
 }
 
-const DRMSession* DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> manifestDrmInfos,
-                                                     std::vector<DRM::DRMInfo> mediaDrmInfos,
-                                                     DRM::DRMMediaType mediaType,
-                                                     std::optional<bool> isForceSecureDecoder,
-                                                     kodi::addon::InputstreamInfo& streamInfo,
-                                                     bool canCleanupSessions)
+const std::shared_ptr<DRMSession> DRM::CDRMEngine::InitializeSession(
+    std::vector<DRM::DRMInfo> manifestDrmInfos,
+    std::vector<DRM::DRMInfo> mediaDrmInfos,
+    DRM::DRMMediaType mediaType,
+    std::optional<bool> isForceSecureDecoder,
+    kodi::addon::InputstreamInfo& streamInfo,
+    bool canCleanupSessions)
 {
   const auto& kodiProps = CSrvBroker::GetKodiProps();
   
@@ -375,7 +376,7 @@ const DRMSession* DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> m
   }
 
   const auto drmPropCfg = kodiProps.GetDrmConfig(m_keySystem);
-  DRMSession* session{nullptr};
+  std::shared_ptr<DRMSession> session{nullptr};
 
   for (size_t drmInfoIdx = 0; drmInfoIdx < selDrmInfos.size(); ++drmInfoIdx)
   {
@@ -438,20 +439,20 @@ const DRMSession* DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> m
       // the session has been created with a custom PSSH/KID and it should
       // be assumed that there is a single session for all streams.
       // In order to reuse this session is needed to add the current KID.
-      if (!m_sessions[0].drm->HasLicenseKey(m_sessions[0].decrypter, drmInfoKidBytes))
+      if (!m_sessions[0]->drm->HasLicenseKey(m_sessions[0]->decrypter, drmInfoKidBytes))
       {
-        m_sessions[0].decrypter->AddKeyId(drmInfoKidBytes);
-        m_sessions[0].decrypter->SetDefaultKeyId(drmInfoKidBytes);
+        m_sessions[0]->decrypter->AddKeyId(drmInfoKidBytes);
+        m_sessions[0]->decrypter->SetDefaultKeyId(drmInfoKidBytes);
       }
     }
 
     // Check whether it is possible to reuse an existing DRM session
     // its recommended to use separate sessions when a/v media types have different KIDs
     // to avoid possible decryption problems that usually affect android devices (corrupted/pixellated video)
-    for (DRMSession& s : m_sessions)
+    for (const auto& s : m_sessions)
     {
       bool isReuseSession{false};
-      const std::optional<bool> hasKey = s.drm->HasLicenseKey(s.decrypter, drmInfoKidBytes);
+      const std::optional<bool> hasKey = s->drm->HasLicenseKey(s->decrypter, drmInfoKidBytes);
 
       // forced single session, allow to share same session (also with different media types)
       if (drmPropCfg.isForceSingleSession && (!hasKey.has_value() || *hasKey))
@@ -459,14 +460,14 @@ const DRMSession* DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> m
         isReuseSession = true;
       }
       // share same session when: KID is the same, otherwise check if there is license key by media type
-      else if ((!s.kid.empty() && s.kid == drmInfo.defaultKid) ||
-               (hasKey.has_value() && *hasKey && s.mediaType == mediaType))
+      else if ((!s->kid.empty() && s->kid == drmInfo.defaultKid) ||
+               (hasKey.has_value() && *hasKey && s->mediaType == mediaType))
       {
         isReuseSession = true;
       }
       if (isReuseSession)
       {
-        session = &s;
+        session = s;
         break;
       }
     }
@@ -576,8 +577,8 @@ const DRMSession* DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> m
         return nullptr;
       }
 
-      m_sessions.emplace_back(newSes);
-      session = &m_sessions.back();
+      m_sessions.emplace_back(std::make_shared<DRMSession>(newSes));
+      session = m_sessions.back();
       LOG::Log(LOGDEBUG, "Initialized new DRM session (ID: %s, KID: %s)", session->id.c_str(),
                drmInfo.defaultKid.c_str());
     }
@@ -609,8 +610,8 @@ const DRMSession* DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> m
         }
       }
 
-      m_sessions.emplace_back(newSes);
-      session = &m_sessions.back();
+      m_sessions.emplace_back(std::make_shared<DRMSession>(newSes));
+      session = m_sessions.back();
       LOG::Log(LOGDEBUG, "Reused existing DRM session (ID: %s, KID: %s)", session->id.c_str(),
                drmInfo.defaultKid.c_str());
     }
@@ -672,28 +673,28 @@ const DRMSession* DRM::CDRMEngine::InitializeSession(std::vector<DRM::DRMInfo> m
   return session;
 }
 
-const DRMSession* DRM::CDRMEngine::GetSession(const std::string& id) const
+const std::shared_ptr<DRMSession> DRM::CDRMEngine::GetSession(const std::string& id) const
 {
   if (id.empty())
     return nullptr;
 
   for (const auto& session : m_sessions)
   {
-    if (session.id == id)
-      return &session;
+    if (session->id == id)
+      return session;
   }
   return nullptr;
 }
 
-const DRMSession* DRM::CDRMEngine::GetSession(const std::string& id, const std::string& kid) const
+const std::shared_ptr<DRMSession> DRM::CDRMEngine::GetSession(const std::string& id, const std::string& kid) const
 {
   if (id.empty())
     return nullptr;
 
   for (const auto& session : m_sessions)
   {
-    if (session.id == id && session.kid == kid)
-      return &session;
+    if (session->id == id && session->kid == kid)
+      return session;
   }
   return nullptr;
 }
@@ -820,8 +821,8 @@ void DRM::CDRMEngine::DeleteSessionsByType(const DRMMediaType mediaType)
   // Despite this will delete sessions, the shared IDecrypter/Adaptive_CencSingleSampleDecrypter
   // might still be in use, for example on CVideoCodecAdaptive, so shared uses can be deleted at later time
   m_sessions.erase(std::remove_if(m_sessions.begin(), m_sessions.end(),
-                                  [mediaType](const DRMSession& session)
-                                  { return session.mediaType == mediaType; }),
+                                  [mediaType](const std::shared_ptr<DRMSession>& session)
+                                  { return session->mediaType == mediaType; }),
                    m_sessions.end());
 }
 

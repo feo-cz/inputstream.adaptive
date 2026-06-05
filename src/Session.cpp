@@ -228,7 +228,7 @@ bool SESSION::CSession::CheckPlayableStreams(PLAYLIST::CPeriod* period)
             continue;
           }
 
-          const DRM::DRMSession* drmSession = m_drmEngine.InitializeSession(
+          const std::shared_ptr<DRM::DRMSession> drmSession = m_drmEngine.InitializeSession(
               repr->DrmInfos(), {}, drmMediaType, period->IsSecureDecodeNeeded(), isInfo, false);
 
           if (drmSession)
@@ -730,7 +730,7 @@ bool SESSION::CSession::PrepareStream(CStream& stream)
       return false;
     }
 
-    const DRM::DRMSession* drmSession = m_drmEngine.InitializeSession(
+    const std::shared_ptr<DRM::DRMSession> drmSession = m_drmEngine.InitializeSession(
         manifestDrmInfo, mediaDrmInfo, drmMediaType, period->IsSecureDecodeNeeded(), stream.m_info,
         m_adaptiveTree->IsChangingPeriod());
 
@@ -739,7 +739,7 @@ bool SESSION::CSession::PrepareStream(CStream& stream)
 
     isDrmSecure = drmSession->capabilities.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH;
 
-    reader->SetDecrypter(drmSession->decrypter, drmSession->capabilities);
+    reader->SetDecrypter(drmSession);
   }
 
   if (adp->GetStreamType() == StreamType::VIDEO || adp->GetStreamType() == StreamType::VIDEO_AUDIO)

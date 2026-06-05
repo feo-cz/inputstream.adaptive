@@ -9,7 +9,6 @@
 #pragma once
 
 #include "SampleReader.h"
-#include "decrypters/IDecrypter.h"
 
 #include <bento4/Ap4.h>
 #include <bento4/Ap4LinearReader.h>
@@ -99,8 +98,7 @@ public:
 
   virtual std::vector<DRM::DRMInfo> GetInitDRMInfo() override;
 
-  virtual void SetDecrypter(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> ssd,
-                            const DRM::DecrypterCapabilites& dcaps) override;
+  virtual void SetDecrypter(std::shared_ptr<DRM::DRMSession> drmSession) override;
 
   AP4_Result Start(std::optional<uint64_t> pts) override;
   AP4_Result ReadSample() override;
@@ -158,7 +156,7 @@ private:
   AP4_DataBuffer m_sampleData;
   CodecHandler* m_codecHandler{nullptr};
   AP4_ProtectedSampleDescription* m_protectedDesc{nullptr};
-  std::shared_ptr<Adaptive_CencSingleSampleDecrypter> m_singleSampleDecryptor{nullptr};
+  std::shared_ptr<DRM::DRMSession> m_drmSession;
   std::unique_ptr<CAdaptiveCencSampleDecrypter> m_decrypter;
   CryptoInfo m_readerCryptoInfo{};
 

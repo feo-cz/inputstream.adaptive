@@ -61,8 +61,7 @@ public:
 
   virtual std::vector<DRM::DRMInfo> GetInitDRMInfo() { return {}; }
 
-  virtual void SetDecrypter(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> ssd,
-                            const DRM::DecrypterCapabilites& dcaps)
+  virtual void SetDecrypter(std::shared_ptr<DRM::DRMSession> drmSession)
   {
   }
 
