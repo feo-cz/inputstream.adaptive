@@ -33,13 +33,13 @@ constexpr uint16_t HDCP_V_MAX = 9999;
 // \brief Decrypter capabilities
 struct Capabilities
 {
-  static const uint32_t SSD_SUPPORTS_DECODING = 1;
-  static const uint32_t SSD_SECURE_PATH = 2;
-  static const uint32_t SSD_ANNEXB_REQUIRED = 4;
-  static const uint32_t SSD_HDCP_RESTRICTED = 8;
-  static const uint32_t SSD_SINGLE_DECRYPT = 16;
-  static const uint32_t SSD_SECURE_DECODER = 32;
-  static const uint32_t SSD_INVALID = 64;
+  static const uint32_t SUPPORTS_DECODING = 1;
+  static const uint32_t SECURE_PATH = 2;
+  static const uint32_t ANNEXB_REQUIRED = 4;
+  static const uint32_t HDCP_RESTRICTED = 8;
+  static const uint32_t SINGLE_DECRYPT = 16;
+  static const uint32_t SECURE_DECODER = 32;
+  static const uint32_t INVALID_STATUS = 64;
 
   uint16_t flags{0};
 

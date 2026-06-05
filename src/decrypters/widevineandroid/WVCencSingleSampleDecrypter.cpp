@@ -204,9 +204,8 @@ bool CWVCencSingleSampleDecrypterA::HasKeyId(const std::vector<uint8_t>& keyid)
 void CWVCencSingleSampleDecrypterA::GetCapabilities(const std::vector<uint8_t>& keyId,
                                                     DRM::Capabilities& caps)
 {
-  caps = {DRM::Capabilities::SSD_SECURE_PATH |
-              DRM::Capabilities::SSD_ANNEXB_REQUIRED,
-          m_hdcpVersion, m_hdcpLimit};
+  caps = {DRM::Capabilities::SECURE_PATH | DRM::Capabilities::ANNEXB_REQUIRED, m_hdcpVersion,
+          m_hdcpLimit};
 
   if (caps.hdcpLimit == 0)
     caps.hdcpLimit = m_resolutionLimit;
@@ -217,7 +216,7 @@ void CWVCencSingleSampleDecrypterA::GetCapabilities(const std::vector<uint8_t>& 
   if (m_cdmAdapter->GetCDM()->getPropertyString("securityLevel") == "L1")
   {
     caps.hdcpLimit = m_resolutionLimit; //No restriction
-    caps.flags |= DRM::Capabilities::SSD_SECURE_DECODER;
+    caps.flags |= DRM::Capabilities::SECURE_DECODER;
   }
   LOG::LogF(LOGDEBUG, "hdcpLimit: %i", caps.hdcpLimit);
 }
@@ -585,7 +584,7 @@ AP4_Result CWVCencSingleSampleDecrypterA::DecryptSampleData(AP4_UI32 poolId,
 
   AP4_DataBuffer payload;
   std::vector<SubsampleEntry> rebuiltSubs;
-  bool convertAnnexB = (fragInfo.m_decrypterFlags & DRM::Capabilities::SSD_ANNEXB_REQUIRED) != 0;
+  bool convertAnnexB = (fragInfo.m_decrypterFlags & DRM::Capabilities::ANNEXB_REQUIRED) != 0;
 
   // Convert only when safe to look at clear_bytes[0]
   if (fragInfo.m_nalLengthSize && (!iv || (subsampleCount > 0 && bytesOfCleartextData[0] > 0)))
