@@ -156,4 +156,5 @@ private:
   CryptoMode m_EncryptionMode;
 
   std::optional<cdm::VideoDecoderConfig_3> m_currentVideoDecConfig;
+  bool m_isTestingCapabilities{false};
 };

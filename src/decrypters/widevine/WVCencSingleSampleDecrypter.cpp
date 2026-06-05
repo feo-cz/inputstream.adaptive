@@ -202,6 +202,11 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
     {
       encryptedBytes[0] = 12;
       clearBytes[0] = 0;
+
+      // Ignore callbacks to OnKeyStatusChangeNotify when testing capabilities,
+      // when the decryption fails CDM trigger a key status change with keys as unusable but this is expected
+      m_isTestingCapabilities = true;
+
       if (DecryptSampleData(poolId, in, out, iv, 1, clearBytes, encryptedBytes, mediaType) !=
           AP4_SUCCESS)
       {
@@ -216,6 +221,8 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
         caps.hdcpVersion = DRM::HDCP_V_MAX;
         caps.hdcpLimit = m_resolutionLimit;
       }
+
+      m_isTestingCapabilities = false;
     }
     catch (const std::exception& e)
     {
@@ -408,6 +415,9 @@ void CWVCencSingleSampleDecrypter::OnNotify(const CdmMessage& message)
 
 void CWVCencSingleSampleDecrypter::OnKeyStatusChangeNotify(const std::string& sessionId, const std::vector<DRM::KeyInfo>& keysInfo)
 {
+  if (m_isTestingCapabilities)
+    return;
+
   if (!m_strSession.empty() && m_strSession != sessionId)
     return;
 
@@ -433,8 +443,12 @@ bool CWVCencSingleSampleDecrypter::HasKeyId(const std::vector<uint8_t>& keyid)
   {
     for (const DRM::KeyInfo& key : m_keys)
     {
-      if (key.kid == keyid)
+      if (key.kid == keyid &&
+          (key.status == DRM::KeyStatus::USABLE || key.status == DRM::KeyStatus::USABLE_IN_FUTURE ||
+           key.status == DRM::KeyStatus::PENDING))
+      {
         return true;
+      }
     }
   }
   return false;
