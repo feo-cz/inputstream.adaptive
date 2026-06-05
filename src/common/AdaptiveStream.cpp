@@ -539,12 +539,43 @@ bool AdaptiveStream::parseIndexRange(PLAYLIST::CRepresentation* rep,
 
         seg.range_end_ = streamPos + boxSize + sidx->GetFirstOffset() - 1;
 
+        // Compute current period boundaries in milliseconds to filter SIDX refs
+        uint64_t periodStartMs = current_period_->GetStart();
+        if (periodStartMs == NO_VALUE)
+          periodStartMs = 0;
+
+        uint64_t periodEndMs = NO_PTS_VALUE;
+        if (current_period_->GetDuration() != 0)
+        {
+          const uint64_t periodDurMs = current_period_->GetDuration() * 1000 / current_period_->GetTimescale();
+          periodEndMs = periodStartMs + periodDurMs;
+        }
+
+        // Iterate each SIDX reference to create the segments, and filter them based on the current period boundaries
         for (AP4_Cardinal i{0}; i < refs.ItemCount(); i++)
         {
           seg.range_begin_ = seg.range_end_ + 1;
           seg.range_end_ = seg.range_begin_ + refs[i].m_ReferencedSize - 1;
           seg.m_endPts = seg.startPTS_ + refs[i].m_SubsegmentDuration;
-          rep->Timeline().Add(seg);
+
+          // Convert segment PTS to milliseconds using representation timescale
+          uint64_t segStartMs{0};
+          uint64_t segEndMs{0};
+          if (rep->GetTimescale() != 0)
+          {
+            segStartMs = seg.startPTS_ * 1000 / rep->GetTimescale();
+            segEndMs = seg.m_endPts * 1000 / rep->GetTimescale();
+          }
+
+          // Determine if this segment belongs to the current period
+          bool inCurrentPeriod = true;
+          if (segStartMs < periodStartMs)
+            inCurrentPeriod = false;
+          if (periodEndMs != NO_PTS_VALUE && segStartMs >= periodEndMs)
+            inCurrentPeriod = false;
+
+          if (inCurrentPeriod)
+            rep->Timeline().Add(seg);
 
           seg.startPTS_ += refs[i].m_SubsegmentDuration;
           seg.m_time += refs[i].m_SubsegmentDuration;
