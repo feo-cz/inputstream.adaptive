@@ -181,7 +181,7 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
   return;
 #endif
 
-  if ((caps.flags & Capabilities::SUPPORTS_DECODING) != 0)
+  if (caps.HasFlag(Capabilities::SUPPORTS_DECODING))
   {
     AP4_UI32 poolId(AddPool());
     m_fragmentPool[poolId].m_key = keyId.empty() ? m_keys.front().kid : keyId;
@@ -454,7 +454,7 @@ AP4_Result CWVCencSingleSampleDecrypter::SetFragmentInfo(AP4_UI32 poolId,
                                                          const std::vector<uint8_t>& keyId,
                                                          const AP4_UI08 nalLengthSize,
                                                          const std::vector<uint8_t>& annexbSpsPps,
-                                                         AP4_UI32 flags,
+                                                         DRM::Capabilities caps,
                                                          CryptoInfo cryptoInfo)
 {
   if (poolId >= m_fragmentPool.size())
@@ -463,7 +463,7 @@ AP4_Result CWVCencSingleSampleDecrypter::SetFragmentInfo(AP4_UI32 poolId,
   m_fragmentPool[poolId].m_key = keyId;
   m_fragmentPool[poolId].m_nalLengthSize = nalLengthSize;
   m_fragmentPool[poolId].m_annexbSpsPps = annexbSpsPps;
-  m_fragmentPool[poolId].m_decrypterFlags = flags;
+  m_fragmentPool[poolId].capabilities = caps;
   m_fragmentPool[poolId].m_cryptoInfo = cryptoInfo;
 
   return AP4_SUCCESS;
@@ -577,8 +577,7 @@ AP4_Result CWVCencSingleSampleDecrypter::DecryptSampleData(AP4_UI32 poolId,
 
   FINFO& fragInfo(m_fragmentPool[poolId]);
 
-  if (fragInfo.m_decrypterFlags &
-      Capabilities::SECURE_PATH) //we can not decrypt only
+  if (fragInfo.capabilities.HasFlag(Capabilities::SECURE_PATH)) //we can not decrypt only
   {
     if (fragInfo.m_nalLengthSize > 4)
     {
@@ -588,8 +587,7 @@ AP4_Result CWVCencSingleSampleDecrypter::DecryptSampleData(AP4_UI32 poolId,
 
     AP4_DataBuffer payload;
     std::vector<cdm::SubsampleEntry> rebuiltSubs;
-    bool convertAnnexB =
-        (fragInfo.m_decrypterFlags & Capabilities::ANNEXB_REQUIRED) != 0;
+    const bool convertAnnexB = fragInfo.capabilities.HasFlag(Capabilities::ANNEXB_REQUIRED);
 
     // Convert only when safe to look at clear_bytes[0]
     if (fragInfo.m_nalLengthSize && (!iv || (subsampleCount > 0 && bytesOfCleartextData[0] > 0)))

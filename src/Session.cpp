@@ -737,7 +737,7 @@ bool SESSION::CSession::PrepareStream(CStream& stream)
     if (!drmSession)
       return false;
 
-    isDrmSecure = drmSession->capabilities.flags & DRM::Capabilities::SECURE_PATH;
+    isDrmSecure = drmSession->capabilities.HasFlag(DRM::Capabilities::SECURE_PATH);
 
     reader->SetDecrypter(drmSession);
   }

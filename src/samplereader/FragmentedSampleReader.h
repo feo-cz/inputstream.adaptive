@@ -141,7 +141,6 @@ private:
   AP4_Track* m_track;
   AP4_UI32 m_poolId{0};
   AP4_UI32 m_sampleDescIndex{1};
-  DRM::Capabilities m_decrypterCaps;
   unsigned int m_failCount{0};
   bool m_bSampleDescChanged{false};
   bool m_eos{false};

@@ -42,6 +42,7 @@ struct Capabilities
   static const uint32_t INVALID_STATUS = 64;
 
   uint16_t flags{0};
+  bool HasFlag(uint32_t cap) const { return (flags & cap) != 0; }
 
   /* The following 2 fields are set as followed:
      - If licenseresponse return hdcp information, hdcpversion is 0 and
