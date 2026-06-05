@@ -59,8 +59,8 @@ CFragmentedSampleReader::CFragmentedSampleReader(std::shared_ptr<CLinearReader> 
 CFragmentedSampleReader::~CFragmentedSampleReader()
 {
   // Remove the decryptor pool only with the last CLinearReader instance
-  if (m_lReader.use_count() == 1 && m_singleSampleDecryptor)
-    m_singleSampleDecryptor->RemovePool(m_poolId);
+  if (m_lReader.use_count() == 1 && m_drmSession)
+    m_drmSession->decrypter->RemovePool(m_poolId);
 
   delete m_codecHandler;
 }
@@ -215,16 +215,14 @@ std::vector<DRM::DRMInfo> CFragmentedSampleReader::GetInitDRMInfo()
   return drmInfos;
 }
 
-void CFragmentedSampleReader::SetDecrypter(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> ssd,
-                                           const DRM::DecrypterCapabilites& dcaps)
+void CFragmentedSampleReader::SetDecrypter(std::shared_ptr<DRM::DRMSession> drmSession)
 {
-  if (ssd)
+  if (drmSession)
   {
-    m_poolId = ssd->AddPool();
-    m_singleSampleDecryptor = ssd;
+    m_poolId = drmSession->decrypter->AddPool();
+    m_decrypterCaps = drmSession->capabilities;
+    m_drmSession = drmSession;
   }
-  
-  m_decrypterCaps = dcaps;
 }
 
 AP4_Result CFragmentedSampleReader::Start(std::optional<uint64_t> pts)
@@ -281,8 +279,7 @@ AP4_Result CFragmentedSampleReader::ReadSample()
 
     //Protection could have changed in ProcessMoof
     bool useDecryptingDecoder =
-        m_singleSampleDecryptor &&
-        (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH) != 0;
+        m_drmSession && (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH) != 0;
 
     if (m_decrypter)
     {
@@ -315,7 +312,7 @@ AP4_Result CFragmentedSampleReader::ReadSample()
       //!        and may not be suitable for other decryptors
       m_sampleData.Reserve(sampleData.GetDataSize());
       if (AP4_FAILED(
-              result = m_singleSampleDecryptor->DecryptSampleData(
+              result = m_drmSession->decrypter->DecryptSampleData(
                   m_poolId, sampleData, m_sampleData, nullptr, 0, nullptr, nullptr, streamType)))
       {
         Reset(true);
@@ -457,7 +454,7 @@ std::unique_ptr<ISampleReader> CFragmentedSampleReader::CreateReaderByTrack()
   }
 
   auto newFragReader = std::make_unique<CFragmentedSampleReader>(m_lReader, selTrack);
-  newFragReader->SetDecrypter(m_singleSampleDecryptor, m_decrypterCaps);
+  newFragReader->SetDecrypter(m_drmSession);
 
   LOG::LogF(LOGDEBUG, "Created shared reader for audio track id %u", selTrack->GetId());
 
@@ -595,10 +592,10 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
         // we assume unencrypted fragment here
         goto SUCCESS;
 
-      if (!m_singleSampleDecryptor)
+      if (!m_drmSession)
         return AP4_ERROR_INVALID_PARAMETERS;
 
-      m_decrypter = std::make_unique<CAdaptiveCencSampleDecrypter>(m_singleSampleDecryptor, sample_table);
+      m_decrypter = std::make_unique<CAdaptiveCencSampleDecrypter>(m_drmSession->decrypter, sample_table);
 
       // Inform decrypter of pattern decryption (CBCS)
       AP4_UI32 schemeType = m_protectedDesc->GetSchemeType();
@@ -629,11 +626,13 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
     }
   }
 SUCCESS:
-  if (m_singleSampleDecryptor && m_codecHandler)
+  if (m_drmSession && m_codecHandler)
   {
-    //! @todo: handle the default KID from the media segment/package
-    if (AP4_FAILED(m_singleSampleDecryptor->SetFragmentInfo(
-            m_poolId, {}, m_codecHandler->m_naluLengthSize, m_codecHandler->m_extraData,
+    //! @todo: if the media segment/package provide a different KID, the decrypter should be informed (key rotation)
+    std::vector<uint8_t> kid = DRM::ConvertKidStrToBytes(m_drmSession->kid);
+
+    if (AP4_FAILED(m_drmSession->decrypter->SetFragmentInfo(
+            m_poolId, kid, m_codecHandler->m_naluLengthSize, m_codecHandler->m_extraData,
             m_decrypterCaps.flags, m_readerCryptoInfo)))
     {
       return AP4_ERROR_INVALID_FORMAT;

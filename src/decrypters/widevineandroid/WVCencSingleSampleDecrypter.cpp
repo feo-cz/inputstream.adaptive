@@ -528,11 +528,7 @@ AP4_Result CWVCencSingleSampleDecrypterA::SetFragmentInfo(AP4_UI32 poolId,
   if (poolId >= m_fragmentPool.size())
     return AP4_ERROR_OUT_OF_RANGE;
 
-  if (keyId.empty())
-    m_fragmentPool[poolId].m_key = m_defaultKeyId;
-  else
-    m_fragmentPool[poolId].m_key = keyId;
-
+  m_fragmentPool[poolId].m_key = keyId;
   m_fragmentPool[poolId].m_nalLengthSize = nalLengthSize;
   m_fragmentPool[poolId].m_annexbSpsPps = annexbSpsPps;
   m_fragmentPool[poolId].m_decrypterFlags = flags;
