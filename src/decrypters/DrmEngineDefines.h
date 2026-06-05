@@ -30,7 +30,8 @@ namespace DRM
 constexpr uint16_t HDCP_V_NONE = 0;
 constexpr uint16_t HDCP_V_MAX = 9999;
 
-struct DecrypterCapabilites
+// \brief Decrypter capabilities
+struct Capabilities
 {
   static const uint32_t SSD_SUPPORTS_DECODING = 1;
   static const uint32_t SSD_SECURE_PATH = 2;
@@ -145,7 +146,7 @@ struct DRMSession
   std::string id; // DRM session ID
   std::shared_ptr<DRM::IDecrypter> drm; // DRM instance
   std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter; // DRM Decrypter instance
-  DRM::DecrypterCapabilites capabilities;
+  DRM::Capabilities capabilities;
   std::string kid;
   std::string challenge; // Key request (Challenge) as base64
   DRMMediaType mediaType{DRMMediaType::UNKNOWN};

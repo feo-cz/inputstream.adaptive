@@ -39,7 +39,7 @@ public:
                                 bool skipSessionMessage) override;
 
   void GetCapabilities(const std::vector<uint8_t>& keyId,
-                       DecrypterCapabilites& caps,
+                       Capabilities& caps,
                        DRMMediaType mediaType);
   virtual std::string GetSessionId() override;
   void CloseSessionId();

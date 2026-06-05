@@ -110,7 +110,7 @@ public:
    */
   virtual void GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
                                const std::vector<uint8_t>& keyId,
-                               DecrypterCapabilites& caps,
+                               Capabilities& caps,
                                DRMMediaType mediaType) = 0;
 
   /*

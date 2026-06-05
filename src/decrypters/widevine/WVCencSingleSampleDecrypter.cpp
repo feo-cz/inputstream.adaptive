@@ -149,7 +149,7 @@ SResult CWVCencSingleSampleDecrypter::CreateSession(const std::vector<uint8_t>& 
 }
 
 void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& keyId,
-                                                   DecrypterCapabilites& caps,
+                                                   Capabilities& caps,
                                                    DRMMediaType mediaType)
 {
   caps = {0, m_hdcpVersion, m_hdcpLimit};
@@ -157,16 +157,16 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
   if (m_strSession.empty())
   {
     LOG::LogF(LOGDEBUG, "Session empty");
-    caps.flags = DecrypterCapabilites::SSD_INVALID;
+    caps.flags = Capabilities::SSD_INVALID;
     return;
   }
 
-  caps.flags = DecrypterCapabilites::SSD_SUPPORTS_DECODING;
+  caps.flags = Capabilities::SSD_SUPPORTS_DECODING;
 
   if (m_keys.empty())
   {
     LOG::LogF(LOGDEBUG, "Keys empty");
-    caps.flags = DecrypterCapabilites::SSD_INVALID;
+    caps.flags = Capabilities::SSD_INVALID;
     return;
   }
 
@@ -176,14 +176,14 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
 #ifdef TARGET_WEBOS
   LOG::LogF(LOGDEBUG,
             "Overriding settings to: SSD_SECURE PATH | SSD_ANNEXB_REQUIRED | SSD_SECURE_DECODER");
-  caps = {DRM::DecrypterCapabilites::SSD_SECURE_PATH |
-              DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED,
-          DRM::DecrypterCapabilites::SSD_SECURE_DECODER};
+  caps = {DRM::Capabilities::SSD_SECURE_PATH |
+              DRM::Capabilities::SSD_ANNEXB_REQUIRED,
+          DRM::Capabilities::SSD_SECURE_DECODER};
   caps.hdcpVersion = DRM::HDCP_V_MAX;
   return;
 #endif
 
-  if ((caps.flags & DecrypterCapabilites::SSD_SUPPORTS_DECODING) != 0)
+  if ((caps.flags & Capabilities::SSD_SUPPORTS_DECODING) != 0)
   {
     AP4_UI32 poolId(AddPool());
     m_fragmentPool[poolId].m_key = keyId.empty() ? m_keys.front().kid : keyId;
@@ -212,12 +212,12 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
       {
         LOG::LogF(LOGDEBUG, "Single decrypt failed, secure path only");
         caps.flags |=
-            (DecrypterCapabilites::SSD_SECURE_PATH | DecrypterCapabilites::SSD_ANNEXB_REQUIRED);
+            (Capabilities::SSD_SECURE_PATH | Capabilities::SSD_ANNEXB_REQUIRED);
       }
       else
       {
         LOG::LogF(LOGDEBUG, "Single decrypt possible");
-        caps.flags |= DecrypterCapabilites::SSD_SINGLE_DECRYPT;
+        caps.flags |= Capabilities::SSD_SINGLE_DECRYPT;
         caps.hdcpVersion = DRM::HDCP_V_MAX;
         caps.hdcpLimit = m_resolutionLimit;
       }
@@ -227,15 +227,15 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
     catch (const std::exception& e)
     {
       LOG::LogF(LOGDEBUG, "Decrypt error, assuming secure path: %s", e.what());
-      caps.flags |= (DecrypterCapabilites::SSD_SECURE_PATH |
-                     DecrypterCapabilites::SSD_ANNEXB_REQUIRED);
+      caps.flags |= (Capabilities::SSD_SECURE_PATH |
+                     Capabilities::SSD_ANNEXB_REQUIRED);
     }
     RemovePool(poolId);
   }
   else
   {
     LOG::LogF(LOGDEBUG, "Decoding not supported");
-    caps.flags = DecrypterCapabilites::SSD_INVALID;
+    caps.flags = Capabilities::SSD_INVALID;
   }
 }
 
@@ -582,7 +582,7 @@ AP4_Result CWVCencSingleSampleDecrypter::DecryptSampleData(AP4_UI32 poolId,
   FINFO& fragInfo(m_fragmentPool[poolId]);
 
   if (fragInfo.m_decrypterFlags &
-      DecrypterCapabilites::SSD_SECURE_PATH) //we can not decrypt only
+      Capabilities::SSD_SECURE_PATH) //we can not decrypt only
   {
     if (fragInfo.m_nalLengthSize > 4)
     {
@@ -593,7 +593,7 @@ AP4_Result CWVCencSingleSampleDecrypter::DecryptSampleData(AP4_UI32 poolId,
     AP4_DataBuffer payload;
     std::vector<cdm::SubsampleEntry> rebuiltSubs;
     bool convertAnnexB =
-        (fragInfo.m_decrypterFlags & DecrypterCapabilites::SSD_ANNEXB_REQUIRED) != 0;
+        (fragInfo.m_decrypterFlags & Capabilities::SSD_ANNEXB_REQUIRED) != 0;
 
     // Convert only when safe to look at clear_bytes[0]
     if (fragInfo.m_nalLengthSize && (!iv || (subsampleCount > 0 && bytesOfCleartextData[0] > 0)))

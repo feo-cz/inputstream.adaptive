@@ -82,11 +82,11 @@ bool GetCapabilities(const std::optional<bool> isForceSecureDecoder,
   auto& caps = session.capabilities;
   session.drm->GetCapabilities(session.decrypter, defaultKid, caps, session.mediaType);
 
-  if (caps.flags & DRM::DecrypterCapabilites::SSD_INVALID)
+  if (caps.flags & DRM::Capabilities::SSD_INVALID)
   {
     return false;
   }
-  else if (caps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH)
+  else if (caps.flags & DRM::Capabilities::SSD_SECURE_PATH)
   {
     // Allow to disable the secure decoder
     bool disableSecureDecoder = CSrvBroker::GetSettings().IsDisableSecureDecoder();
@@ -99,7 +99,7 @@ bool GetCapabilities(const std::optional<bool> isForceSecureDecoder,
     if (disableSecureDecoder)
     {
       LOG::Log(LOGDEBUG, "DRM configured with secure decoder disabled");
-      caps.flags &= ~DRM::DecrypterCapabilites::SSD_SECURE_DECODER;
+      caps.flags &= ~DRM::Capabilities::SSD_SECURE_DECODER;
     }
   }
 
@@ -632,7 +632,7 @@ const std::shared_ptr<DRMSession> DRM::CDRMEngine::InitializeSession(
   //! since audio streams that require Secure path decoder cannot be played
   //! we have no way to distinguish which ones they are other than to do a KID test with the DRM
   if (!session->drm->IsSecureDecoderAudioSupported() && session->mediaType == DRMMediaType::AUDIO &&
-      caps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH)
+      caps.flags & DRM::Capabilities::SSD_SECURE_PATH)
   {
     LOG::Log(LOGWARNING, "Secure decoder on audio stream is not supported");
     m_status = EngineStatus::NOT_SUPPORTED;
@@ -644,11 +644,11 @@ const std::shared_ptr<DRMSession> DRM::CDRMEngine::InitializeSession(
 
   cryptoSession.SetSessionId(session->id);
   // Set the key system will enable the crypto session to kodi decoders (e.g. ffmpeg)
-  if (caps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH)
+  if (caps.flags & DRM::Capabilities::SSD_SECURE_PATH)
     cryptoSession.SetKeySystem(KSToCryptoKeySystem(m_keySystem));
 
-  if (caps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH &&
-      caps.flags & DRM::DecrypterCapabilites::SSD_SUPPORTS_DECODING)
+  if (caps.flags & DRM::Capabilities::SSD_SECURE_PATH &&
+      caps.flags & DRM::Capabilities::SSD_SUPPORTS_DECODING)
   {
     LOG::Log(LOGDEBUG, "Secure crypto session enabled to DRM session (ID: %s)",
              session->id.c_str());
@@ -657,8 +657,8 @@ const std::shared_ptr<DRMSession> DRM::CDRMEngine::InitializeSession(
   else
     streamInfo.SetFeatures(INPUTSTREAM_FEATURE_NONE);
 
-  if (caps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH &&
-      caps.flags & DRM::DecrypterCapabilites::SSD_SECURE_DECODER)
+  if (caps.flags & DRM::Capabilities::SSD_SECURE_PATH &&
+      caps.flags & DRM::Capabilities::SSD_SECURE_DECODER)
   {
     // Enable the ISA VideoCodecAdaptive decoder
     LOG::Log(LOGDEBUG, "Secure crypto decoder enabled to DRM session (ID: %s)",

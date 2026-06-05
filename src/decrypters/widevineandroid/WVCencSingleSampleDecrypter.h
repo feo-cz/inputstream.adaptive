@@ -63,7 +63,7 @@ public:
       const AP4_UI32* bytesOfEncryptedData,
       DRM::DRMMediaType streamType) override;
 
-  void GetCapabilities(const std::vector<uint8_t>& keyId, DRM::DecrypterCapabilites& caps);
+  void GetCapabilities(const std::vector<uint8_t>& keyId, DRM::Capabilities& caps);
 
   void RequestNewKeys() { m_isKeyUpdateRequested = true; };
 

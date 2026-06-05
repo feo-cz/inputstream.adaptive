@@ -89,7 +89,7 @@ std::shared_ptr<Adaptive_CencSingleSampleDecrypter> CWVDecrypter::CreateSingleSa
 
 void CWVDecrypter::GetCapabilities(std::shared_ptr<Adaptive_CencSingleSampleDecrypter> decrypter,
                                    const std::vector<uint8_t>& keyId,
-                                   DRM::DecrypterCapabilites& caps,
+                                   DRM::Capabilities& caps,
                                    DRMMediaType mediaType)
 {
   if (!decrypter)

@@ -279,7 +279,7 @@ AP4_Result CFragmentedSampleReader::ReadSample()
 
     //Protection could have changed in ProcessMoof
     bool useDecryptingDecoder =
-        m_drmSession && (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH) != 0;
+        m_drmSession && (m_decrypterCaps.flags & DRM::Capabilities::SSD_SECURE_PATH) != 0;
 
     if (m_decrypter)
     {
@@ -355,7 +355,7 @@ uint64_t CFragmentedSampleReader::GetDuration() const
 
 bool CFragmentedSampleReader::IsEncrypted() const
 {
-  return (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH) != 0 && m_decrypter;
+  return (m_decrypterCaps.flags & DRM::Capabilities::SSD_SECURE_PATH) != 0 && m_decrypter;
 }
 
 bool CFragmentedSampleReader::GetInformation(kodi::addon::InputstreamInfo& info)
@@ -376,7 +376,7 @@ bool CFragmentedSampleReader::GetInformation(kodi::addon::InputstreamInfo& info)
 
   std::vector<uint8_t> extraData = info.GetExtraData();
   if (m_codecHandler->CheckExtraData(
-      extraData, (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED) != 0))
+      extraData, (m_decrypterCaps.flags & DRM::Capabilities::SSD_ANNEXB_REQUIRED) != 0))
   {
     m_codecHandler->m_extraData = extraData;
     info.SetExtraData(extraData);
@@ -527,7 +527,7 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
       std::vector<uint8_t> extradata = m_codecHandler->m_extraData;
       if (m_codecHandler->CheckExtraData(
               extradata,
-              (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED) != 0))
+              (m_decrypterCaps.flags & DRM::Capabilities::SSD_ANNEXB_REQUIRED) != 0))
       {
         m_codecHandler->m_extraData = extradata;
       }
