@@ -84,6 +84,7 @@ namespace adaptive
   void AdaptiveTree::PostOpen()
   {
     SortTree();
+    OverrideStreamsMediaFlags(m_periods);
 
     // A manifest can provide live delay value, if not so we use our default
     // value of 16 secs, this is needed to ensure an appropriate playback,
@@ -112,6 +113,192 @@ namespace adaptive
                                    bool isLastChunk)
   {
     segBuffer.insert(segBuffer.end(), srcData, srcData + srcDataSize);
+  }
+
+  void AdaptiveTree::OverrideStreamsMediaFlags(
+      std::vector<std::unique_ptr<PLAYLIST::CPeriod>>& periods)
+  {
+    const auto& config = CSrvBroker::GetKodiProps().GetConfig();
+
+    const std::string& audioLangCodeDef = config.mediaAudioLangCodeDef;
+    const std::string& audioLangCodeOrig = config.mediaAudioLangCodeOrig;
+    const std::string& subtitleLangCodeDef = config.mediaSubtitleLangCodeDef;
+    const bool isAudioStereoPref = config.mediaAudioStereoPref;
+    const auto audioTypePref = config.mediaAudioTypePref;
+
+    // Media flags note:
+    // Manifests of video services dont always set appropriately the default stream media flags
+    // moreover the manifest "default" stream flag dont have always the same meaning of Kodi track "default" flag
+    // so this can lead to wrong audio track selected when playback start.
+    //
+    // NOTE: to simplify the code it dont take in account of multi-codecs streams with same language code and channels,
+    //  this is not a common use case and we ignore it.
+    // NOTE 2: To allow Kodi VP to do a better track auto-selection we need:
+    //  - Set default/impaired/original flag to a single track only
+    //  - Set default/impaired/original flag to stereo or multichannels track, not both
+    // NOTE 3: At moment Kodi dont support any kind of track auto-selection fallback for language code
+    //  that have variants e.g. "pt-BR" for Brazilian Portuguese vs "pt" for Portuguese,
+    //  so here at moment its the same, if you set as default "pt-BR" but exists only a "pt" stream
+    //  no stream will be set as default. This could be improved in future but for now we keep it simple.
+    //
+    //! @todo: For the way it works, we have to rely on each add-on to provide the necessary parameters.
+    //! This is because the C++ interface does not provide access to language settings,
+    //! whereas the Python interface has access to everything. This could be improved in the future.
+
+    // Override subtitles "default" flag to streams
+    if (!audioLangCodeDef.empty())
+    {
+      for (auto& period : periods)
+      {
+        for (auto& adpSet : period->GetAdaptationSets())
+        {
+          if (adpSet->GetStreamType() == StreamType::SUBTITLE)
+          {
+            adpSet->SetIsDefault(STRING::CompareNoCase(adpSet->GetLanguage(), audioLangCodeDef));
+          }
+        }
+      }
+    }
+
+    // Override audio "original" flag to streams
+    if (!audioLangCodeOrig.empty())
+    {
+      for (auto& period : periods)
+      {
+        auto& adpSets = period->GetAdaptationSets();
+        auto itAudioStream = adpSets.cend();
+
+        if (isAudioStereoPref)
+        {
+          itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeOrig, true);
+          if (itAudioStream == adpSets.cend()) // No stereo stream, find multichannels
+            itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeOrig, false);
+        }
+        else
+        {
+          itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeOrig, false);
+          if (itAudioStream == adpSets.cend()) // No multichannels stream, find stereo
+            itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeOrig, true);
+        }
+
+        // Update "original" flags
+        if (itAudioStream != adpSets.cend())
+        {
+          for (auto& adpSet : adpSets)
+          {
+            adpSet->SetIsOriginal(adpSet.get() == itAudioStream->get());
+          }
+        }
+      }
+    }
+
+    // Override audio "default" flag to streams, we give priority to "impaired" streams if specified
+    if (!audioLangCodeDef.empty() || !audioLangCodeOrig.empty())
+    {
+      for (auto& period : periods)
+      {
+        auto& adpSets = period->GetAdaptationSets();
+        auto itAudioStream = adpSets.cend();
+
+        // Try give priority to "impaired" streams
+        if (audioTypePref == ADP::KODI_PROPS::MediaFlagType::IMPAIRED)
+        {
+          if (isAudioStereoPref)
+          {
+            itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeDef, true, true);
+            if (itAudioStream == adpSets.cend()) // No stereo stream, find multichannels
+              itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeDef, false, true);
+          }
+          else
+          {
+            itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeDef, false, true);
+            if (itAudioStream == adpSets.cend()) // No multichannels stream, find stereo
+              itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeDef, true, true);
+          }
+
+          // No stream found, try find a "impaired" stream with the "original" language code
+          if (itAudioStream == adpSets.cend() && !audioLangCodeOrig.empty())
+          {
+            if (isAudioStereoPref)
+            {
+              itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeOrig, true, true);
+              if (itAudioStream == adpSets.cend()) // No stereo stream, find multichannels
+                itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeOrig, false, true);
+            }
+            else
+            {
+              itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeOrig, false, true);
+              if (itAudioStream == adpSets.cend()) // No multichannels stream, find stereo
+                itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeOrig, true, true);
+            }
+          }
+        }
+
+        // Try find a stream with specified lang code
+        if (audioTypePref != ADP::KODI_PROPS::MediaFlagType::ORIGINAL &&
+            itAudioStream == adpSets.cend() && !audioLangCodeDef.empty())
+        {
+          if (isAudioStereoPref)
+          {
+            itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeDef, true);
+            if (itAudioStream == adpSets.cend()) // No stereo stream, find multichannels
+              itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeDef, false);
+          }
+          else
+          {
+            itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeDef, false);
+            if (itAudioStream == adpSets.cend()) // No multichannels stream, find stereo
+              itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeDef, true);
+          }
+        }
+
+        // No stream found, try find a stream with the "original" language code
+        if (itAudioStream == adpSets.cend() && !audioLangCodeOrig.empty())
+        {
+          if (isAudioStereoPref)
+          {
+            itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeOrig, true);
+            if (itAudioStream == adpSets.cend()) // No stereo stream, find multichannels
+              itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeOrig, false);
+          }
+          else
+          {
+            itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeOrig, false);
+            if (itAudioStream == adpSets.cend()) // No multichannels stream, find stereo
+              itAudioStream = CAdaptationSet::FindAudioAdpSet(adpSets, audioLangCodeOrig, true);
+          }
+        }
+
+        // Update "default" flags
+        if (itAudioStream != adpSets.cend())
+        {
+          for (auto& adpSet : adpSets)
+          {
+            adpSet->SetIsDefault(adpSet.get() == itAudioStream->get());
+          }
+        }
+      }
+    }
+
+    // Override subtitles "default" flag to streams
+    if (!subtitleLangCodeDef.empty())
+    {
+      for (auto& period : periods)
+      {
+        auto& adpSets = period->GetAdaptationSets();
+
+        auto itSubtitleStream = CAdaptationSet::FindSubtitleAdpSet(adpSets, subtitleLangCodeDef, false);
+
+        // Update "default" flags
+        if (itSubtitleStream != adpSets.cend())
+        {
+          for (auto& adpSet : adpSets)
+          {
+            adpSet->SetIsDefault(adpSet.get() == itSubtitleStream->get());
+          }
+        }
+      }
+    }
   }
 
   void AdaptiveTree::SortTree()

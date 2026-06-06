@@ -314,12 +314,6 @@ void SESSION::CSession::InitializePeriod()
     return;
 
   CHOOSER::StreamSelection streamSelectionMode = m_reprChooser->GetStreamSelectionMode();
-  //! @todo: GetAudioLangOrig property should be reworked to allow override or set
-  //! manifest a/v and subtitles streams attributes such as default/original etc..
-  //! since Kodi stream flags dont have always the same meaning of manifest attributes
-  //! and some video services dont follow exactly the specs so can lead to wrong Kodi flags sets.
-  //! An idea is add/move these override of attributes on post manifest parsing.
-  std::string audioLanguageOrig = CSrvBroker::GetKodiProps().GetAudioLangOrig();
 
   // For multi-codec manifests, determine which codec to use by default,
   // then choose the appropriate AdaptationSet. It may also depend on the Chooser behavior.
@@ -369,7 +363,7 @@ void SESSION::CSession::InitializePeriod()
       const uint32_t uniqueId = MakeUniqueId(periodIndex, streamIndex);
       const bool isDefaultVideoRepr{isDefaultAdpSet && repr == defaultRepr};
 
-      AddStream(adp.get(), repr, isDefaultVideoRepr, uniqueId, audioLanguageOrig);
+      AddStream(adp.get(), repr, isDefaultVideoRepr, uniqueId);
       ++streamIndex;
       return true;
     };
@@ -417,8 +411,7 @@ void SESSION::CSession::InitializePeriod()
 void SESSION::CSession::AddStream(PLAYLIST::CAdaptationSet* adp,
                                   PLAYLIST::CRepresentation* initialRepr,
                                   bool isDefaultVideoRepr,
-                                  uint32_t uniqueId,
-                                  std::string_view audioLanguageOrig)
+                                  uint32_t uniqueId)
 {
   m_streams.push_back(std::make_shared<CStream>(m_adaptiveTree, adp, initialRepr));
 
@@ -443,11 +436,8 @@ void SESSION::CSession::AddStream(PLAYLIST::CAdaptationSet* adp,
         flags |= INPUTSTREAM_FLAG_VISUAL_IMPAIRED;
       if (adp->IsDefault())
         flags |= INPUTSTREAM_FLAG_DEFAULT;
-      if (adp->IsOriginal() || (!audioLanguageOrig.empty() &&
-                                adp->GetLanguage() == audioLanguageOrig))
-      {
+      if (adp->IsOriginal())
         flags |= INPUTSTREAM_FLAG_ORIGINAL;
-      }
       break;
     }
     case StreamType::SUBTITLE:

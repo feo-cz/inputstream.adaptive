@@ -1590,6 +1590,8 @@ void adaptive::CDashTree::OnUpdateSegments()
     return;
   }
 
+  OverrideStreamsMediaFlags(updateTree->m_periods);
+
   const uint64_t liveEdgeMs = GetTimestamp() - m_timeShiftBufferDepth + *m_clockOffset;
 
   // Update local members for the next manifest update
