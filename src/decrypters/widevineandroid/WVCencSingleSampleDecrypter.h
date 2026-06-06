@@ -40,7 +40,7 @@ public:
                                      const std::vector<uint8_t>& keyId,
                                      const AP4_UI08 nalLengthSize,
                                      const std::vector<uint8_t>& annexbSpsPps,
-                                     AP4_UI32 flags,
+                                     DRM::Capabilities caps,
                                      CryptoInfo cryptoInfo) override;
   virtual AP4_UI32 AddPool() override;
   virtual void RemovePool(AP4_UI32 poolId) override;
@@ -63,7 +63,7 @@ public:
       const AP4_UI32* bytesOfEncryptedData,
       DRM::DRMMediaType streamType) override;
 
-  void GetCapabilities(const std::vector<uint8_t>& keyId, DRM::DecrypterCapabilites& caps);
+  void GetCapabilities(const std::vector<uint8_t>& keyId, DRM::Capabilities& caps);
 
   void RequestNewKeys() { m_isKeyUpdateRequested = true; };
 
@@ -77,7 +77,7 @@ private:
   {
     std::vector<uint8_t> m_key;
     AP4_UI08 m_nalLengthSize;
-    AP4_UI16 m_decrypterFlags;
+    DRM::Capabilities capabilities;
     std::vector<uint8_t> m_annexbSpsPps;
   };
   

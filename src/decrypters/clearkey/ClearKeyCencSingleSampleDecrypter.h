@@ -34,7 +34,7 @@ public:
                                      const std::vector<uint8_t>& keyId,
                                      const AP4_UI08 nalLengthSize,
                                      const std::vector<uint8_t>& annexbSpsPps,
-                                     AP4_UI32 flags,
+                                     DRM::Capabilities flags,
                                      CryptoInfo cryptoInfo) override;
   virtual AP4_Result DecryptSampleData(AP4_UI32 poolId,
                                        AP4_DataBuffer& dataIn,

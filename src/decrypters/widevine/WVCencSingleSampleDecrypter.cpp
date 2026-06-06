@@ -149,7 +149,7 @@ SResult CWVCencSingleSampleDecrypter::CreateSession(const std::vector<uint8_t>& 
 }
 
 void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& keyId,
-                                                   DecrypterCapabilites& caps,
+                                                   Capabilities& caps,
                                                    DRMMediaType mediaType)
 {
   caps = {0, m_hdcpVersion, m_hdcpLimit};
@@ -157,16 +157,16 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
   if (m_strSession.empty())
   {
     LOG::LogF(LOGDEBUG, "Session empty");
-    caps.flags = DecrypterCapabilites::SSD_INVALID;
+    caps.flags = Capabilities::INVALID_STATUS;
     return;
   }
 
-  caps.flags = DecrypterCapabilites::SSD_SUPPORTS_DECODING;
+  caps.flags = Capabilities::SUPPORTS_DECODING;
 
   if (m_keys.empty())
   {
     LOG::LogF(LOGDEBUG, "Keys empty");
-    caps.flags = DecrypterCapabilites::SSD_INVALID;
+    caps.flags = Capabilities::INVALID_STATUS;
     return;
   }
 
@@ -174,16 +174,14 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
     caps.hdcpLimit = m_resolutionLimit;
 
 #ifdef TARGET_WEBOS
-  LOG::LogF(LOGDEBUG,
-            "Overriding settings to: SSD_SECURE PATH | SSD_ANNEXB_REQUIRED | SSD_SECURE_DECODER");
-  caps = {DRM::DecrypterCapabilites::SSD_SECURE_PATH |
-              DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED,
-          DRM::DecrypterCapabilites::SSD_SECURE_DECODER};
+  LOG::LogF(LOGDEBUG, "Overriding settings to: SECURE_PATH | ANNEXB_REQUIRED | SECURE_DECODER");
+  caps = {DRM::Capabilities::SECURE_PATH | DRM::Capabilities::ANNEXB_REQUIRED,
+          DRM::Capabilities::SECURE_DECODER};
   caps.hdcpVersion = DRM::HDCP_V_MAX;
   return;
 #endif
 
-  if ((caps.flags & DecrypterCapabilites::SSD_SUPPORTS_DECODING) != 0)
+  if (caps.HasFlag(Capabilities::SUPPORTS_DECODING))
   {
     AP4_UI32 poolId(AddPool());
     m_fragmentPool[poolId].m_key = keyId.empty() ? m_keys.front().kid : keyId;
@@ -211,13 +209,12 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
           AP4_SUCCESS)
       {
         LOG::LogF(LOGDEBUG, "Single decrypt failed, secure path only");
-        caps.flags |=
-            (DecrypterCapabilites::SSD_SECURE_PATH | DecrypterCapabilites::SSD_ANNEXB_REQUIRED);
+        caps.flags |= (Capabilities::SECURE_PATH | Capabilities::ANNEXB_REQUIRED);
       }
       else
       {
         LOG::LogF(LOGDEBUG, "Single decrypt possible");
-        caps.flags |= DecrypterCapabilites::SSD_SINGLE_DECRYPT;
+        caps.flags |= Capabilities::SINGLE_DECRYPT;
         caps.hdcpVersion = DRM::HDCP_V_MAX;
         caps.hdcpLimit = m_resolutionLimit;
       }
@@ -227,15 +224,14 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
     catch (const std::exception& e)
     {
       LOG::LogF(LOGDEBUG, "Decrypt error, assuming secure path: %s", e.what());
-      caps.flags |= (DecrypterCapabilites::SSD_SECURE_PATH |
-                     DecrypterCapabilites::SSD_ANNEXB_REQUIRED);
+      caps.flags |= (Capabilities::SECURE_PATH | Capabilities::ANNEXB_REQUIRED);
     }
     RemovePool(poolId);
   }
   else
   {
     LOG::LogF(LOGDEBUG, "Decoding not supported");
-    caps.flags = DecrypterCapabilites::SSD_INVALID;
+    caps.flags = Capabilities::INVALID_STATUS;
   }
 }
 
@@ -458,7 +454,7 @@ AP4_Result CWVCencSingleSampleDecrypter::SetFragmentInfo(AP4_UI32 poolId,
                                                          const std::vector<uint8_t>& keyId,
                                                          const AP4_UI08 nalLengthSize,
                                                          const std::vector<uint8_t>& annexbSpsPps,
-                                                         AP4_UI32 flags,
+                                                         DRM::Capabilities caps,
                                                          CryptoInfo cryptoInfo)
 {
   if (poolId >= m_fragmentPool.size())
@@ -467,7 +463,7 @@ AP4_Result CWVCencSingleSampleDecrypter::SetFragmentInfo(AP4_UI32 poolId,
   m_fragmentPool[poolId].m_key = keyId;
   m_fragmentPool[poolId].m_nalLengthSize = nalLengthSize;
   m_fragmentPool[poolId].m_annexbSpsPps = annexbSpsPps;
-  m_fragmentPool[poolId].m_decrypterFlags = flags;
+  m_fragmentPool[poolId].capabilities = caps;
   m_fragmentPool[poolId].m_cryptoInfo = cryptoInfo;
 
   return AP4_SUCCESS;
@@ -581,8 +577,7 @@ AP4_Result CWVCencSingleSampleDecrypter::DecryptSampleData(AP4_UI32 poolId,
 
   FINFO& fragInfo(m_fragmentPool[poolId]);
 
-  if (fragInfo.m_decrypterFlags &
-      DecrypterCapabilites::SSD_SECURE_PATH) //we can not decrypt only
+  if (fragInfo.capabilities.HasFlag(Capabilities::SECURE_PATH)) //we can not decrypt only
   {
     if (fragInfo.m_nalLengthSize > 4)
     {
@@ -592,8 +587,7 @@ AP4_Result CWVCencSingleSampleDecrypter::DecryptSampleData(AP4_UI32 poolId,
 
     AP4_DataBuffer payload;
     std::vector<cdm::SubsampleEntry> rebuiltSubs;
-    bool convertAnnexB =
-        (fragInfo.m_decrypterFlags & DecrypterCapabilites::SSD_ANNEXB_REQUIRED) != 0;
+    const bool convertAnnexB = fragInfo.capabilities.HasFlag(Capabilities::ANNEXB_REQUIRED);
 
     // Convert only when safe to look at clear_bytes[0]
     if (fragInfo.m_nalLengthSize && (!iv || (subsampleCount > 0 && bytesOfCleartextData[0] > 0)))

@@ -202,11 +202,10 @@ bool CWVCencSingleSampleDecrypterA::HasKeyId(const std::vector<uint8_t>& keyid)
 }
 
 void CWVCencSingleSampleDecrypterA::GetCapabilities(const std::vector<uint8_t>& keyId,
-                                                    DRM::DecrypterCapabilites& caps)
+                                                    DRM::Capabilities& caps)
 {
-  caps = {DRM::DecrypterCapabilites::SSD_SECURE_PATH |
-              DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED,
-          m_hdcpVersion, m_hdcpLimit};
+  caps = {DRM::Capabilities::SECURE_PATH | DRM::Capabilities::ANNEXB_REQUIRED, m_hdcpVersion,
+          m_hdcpLimit};
 
   if (caps.hdcpLimit == 0)
     caps.hdcpLimit = m_resolutionLimit;
@@ -217,7 +216,7 @@ void CWVCencSingleSampleDecrypterA::GetCapabilities(const std::vector<uint8_t>& 
   if (m_cdmAdapter->GetCDM()->getPropertyString("securityLevel") == "L1")
   {
     caps.hdcpLimit = m_resolutionLimit; //No restriction
-    caps.flags |= DRM::DecrypterCapabilites::SSD_SECURE_DECODER;
+    caps.flags |= DRM::Capabilities::SECURE_DECODER;
   }
   LOG::LogF(LOGDEBUG, "hdcpLimit: %i", caps.hdcpLimit);
 }
@@ -526,7 +525,7 @@ AP4_Result CWVCencSingleSampleDecrypterA::SetFragmentInfo(AP4_UI32 poolId,
                                                           const std::vector<uint8_t>& keyId,
                                                           const AP4_UI08 nalLengthSize,
                                                           const std::vector<uint8_t>& annexbSpsPps,
-                                                          AP4_UI32 flags,
+                                                          DRM::Capabilities caps,
                                                           CryptoInfo cryptoInfo)
 {
   if (poolId >= m_fragmentPool.size())
@@ -535,7 +534,7 @@ AP4_Result CWVCencSingleSampleDecrypterA::SetFragmentInfo(AP4_UI32 poolId,
   m_fragmentPool[poolId].m_key = keyId;
   m_fragmentPool[poolId].m_nalLengthSize = nalLengthSize;
   m_fragmentPool[poolId].m_annexbSpsPps = annexbSpsPps;
-  m_fragmentPool[poolId].m_decrypterFlags = flags;
+  m_fragmentPool[poolId].capabilities = caps;
 
   if (m_isKeyUpdateRequested)
     KeyUpdateRequest(false, false);
@@ -585,7 +584,7 @@ AP4_Result CWVCencSingleSampleDecrypterA::DecryptSampleData(AP4_UI32 poolId,
 
   AP4_DataBuffer payload;
   std::vector<SubsampleEntry> rebuiltSubs;
-  bool convertAnnexB = (fragInfo.m_decrypterFlags & DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED) != 0;
+  const bool convertAnnexB = fragInfo.capabilities.HasFlag(DRM::Capabilities::ANNEXB_REQUIRED);
 
   // Convert only when safe to look at clear_bytes[0]
   if (fragInfo.m_nalLengthSize && (!iv || (subsampleCount > 0 && bytesOfCleartextData[0] > 0)))

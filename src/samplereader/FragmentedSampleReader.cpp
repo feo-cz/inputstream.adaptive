@@ -220,7 +220,6 @@ void CFragmentedSampleReader::SetDecrypter(std::shared_ptr<DRM::DRMSession> drmS
   if (drmSession)
   {
     m_poolId = drmSession->decrypter->AddPool();
-    m_decrypterCaps = drmSession->capabilities;
     m_drmSession = drmSession;
   }
 }
@@ -279,7 +278,7 @@ AP4_Result CFragmentedSampleReader::ReadSample()
 
     //Protection could have changed in ProcessMoof
     bool useDecryptingDecoder =
-        m_drmSession && (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH) != 0;
+        m_drmSession && (m_drmSession->capabilities.HasFlag(DRM::Capabilities::SECURE_PATH));
 
     if (m_decrypter)
     {
@@ -355,7 +354,7 @@ uint64_t CFragmentedSampleReader::GetDuration() const
 
 bool CFragmentedSampleReader::IsEncrypted() const
 {
-  return (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_SECURE_PATH) != 0 && m_decrypter;
+  return m_decrypter && m_drmSession->capabilities.HasFlag(DRM::Capabilities::SECURE_PATH);
 }
 
 bool CFragmentedSampleReader::GetInformation(kodi::addon::InputstreamInfo& info)
@@ -376,7 +375,8 @@ bool CFragmentedSampleReader::GetInformation(kodi::addon::InputstreamInfo& info)
 
   std::vector<uint8_t> extraData = info.GetExtraData();
   if (m_codecHandler->CheckExtraData(
-      extraData, (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED) != 0))
+          extraData,
+          (m_drmSession && m_drmSession->capabilities.HasFlag(DRM::Capabilities::ANNEXB_REQUIRED))))
   {
     m_codecHandler->m_extraData = extraData;
     info.SetExtraData(extraData);
@@ -526,8 +526,8 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
 
       std::vector<uint8_t> extradata = m_codecHandler->m_extraData;
       if (m_codecHandler->CheckExtraData(
-              extradata,
-              (m_decrypterCaps.flags & DRM::DecrypterCapabilites::SSD_ANNEXB_REQUIRED) != 0))
+              extradata, (m_drmSession &&
+                          m_drmSession->capabilities.HasFlag(DRM::Capabilities::ANNEXB_REQUIRED))))
       {
         m_codecHandler->m_extraData = extradata;
       }
@@ -633,7 +633,7 @@ SUCCESS:
 
     if (AP4_FAILED(m_drmSession->decrypter->SetFragmentInfo(
             m_poolId, kid, m_codecHandler->m_naluLengthSize, m_codecHandler->m_extraData,
-            m_decrypterCaps.flags, m_readerCryptoInfo)))
+            m_drmSession->capabilities, m_readerCryptoInfo)))
     {
       return AP4_ERROR_INVALID_FORMAT;
     }

@@ -122,12 +122,13 @@ void CClearKeyCencSingleSampleDecrypter::RemovePool(AP4_UI32 poolId)
   m_pool.erase(poolId);
 }
 
-AP4_Result CClearKeyCencSingleSampleDecrypter::SetFragmentInfo(AP4_UI32 poolId,
-                                                               const std::vector<uint8_t>& keyId,
-                                                               const AP4_UI08 nalLengthSize,
-                                                               const std::vector<uint8_t>& annexbSpsPps,
-                                                               AP4_UI32 flags,
-                                                               CryptoInfo cryptoInfo)
+AP4_Result CClearKeyCencSingleSampleDecrypter::SetFragmentInfo(
+    AP4_UI32 poolId,
+    const std::vector<uint8_t>& keyId,
+    const AP4_UI08 nalLengthSize,
+    const std::vector<uint8_t>& annexbSpsPps,
+    DRM::Capabilities flags,
+    CryptoInfo cryptoInfo)
 {
   if (!STRING::KeyExists(m_pool, poolId))
   {
