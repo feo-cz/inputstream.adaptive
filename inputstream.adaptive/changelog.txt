@@ -1,3 +1,11 @@
+v22.3.14 (2026-06-06)
+- [inputstream.adaptive.config] New parameters to override media flags, see wiki
+- [inputstream.adaptive.original_audio_language] property is deprecated, see wiki
+- [Dash] Improved support to MPD SegmentBase with multi-periods
+- Fix missing subtitles due to unsupported SegmentBase with multi-periods
+- [Widevine] Fix decryption problems introduced from 22.3.13
+- Fix support for Common CENC DRM encryption info
+
 v22.3.13 (2026-05-29)
 - DRM sessions will now be created by default for streams that are actually used only
 - DRM info from media init segments now takes precedence, otherwise fallback to manifest info
