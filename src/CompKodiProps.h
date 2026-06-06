@@ -41,6 +41,13 @@ enum class HdcpCheckType
   LICENSE, // To check HDCP values from DRM license response
 };
 
+enum class MediaFlagType
+{
+  DEFAULT,
+  ORIGINAL,
+  IMPAIRED,
+};
+
 // Generic add-on configuration
 struct Config
 {
@@ -53,6 +60,19 @@ struct Config
   HdcpCheckType hdcpCheck{HdcpCheckType::DEFAULT};
   // Force limit resolutions of manifest streams to the specified value included (value in px, height x width)
   int resolutionLimit{0};
+
+  // To override "default" media flag on audio streams that have the specified language code (IETF BCP-47)
+  std::string mediaAudioLangCodeDef;
+  // To override "original" media flag on audio streams that have the specified language code (IETF BCP-47)
+  std::string mediaAudioLangCodeOrig;
+  // To override "default" media flag on subtitles streams that have the specified language code (IETF BCP-47)
+  std::string mediaSubtitleLangCodeDef;
+  // Defines what type of audio tracks should be preferred for the "default"/"impaired" flag
+  // (applicable when using media flag override)
+  MediaFlagType mediaAudioTypePref{MediaFlagType::DEFAULT};
+  // Defines if stereo audio tracks are preferred over multichannels one
+  // (applicable when using media flag override)
+  bool mediaAudioStereoPref{false};
 };
 
 struct ManifestConfig
@@ -154,9 +174,6 @@ public:
   // \brief HTTP headers used to download streams
   std::map<std::string, std::string> GetStreamHeaders() const { return m_streamHeaders; }
 
-  // \brief Get language code to identify the audio track in original language
-  std::string GetAudioLangOrig() const { return m_audioLanguageOrig; }
-
   // \brief Specify to start playing a LIVE stream from the beginning of the buffer instead of its end
   bool IsPlayTimeshift() const { return m_playTimeshiftBuffer; }
 
@@ -192,7 +209,6 @@ private:
   std::map<std::string, std::string> m_manifestHeaders;
   std::string m_streamParams;
   std::map<std::string, std::string> m_streamHeaders;
-  std::string m_audioLanguageOrig;
   bool m_playTimeshiftBuffer{false};
   ChooserProps m_chooserProps;
   Config m_config;

@@ -247,3 +247,63 @@ PLAYLIST::CAdaptationSet* PLAYLIST::CAdaptationSet::FindByFirstAVStream(
 
   return adp;
 }
+
+std::vector<std::unique_ptr<CAdaptationSet>>::const_iterator PLAYLIST::CAdaptationSet::
+    FindAudioAdpSet(const std::vector<std::unique_ptr<CAdaptationSet>>& adpSets,
+                    const std::string langCode,
+                    bool isPreferStereo)
+{
+  for (auto itAdpSet = adpSets.cbegin(); itAdpSet != adpSets.cend(); ++itAdpSet)
+  {
+    auto adpSet = itAdpSet->get();
+    if (adpSet->GetStreamType() == StreamType::AUDIO &&
+        STRING::CompareNoCase(adpSet->GetLanguage(), langCode) &&
+        !adpSet->GetRepresentations().empty() &&
+        (isPreferStereo ? adpSet->GetRepresentations()[0]->GetAudioChannels() <= 2
+                        : adpSet->GetRepresentations()[0]->GetAudioChannels() > 2))
+    {
+      return itAdpSet;
+    }
+  }
+  return adpSets.end();
+}
+
+std::vector<std::unique_ptr<CAdaptationSet>>::const_iterator PLAYLIST::CAdaptationSet::
+    FindAudioAdpSet(const std::vector<std::unique_ptr<CAdaptationSet>>& adpSets,
+                    const std::string langCode,
+                    bool isPreferStereo,
+                    bool filterImpaired)
+{
+  for (auto itAdpSet = adpSets.cbegin(); itAdpSet != adpSets.cend(); ++itAdpSet)
+  {
+    auto adpSet = itAdpSet->get();
+    if (adpSet->GetStreamType() == StreamType::AUDIO &&
+        STRING::CompareNoCase(adpSet->GetLanguage(), langCode) &&
+        !adpSet->GetRepresentations().empty() &&
+        (isPreferStereo ? adpSet->GetRepresentations()[0]->GetAudioChannels() <= 2
+                        : adpSet->GetRepresentations()[0]->GetAudioChannels() > 2) &&
+        adpSet->IsImpaired() == filterImpaired)
+    {
+      return itAdpSet;
+    }
+  }
+  return adpSets.end();
+}
+
+std::vector<std::unique_ptr<CAdaptationSet>>::const_iterator PLAYLIST::CAdaptationSet::
+    FindSubtitleAdpSet(const std::vector<std::unique_ptr<CAdaptationSet>>& adpSets,
+                       const std::string langCode,
+                       bool filterImpaired)
+{
+  for (auto itAdpSet = adpSets.cbegin(); itAdpSet != adpSets.cend(); ++itAdpSet)
+  {
+    auto adpSet = itAdpSet->get();
+    if (adpSet->GetStreamType() == StreamType::SUBTITLE &&
+        STRING::CompareNoCase(adpSet->GetLanguage(), langCode) &&
+        !adpSet->GetRepresentations().empty() && adpSet->IsImpaired() == filterImpaired)
+    {
+      return itAdpSet;
+    }
+  }
+  return adpSets.end();
+}

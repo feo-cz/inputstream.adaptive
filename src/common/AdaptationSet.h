@@ -170,6 +170,22 @@ public:
    */
   static CAdaptationSet* FindByFirstAVStream(std::vector<std::unique_ptr<CAdaptationSet>>& adpSets);
 
+  static std::vector<std::unique_ptr<CAdaptationSet>>::const_iterator FindAudioAdpSet(
+      const std::vector<std::unique_ptr<CAdaptationSet>>& adpSets,
+      const std::string langCode,
+      bool isPreferStereo);
+
+  static std::vector<std::unique_ptr<CAdaptationSet>>::const_iterator FindAudioAdpSet(
+      const std::vector<std::unique_ptr<CAdaptationSet>>& adpSets,
+      const std::string langCode,
+      bool isPreferStereo,
+      bool filterImpaired);
+
+  static std::vector<std::unique_ptr<CAdaptationSet>>::const_iterator FindSubtitleAdpSet(
+      const std::vector<std::unique_ptr<CAdaptationSet>>& adpSets,
+      const std::string langCode,
+      bool filterImpaired);
+
 protected:
   std::vector<std::unique_ptr<CRepresentation>> m_representations;
 

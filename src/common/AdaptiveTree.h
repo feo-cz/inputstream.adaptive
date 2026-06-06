@@ -362,6 +362,12 @@ protected:
                             const std::string& data,
                             std::string_view info);
 
+  /*!
+   * \brief Override streams media flags.
+   * \param periods The periods to override the media flags.
+   */
+  void OverrideStreamsMediaFlags(std::vector<std::unique_ptr<PLAYLIST::CPeriod>>& periods);
+
   void SortTree();
 
   // Live segment update section

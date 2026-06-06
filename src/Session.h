@@ -64,8 +64,7 @@ public:
   void AddStream(PLAYLIST::CAdaptationSet* adp,
                  PLAYLIST::CRepresentation* repr,
                  bool isDefaultVideoRepr,
-                 uint32_t uniqueId,
-                 std::string_view audioLanguageOrig);
+                 uint32_t uniqueId);
 
   /*! \brief Update stream's InputstreamInfo
    *  \param stream The stream to update
