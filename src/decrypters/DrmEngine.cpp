@@ -52,12 +52,21 @@ STREAM_CRYPTO_KEY_SYSTEM KSToCryptoKeySystem(std::string_view keySystem)
  */
 DRM::DRMInfo* GetDRMInfoByKS(std::vector<DRM::DRMInfo>& drmInfos, std::string_view keySystem, bool isStrict = false)
 {
-  // If no key system is provided its assumend CENC content compatible with any DRM
+  // Give priority to entries that explicitly match the requested key system, then try find entries with an empty key system (CENC)
   auto itDrmInfo = std::find_if(drmInfos.begin(), drmInfos.end(), [&](const DRMInfo& info)
-                   { return info.keySystem == keySystem || !isStrict && info.keySystem.empty(); });
+                                { return !info.keySystem.empty() && info.keySystem == keySystem; });
 
   if (itDrmInfo != drmInfos.end())
     return &(*itDrmInfo);
+
+  if (!isStrict)
+  {
+    itDrmInfo = std::find_if(drmInfos.begin(), drmInfos.end(), [&](const DRMInfo& info)
+                             { return info.keySystem.empty(); });
+
+    if (itDrmInfo != drmInfos.end())
+      return &(*itDrmInfo);
+  }
 
   return nullptr;
 }
@@ -65,11 +74,49 @@ DRM::DRMInfo* GetDRMInfoByKS(std::vector<DRM::DRMInfo>& drmInfos, std::string_vi
 std::vector<DRM::DRMInfo> GetDRMInfosByKS(std::vector<DRM::DRMInfo>& drmInfos, std::string_view keySystem)
 {
   std::vector<DRM::DRMInfo> ret;
-  // If no key system is provided its assumend CENC content compatible with any DRM
-  std::copy_if(drmInfos.begin(), drmInfos.end(), std::back_inserter(ret),
-               [&](const DRM::DRMInfo& info)
-               { return info.keySystem == keySystem || info.keySystem.empty(); });
+  // Give priority to entries that explicitly match the requested key system, then append entries with an empty key system (CENC)
+  for (const auto& info : drmInfos)
+  {
+    if (!info.keySystem.empty() && info.keySystem == keySystem)
+      ret.emplace_back(info);
+  }
+  for (const auto& info : drmInfos)
+  {
+    if (info.keySystem.empty())
+      ret.emplace_back(info);
+  }
+
   return ret;
+}
+
+// \brief Common CENC DRMInfo need to be converted to a specific key system with appropriate PSSH init
+void ConvertDRMInfoCENC(DRM::DRMInfo& drmInfo, const std::string& keySystem)
+{
+  if (!drmInfo.keySystem.empty())
+    return; // Not a CENC DRMInfo, no need to convert
+
+  LOG::Log(LOGDEBUG, "Converting Common CENC DRMInfo to %s", keySystem.c_str());
+  std::vector<std::vector<uint8_t>> keyIds;
+
+  if (DRM::IsValidPsshHeader(drmInfo.initData))
+  {
+    DRM::PSSH parser;
+    if (parser.Parse(drmInfo.initData))
+      keyIds = parser.GetKeyIds();
+  }
+
+  if (keyIds.empty())
+  {
+    if (drmInfo.defaultKid.empty())
+    {
+      LOG::Log(LOGERROR, "Common CENC DRMInfo does not have a default KID, cannot convert to %s",
+               keySystem.c_str());
+      return;
+    }
+    keyIds.emplace_back(DRM::ConvertKidStrToBytes(drmInfo.defaultKid));
+  }
+
+  drmInfo.initData = DRM::PSSH::Make(KeySystemToUUID(keySystem), keyIds);
 }
 
 // \brief Query DRM decrypter to get capabilities and set it to session.
@@ -381,6 +428,8 @@ const std::shared_ptr<DRMSession> DRM::CDRMEngine::InitializeSession(
   for (size_t drmInfoIdx = 0; drmInfoIdx < selDrmInfos.size(); ++drmInfoIdx)
   {
     DRM::DRMInfo drmInfo = selDrmInfos[drmInfoIdx];
+
+    ConvertDRMInfoCENC(drmInfo, m_keySystem);
 
     // Set custom init data PSSH provided from property,
     // can allow to initialize a DRM that could be also not specified
