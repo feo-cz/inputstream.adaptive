@@ -14,6 +14,7 @@
 
 using namespace TSDemux;
 
+// H.264 level identifiers to CPB/bitrate limits
 static const int h264_lev2cpbsize[][2] =
 {
   {10, 175},
@@ -31,6 +32,10 @@ static const int h264_lev2cpbsize[][2] =
   {42, 62500},
   {50, 135000},
   {51, 240000},
+  {52, 240000},
+  {60, 240000},
+  {61, 480000},
+  {62, 800000},
   {-1, -1},
 };
 
@@ -441,7 +446,10 @@ bool ES_h264::Parse_SPS(uint8_t *buf, int len, bool idOnly)
     i++;
   }
   if (cbpsize < 0)
+  {
+    DBG(DEMUX_DBG_ERROR, "H.264 SPS: No valid CPB size for level %d\n", level_idc);
     return false;
+  }
 
   memset(&m_streamData.sps[seq_parameter_set_id], 0, sizeof(h264_private::SPS));
   m_streamData.sps[seq_parameter_set_id].cbpsize = cbpsize * 125; /* Convert from kbit to bytes */
