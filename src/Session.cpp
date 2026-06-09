@@ -820,7 +820,6 @@ bool SESSION::CSession::GetNextSample(ISampleReader*& sampleReader)
 
   for (auto& stream : m_streams)
   {
-    bool isStarted{false};
     ISampleReader* streamReader{stream->GetReader()};
     if (!streamReader)
       continue;
@@ -837,7 +836,7 @@ bool SESSION::CSession::GetNextSample(ISampleReader*& sampleReader)
       }
       else if (!streamReader->EOS())
       {
-        if (AP4_SUCCEEDED(streamReader->Start(isStarted)) && streamReader->IsReady())
+        if (AP4_SUCCEEDED(streamReader->Start()) && streamReader->IsReady())
         {
           if (!res || streamReader->DTSorPTSManifest() < res->GetReader()->DTSorPTSManifest())
           {
