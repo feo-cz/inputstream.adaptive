@@ -42,6 +42,7 @@ public:
   bool IsEncrypted() const override { return false; }
 
 private:
+  void UpdatePts();
   bool m_eos{false};
   bool m_started{false};
   uint64_t m_pts{0};

@@ -44,17 +44,7 @@ AP4_Result CADTSSampleReader::ReadSample()
 {
   if (ReadPacket())
   {
-    uint64_t pts{GetPts()};
-    if (pts == ADTSReader::ADTS_PTS_UNSET)
-      m_pts = STREAM_NOPTS_VALUE;
-    else
-      m_pts = (pts * 100) / 9;
-
-    if (~m_ptsOffs)
-    {
-      m_ptsDiff = m_pts - m_ptsOffs;
-      m_ptsOffs = ~0ULL;
-    }
+    UpdatePts();
     return AP4_SUCCESS;
   }
   if (!m_adByteStream || !m_adByteStream->waitingForSegment())
@@ -72,6 +62,10 @@ void CADTSSampleReader::Reset(bool bEOS)
 
 bool CADTSSampleReader::TimeSeek(uint64_t pts)
 {
+  // ADTSReader::SeekTime expect a sample already read to be able to find the correct position of the requested PTS
+  if (AP4_FAILED(ReadSample()))
+    return false;
+
   // compensate the pts diff with the manifest timing
   pts += m_ptsDiff;
 
@@ -79,7 +73,24 @@ bool CADTSSampleReader::TimeSeek(uint64_t pts)
   if (ADTSReader::SeekTime(seekPos))
   {
     m_started = true;
-    return AP4_SUCCEEDED(ReadSample());
+    // ADTSReader::SeekTime may have read other packages to find the requested PTS, so update the PTS/DTS values
+    UpdatePts();
+    return true;
   }
   return false; // EOS
+}
+
+void CADTSSampleReader::UpdatePts()
+{
+  uint64_t pts{GetPts()};
+  if (pts == ADTSReader::ADTS_PTS_UNSET)
+    m_pts = STREAM_NOPTS_VALUE;
+  else
+    m_pts = (pts * 100) / 9;
+
+  if (~m_ptsOffs)
+  {
+    m_ptsDiff = m_pts - m_ptsOffs;
+    m_ptsOffs = ~0ULL;
+  }
 }

@@ -35,6 +35,7 @@ STREAM_FEAT = {
     'AUDI': 'Audio included to video stream',
     'CMP4': 'Container: MP4',
     'CWEBM': 'Container: WEBM',
+    'CADTS': 'Container: ADTS',
 }
 # SI_ENCRYPT flags for common stream encryption types
 STREAM_ENC = {
@@ -383,7 +384,7 @@ menu_data = {
         'HLS VOD': {
             MI_CONFIG: {},
             'Google shaka demo [multi-audio-codecs, subtitles]': {
-                SI_FEATURE: 'ADPV,SUB',
+                SI_FEATURE: 'ADPV,CADTS,SUB',
                 SI_CODECS: 'avc1,mp4a,ac-3,ec-3,wvtt',
                 SI_CONFIG: {
                     'manifest_url': 'https://storage.googleapis.com/shaka-demo-assets/apple-advanced-stream-ts/master.m3u8'
@@ -478,7 +479,7 @@ menu_data = {
                     'manifest_url': 'https://s3.amazonaws.com/_bc_dml/example-content/bipbop-advanced/bipbop_16x9_variant.m3u8',
                 }
             },
-            'Kaltura sample 4/3 resolution': {
+            'Kaltura sample 4-3 resolution': {
                 SI_CONFIG: {
                     'manifest_url': 'http://cdnbakmi.kaltura.com/p/243342/sp/24334200/playManifest/entryId/0_uka1msg4/flavorIds/1_vqhfu6uy,1_80sohj7p/format/applehttp/protocol/http/a.m3u8',
                 }
