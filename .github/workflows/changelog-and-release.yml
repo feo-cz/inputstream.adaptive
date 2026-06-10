@@ -39,14 +39,14 @@ jobs:
 
       # Checkout the current repository into a directory (repositories name)
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           path: ${{ github.event.repository.name }}
 
       # Checkout the required scripts from xbmc/binary-addon-scripts into the 'scripts' directory
       - name: Checkout Scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           repository: xbmc/binary-addon-scripts
@@ -61,7 +61,7 @@ jobs:
 
       # Setup python version 3.9
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.9'
 

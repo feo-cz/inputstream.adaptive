@@ -15,20 +15,20 @@ jobs:
     steps:
 
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           path: ${{ github.event.repository.name }}
 
       - name: Checkout Scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           repository: xbmc/weblate-supplementary-scripts
           path: scripts
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.9'
 
@@ -53,7 +53,7 @@ jobs:
         working-directory: ${{ github.event.repository.name }}
 
       - name: Create PR for incrementing add-on versions
-        uses: peter-evans/create-pull-request@v3.10.0
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: Add-on version incremented to ${{ steps.required-variables.outputs.version }} from Weblate
           title: Add-on version incremented to ${{ steps.required-variables.outputs.version }} from Weblate
