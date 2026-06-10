@@ -862,7 +862,7 @@ bool SESSION::CSession::GetNextSample(ISampleReader*& sampleReader)
   {
     ISampleReader* sr{res->GetReader()};
 
-    if (sr->PTS() != STREAM_NOPTS_VALUE)
+    if (sr->PTS() != STREAM_NOPTS_VALUE && m_timingStream.get() == res)
       m_elapsedTime = PTSToElapsed(sr->PTS(), res) + GetChapterStartTime();
 
     sampleReader = sr;
