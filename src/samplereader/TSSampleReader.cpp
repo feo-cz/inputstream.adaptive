@@ -22,6 +22,30 @@ void CTSSampleReader::SetStreamId(INPUTSTREAM_TYPE type, int streamId)
   m_typeMap[type] = streamId;
 }
 
+void CTSSampleReader::UpdatePts()
+{
+  //! @todo: there is something wrong on pts calculation,
+  //! m_ptsOffs have a value in seconds and so the substraction "m_pts - m_ptsOffs" looks to be inconsistent,
+  //! To have pts in seconds on m_pts must be: pts = GetDts() / 90000,
+  //! but packet PTS seem to be different from m_ptsOffs pts value, as if it did not include the period start
+  //! so the substraction "m_pts - m_ptsOffs" it is not a clear thing.
+  //! There is also something weird on HLS discontinuities (multiple chapters/periods)
+  //! where after a discontinuity the packet pts is lower than the last segment of previous period/discontinuity
+  //! this cause a VP resync e.g:
+  //!   debug <general>: CVideoPlayer::CheckContinuity - resync backward :1, prev:587175999.000000, curr:577170666.000000, diff:-10005333.000000
+  //!   debug <general>: CVideoPlayer::CheckContinuity - update correction: -10026666.000000
+  //! not sure if this is correct or not (tested with pluto-tv)
+  //! This code is present also on the others sample readers, that need to be verified
+  m_dts = (GetDts() == PTS_UNSET) ? STREAM_NOPTS_VALUE : (GetDts() * 100) / 9;
+  m_pts = (GetPts() == PTS_UNSET) ? STREAM_NOPTS_VALUE : (GetPts() * 100) / 9;
+
+  if (~m_ptsOffs)
+  {
+    m_ptsDiff = m_pts - m_ptsOffs;
+    m_ptsOffs = ~0ULL;
+  }
+}
+
 bool CTSSampleReader::Initialize(SESSION::CStream* stream)
 {
   // This is a workaround to avoid start buffering many segments
@@ -78,26 +102,7 @@ AP4_Result CTSSampleReader::ReadSample()
 {
   if (ReadPacket())
   {
-    //! @todo: there is something wrong on pts calculation,
-    //! m_ptsOffs have a value in seconds and so the substraction "m_pts - m_ptsOffs" looks to be inconsistent,
-    //! To have pts in seconds on m_pts must be: pts = GetDts() / 90000,
-    //! but packet PTS seem to be different from m_ptsOffs pts value, as if it did not include the period start
-    //! so the substraction "m_pts - m_ptsOffs" it is not a clear thing.
-    //! There is also something weird on HLS discontinuities (multiple chapters/periods)
-    //! where after a discontinuity the packet pts is lower than the last segment of previous period/discontinuity
-    //! this cause a VP resync e.g:
-    //!   debug <general>: CVideoPlayer::CheckContinuity - resync backward :1, prev:587175999.000000, curr:577170666.000000, diff:-10005333.000000
-    //!   debug <general>: CVideoPlayer::CheckContinuity - update correction: -10026666.000000
-    //! not sure if this is correct or not (tested with pluto-tv)
-    //! This code is present also on the others sample readers, that need to be verified
-    m_dts = (GetDts() == PTS_UNSET) ? STREAM_NOPTS_VALUE : (GetDts() * 100) / 9;
-    m_pts = (GetPts() == PTS_UNSET) ? STREAM_NOPTS_VALUE : (GetPts() * 100) / 9;
-
-    if (~m_ptsOffs)
-    {
-      m_ptsDiff = m_pts - m_ptsOffs;
-      m_ptsOffs = ~0ULL;
-    }
+    UpdatePts();
     return AP4_SUCCESS;
   }
   if (!m_adByteStream || !m_adByteStream->waitingForSegment())
@@ -115,6 +120,11 @@ bool CTSSampleReader::TimeSeek(uint64_t pts)
 {
   if (!StartStreaming(m_typeMask))
     return false;
+
+  // TSReader::SeekTime expect a sample already read to be able to find the correct position of the requested PTS
+  if (AP4_FAILED(ReadSample()))
+      return false;
+
   // compensate the pts diff with the manifest timing
   pts += m_ptsDiff;
 
@@ -122,7 +132,9 @@ bool CTSSampleReader::TimeSeek(uint64_t pts)
   if (TSReader::SeekTime(seekPos))
   {
     m_started = true;
-    return AP4_SUCCEEDED(ReadSample());
+    // TSReader::SeekTime may have read other packages to find the requested PTS, so update the PTS/DTS values
+    UpdatePts();
+    return true;
   }
   return false; // EOS
 }

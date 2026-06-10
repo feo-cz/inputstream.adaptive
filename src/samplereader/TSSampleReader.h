@@ -50,6 +50,8 @@ public:
   bool IsEncrypted() const override { return false; }
 
 private:
+  void UpdatePts();
+
   uint32_t m_typeMask{0}; //Bit representation of INPUTSTREAM_TYPES
   int m_typeMap[16]{};
   uint64_t m_pts{0};
