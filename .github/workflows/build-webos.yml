@@ -13,7 +13,7 @@ jobs:
         ZIP_NAME_SUFFIX: [webos]
     steps:
     - name: Download webOS NDK
-      uses: robinraju/release-downloader@v1.11
+      uses: robinraju/release-downloader@v1.13
       with:
         repository: "openlgtv/buildroot-nc4"
         latest: true
@@ -25,7 +25,7 @@ jobs:
         tar xzf arm-webos-linux-gnueabi_sdk-buildroot-x86_64.tar.gz
         ./arm-webos-linux-gnueabi_sdk-buildroot/relocate-sdk.sh
     - name: Checkout Kodi repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: xbmc/xbmc
         ref: master
@@ -38,7 +38,7 @@ jobs:
                     --with-toolchain=/tmp/arm-webos-linux-gnueabi_sdk-buildroot --host=arm-webos-linux-gnueabi \
                     --with-platform=webos --enable-debug=no
     - name: Checkout add-on repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         path: ${{ env.app_id }}
     - name: Configure
@@ -61,7 +61,7 @@ jobs:
         cd ${{ github.workspace }}/xbmc/addons
         zip -r inputstream.adaptive.zip inputstream.adaptive
     - name: Upload zipped artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ env.app_id }}_${{ matrix.ZIP_NAME_SUFFIX }}.zip
         path: ${{ github.workspace }}/xbmc/addons/inputstream.adaptive.zip
