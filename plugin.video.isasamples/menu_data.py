@@ -35,6 +35,7 @@ STREAM_FEAT = {
     'AUDI': 'Audio included to video stream',
     'CMP4': 'Container: MP4',
     'CWEBM': 'Container: WEBM',
+    'CADTS': 'Container: ADTS',
 }
 # SI_ENCRYPT flags for common stream encryption types
 STREAM_ENC = {
@@ -383,7 +384,7 @@ menu_data = {
         'HLS VOD': {
             MI_CONFIG: {},
             'Google shaka demo [multi-audio-codecs, subtitles]': {
-                SI_FEATURE: 'ADPV,SUB',
+                SI_FEATURE: 'ADPV,CADTS,SUB',
                 SI_CODECS: 'avc1,mp4a,ac-3,ec-3,wvtt',
                 SI_CONFIG: {
                     'manifest_url': 'https://storage.googleapis.com/shaka-demo-assets/apple-advanced-stream-ts/master.m3u8'
