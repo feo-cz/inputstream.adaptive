@@ -479,7 +479,7 @@ menu_data = {
                     'manifest_url': 'https://s3.amazonaws.com/_bc_dml/example-content/bipbop-advanced/bipbop_16x9_variant.m3u8',
                 }
             },
-            'Kaltura sample 4/3 resolution': {
+            'Kaltura sample 4-3 resolution': {
                 SI_CONFIG: {
                     'manifest_url': 'http://cdnbakmi.kaltura.com/p/243342/sp/24334200/playManifest/entryId/0_uka1msg4/flavorIds/1_vqhfu6uy,1_80sohj7p/format/applehttp/protocol/http/a.m3u8',
                 }
