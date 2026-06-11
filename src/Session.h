@@ -118,12 +118,6 @@ public:
    */
   uint64_t GetElapsedTimeMs() const { return m_elapsedTime / 1000; };
 
-  /*! \brief Get the start pts of the first segment in the timing stream
-   *       with the difference in manifest time and reader time added
-   *  \return The reader's timeshift buffer starting pts
-   */
-  uint64_t GetTimeshiftBufferStart();
-
   /*! \brief Check if the stream has changed, reset changed status
    *  \param bSet True to keep m_changed value true
    *  \return True if stream has changed

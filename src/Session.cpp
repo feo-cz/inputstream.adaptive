@@ -792,22 +792,6 @@ uint64_t SESSION::CSession::GetTotalTimeMs() const
     return m_adaptiveTree->m_totalTime;
 }
 
-uint64_t SESSION::CSession::GetTimeshiftBufferStart()
-{
-  if (m_timingStream)
-  {
-    ISampleReader* timingReader{m_timingStream->GetReader()};
-    if (!timingReader)
-    {
-      LOG::LogF(LOGERROR, "Cannot get the stream sample reader");
-      return 0ULL;
-    }
-    return m_timingStream->m_adStream.GetAbsolutePTSOffset() + timingReader->GetPTSDiff();
-  }
-  else
-    return 0ULL;
-}
-
 void SESSION::CSession::OnScreenResChange()
 {
   m_reprChooser->OnUpdateScreenRes();
