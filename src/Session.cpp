@@ -695,13 +695,12 @@ bool SESSION::CSession::PrepareStream(CStream& stream)
 
   ContainerType reprContainerType = repr->GetContainerType();
   uint32_t mask = (1U << stream.m_info.GetStreamType()) | GetIncludedStreamMask();
-  auto reader = ADP::CreateStreamReader(reprContainerType, &stream, mask);
 
-  if (!reader)
+  if (!ADP::CreateStreamReader(reprContainerType, &stream, mask))
     return false;
 
   std::vector<DRM::DRMInfo> manifestDrmInfo = repr->DrmInfos();
-  std::vector<DRM::DRMInfo> mediaDrmInfo = reader->GetInitDRMInfo();
+  std::vector<DRM::DRMInfo> mediaDrmInfo = stream.GetReader()->GetInitDRMInfo();
   bool isDrmSecure{false};
 
   if (!manifestDrmInfo.empty() || !mediaDrmInfo.empty())
@@ -729,22 +728,11 @@ bool SESSION::CSession::PrepareStream(CStream& stream)
 
     isDrmSecure = drmSession->capabilities.HasFlag(DRM::Capabilities::SECURE_PATH);
 
-    reader->SetDecrypter(drmSession);
+    stream.GetReader()->SetDecrypter(drmSession);
   }
 
   if (adp->GetStreamType() == StreamType::VIDEO || adp->GetStreamType() == StreamType::VIDEO_AUDIO)
     m_reprChooser->SetSecureSession(isDrmSecure);
-
-  stream.SetReader(std::move(reader));
-
-  if (reprContainerType == ContainerType::TS || reprContainerType == ContainerType::ADTS)
-  {
-    // With TS streams the elapsed time would be calculated incorrectly as during the tree refresh,
-    // nextSegment would be deleted by the FreeSegments/newsegments swap. Do this now before the tree refresh.
-    // Also, when reopening a stream (switching reps) the elapsed time would be incorrectly set until the
-    // second segment plays, now force a correct calculation at the start of the stream.
-    OnSegmentChanged(&stream.m_adStream);
-  }
 
   return true;
 }
@@ -790,22 +778,6 @@ uint64_t SESSION::CSession::GetTotalTimeMs() const
     return m_adaptiveTree->m_totalTime - m_adaptiveTree->m_liveDelay * 1000;
   else
     return m_adaptiveTree->m_totalTime;
-}
-
-uint64_t SESSION::CSession::GetTimeshiftBufferStart()
-{
-  if (m_timingStream)
-  {
-    ISampleReader* timingReader{m_timingStream->GetReader()};
-    if (!timingReader)
-    {
-      LOG::LogF(LOGERROR, "Cannot get the stream sample reader");
-      return 0ULL;
-    }
-    return m_timingStream->m_adStream.GetAbsolutePTSOffset() + timingReader->GetPTSDiff();
-  }
-  else
-    return 0ULL;
 }
 
 void SESSION::CSession::OnScreenResChange()
