@@ -734,15 +734,6 @@ bool SESSION::CSession::PrepareStream(CStream& stream)
   if (adp->GetStreamType() == StreamType::VIDEO || adp->GetStreamType() == StreamType::VIDEO_AUDIO)
     m_reprChooser->SetSecureSession(isDrmSecure);
 
-  if (reprContainerType == ContainerType::TS || reprContainerType == ContainerType::ADTS)
-  {
-    // With TS streams the elapsed time would be calculated incorrectly as during the tree refresh,
-    // nextSegment would be deleted by the FreeSegments/newsegments swap. Do this now before the tree refresh.
-    // Also, when reopening a stream (switching reps) the elapsed time would be incorrectly set until the
-    // second segment plays, now force a correct calculation at the start of the stream.
-    OnSegmentChanged(&stream.m_adStream);
-  }
-
   return true;
 }
 

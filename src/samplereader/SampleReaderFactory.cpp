@@ -111,7 +111,13 @@ bool ADP::CreateStreamReader(PLAYLIST::ContainerType& containerType,
       stream->m_adStream.getRepresentation()->SetContainerType(containerType);
 
       stream->GetAdByteStream()->Seek(0); // Seek because bytes are consumed from previous reader
+
       stream->SetReader(std::make_unique<CADTSSampleReader>(stream->GetAdByteStream()));
+
+      // Set the PTS offset manually because the AdaptiveStream has been already started by the previous reader,
+      // and the OnSegmentChanged callback has been already invoked, the new reader needs to be aligned with the PTS reference
+      stream->GetReader()->SetPTSOffset(stream->m_adStream.GetCurrentPTSOffset());
+
       if (!stream->GetReader()->Initialize(stream))
         return false;
     }
