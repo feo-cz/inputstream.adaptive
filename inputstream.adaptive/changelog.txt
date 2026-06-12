@@ -1,3 +1,7 @@
+v22.3.15 (2026-06-12)
+- Fix broken playback with TS H264 streams that use higher codec levels
+- Fix broken playback regression when changing video quality by using OSD
+
 v22.3.14 (2026-06-06)
 - [inputstream.adaptive.config] New parameters to override media flags, see wiki
 - [inputstream.adaptive.original_audio_language] property is deprecated, see wiki
