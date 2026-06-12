@@ -1,3 +1,9 @@
+v21.5.19 (2026-06-12)
+- [Dash] Improved support to MPD SegmentBase with multi-periods
+- Fix missing subtitles due to unsupported SegmentBase with multi-periods
+- Fix problem detecting resolution change (adaptive stream selection)
+- Fix broken playback with TS H264 streams that use higher codec levels
+
 v21.5.18 (2025-12-02)
 - Fix possible corrupted PPS/SPS data on TS H264
 
