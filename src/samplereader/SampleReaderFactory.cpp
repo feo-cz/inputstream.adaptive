@@ -22,9 +22,9 @@
 
 using namespace PLAYLIST;
 
-std::unique_ptr<ISampleReader> ADP::CreateStreamReader(PLAYLIST::ContainerType& containerType,
-                                                       SESSION::CStream* stream,
-                                                       uint32_t includedStreamMask)
+bool ADP::CreateStreamReader(PLAYLIST::ContainerType& containerType,
+                             SESSION::CStream* stream,
+                             uint32_t includedStreamMask)
 {
   std::unique_ptr<ISampleReader> reader;
 
@@ -61,7 +61,7 @@ std::unique_ptr<ISampleReader> ADP::CreateStreamReader(PLAYLIST::ContainerType& 
     if (!movie)
     {
       LOG::LogF(LOGERROR, "No MOOV atom in stream");
-      return nullptr;
+      return false;
     }
 
     AP4_Track* track =
@@ -73,14 +73,14 @@ std::unique_ptr<ISampleReader> ADP::CreateStreamReader(PLAYLIST::ContainerType& 
       if (!track)
       {
         LOG::LogF(LOGERROR, "No suitable Track atom found in stream");
-        return nullptr;
+        return false;
       }
     }
 
     if (!track->GetSampleDescription(0))
     {
       LOG::LogF(LOGERROR, "No STSD atom in stream");
-      return nullptr;
+      return false;
     }
 
     reader = std::make_unique<CFragmentedSampleReader>(stream->GetAdByteStream(), movie, track);
@@ -89,10 +89,14 @@ std::unique_ptr<ISampleReader> ADP::CreateStreamReader(PLAYLIST::ContainerType& 
   {
     LOG::Log(LOGWARNING,
              "Cannot create sample reader due to unhandled representation container type");
-    return nullptr;
+    return false;
   }
 
-  if (!reader->Initialize(stream))
+  // We have to set the reader before initialize it, the reader initialization require to read data from AdaptiveStream
+  // and the AdaptiveStream need to callback (OnSegmentChanged) to the reader to update the PTS of the sample read
+  stream->SetReader(std::move(reader));
+
+  if (!stream->GetReader()->Initialize(stream))
   {
     if (containerType == ContainerType::TS &&
         stream->m_adStream.GetStreamType() == StreamType::AUDIO)
@@ -107,13 +111,13 @@ std::unique_ptr<ISampleReader> ADP::CreateStreamReader(PLAYLIST::ContainerType& 
       stream->m_adStream.getRepresentation()->SetContainerType(containerType);
 
       stream->GetAdByteStream()->Seek(0); // Seek because bytes are consumed from previous reader
-      reader = std::make_unique<CADTSSampleReader>(stream->GetAdByteStream());
-      if (!reader->Initialize(stream))
-        reader.reset();
+      stream->SetReader(std::make_unique<CADTSSampleReader>(stream->GetAdByteStream()));
+      if (!stream->GetReader()->Initialize(stream))
+        return false;
     }
     else
-      reader.reset();
+      return false;
   }
 
-  return reader;
+  return true;
 }

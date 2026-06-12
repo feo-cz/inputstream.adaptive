@@ -695,13 +695,12 @@ bool SESSION::CSession::PrepareStream(CStream& stream)
 
   ContainerType reprContainerType = repr->GetContainerType();
   uint32_t mask = (1U << stream.m_info.GetStreamType()) | GetIncludedStreamMask();
-  auto reader = ADP::CreateStreamReader(reprContainerType, &stream, mask);
 
-  if (!reader)
+  if (!ADP::CreateStreamReader(reprContainerType, &stream, mask))
     return false;
 
   std::vector<DRM::DRMInfo> manifestDrmInfo = repr->DrmInfos();
-  std::vector<DRM::DRMInfo> mediaDrmInfo = reader->GetInitDRMInfo();
+  std::vector<DRM::DRMInfo> mediaDrmInfo = stream.GetReader()->GetInitDRMInfo();
   bool isDrmSecure{false};
 
   if (!manifestDrmInfo.empty() || !mediaDrmInfo.empty())
@@ -729,13 +728,11 @@ bool SESSION::CSession::PrepareStream(CStream& stream)
 
     isDrmSecure = drmSession->capabilities.HasFlag(DRM::Capabilities::SECURE_PATH);
 
-    reader->SetDecrypter(drmSession);
+    stream.GetReader()->SetDecrypter(drmSession);
   }
 
   if (adp->GetStreamType() == StreamType::VIDEO || adp->GetStreamType() == StreamType::VIDEO_AUDIO)
     m_reprChooser->SetSecureSession(isDrmSecure);
-
-  stream.SetReader(std::move(reader));
 
   if (reprContainerType == ContainerType::TS || reprContainerType == ContainerType::ADTS)
   {
