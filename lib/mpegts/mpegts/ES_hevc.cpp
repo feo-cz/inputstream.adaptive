@@ -10,7 +10,7 @@
 #include "bitstream.h"
 #include "debug.h"
 
-#include <cstring>      // for memset memcpy
+#include <cstring>      // for memset memcpy memcmp
 
 using namespace TSDemux;
 
@@ -43,7 +43,9 @@ void ES_hevc::Parse(STREAM_PKT* pkt)
   uint32_t startcode = m_StartCode;
   bool frameComplete = false;
 
-  if (m_NeedSPS)
+  // Reset extra data only on a fresh capture, so a VPS from a previous PES
+  // payload isn't discarded while waiting for its SPS/PPS.
+  if (m_NeedVPS && m_NeedSPS && m_NeedPPS)
     stream_info.extra_data_size = 0;
 
   while (p < es_len)
@@ -167,20 +169,9 @@ void ES_hevc::Parse_HEVC(int buf_ptr, unsigned int NumBytesInNalUnit, bool &comp
     switch (hdr.nal_unit_type)
     {
     case NAL_VPS_NUT:
-      if (m_NeedVPS)
-      {
-        if (stream_info.extra_data_size + NumBytesInNalUnit <= sizeof(stream_info.extra_data))
-        {
-          memcpy(stream_info.extra_data + stream_info.extra_data_size, es_buf + (buf_ptr - 4), NumBytesInNalUnit);
-          stream_info.extra_data_size += NumBytesInNalUnit;
-          m_NeedVPS = false;
-        }
-        else
-        {
-          DBG(DEMUX_DBG_INFO, "HEVC fixme: stream_info.extra_data too small! %i\n", stream_info.extra_data_size + NumBytesInNalUnit);
-        }
-      }
-       break;
+      if (m_NeedVPS && AppendExtraData(buf_ptr, NumBytesInNalUnit))
+        m_NeedVPS = false;
+      break;
 
     case NAL_SPS_NUT:
     {
@@ -191,19 +182,8 @@ void ES_hevc::Parse_HEVC(int buf_ptr, unsigned int NumBytesInNalUnit, bool &comp
         return;
       }
       Parse_SPS(buf, NumBytesInNalUnit, hdr);
-      if (m_NeedSPS)
-      {
-        if (stream_info.extra_data_size + NumBytesInNalUnit <= sizeof(stream_info.extra_data))
-        {
-          memcpy(stream_info.extra_data + stream_info.extra_data_size, es_buf + (buf_ptr - 4), NumBytesInNalUnit);
-          stream_info.extra_data_size += NumBytesInNalUnit;
-          m_NeedSPS = false;
-        }
-        else
-        {
-          DBG(DEMUX_DBG_INFO, "HEVC fixme: stream_info.extra_data too small! %i\n", stream_info.extra_data_size + NumBytesInNalUnit);
-        }
-      }
+      if (m_NeedSPS && AppendExtraData(buf_ptr, NumBytesInNalUnit))
+        m_NeedSPS = false;
       break;
     }
 
@@ -216,19 +196,8 @@ void ES_hevc::Parse_HEVC(int buf_ptr, unsigned int NumBytesInNalUnit, bool &comp
         return;
       }
       Parse_PPS(buf, NumBytesInNalUnit);
-      if (m_NeedPPS)
-      {
-        if (stream_info.extra_data_size + NumBytesInNalUnit <= sizeof(stream_info.extra_data))
-        {
-          memcpy(stream_info.extra_data + stream_info.extra_data_size, es_buf + (buf_ptr - 4), NumBytesInNalUnit);
-          stream_info.extra_data_size += NumBytesInNalUnit;
-          m_NeedPPS = false;
-        }
-        else
-        {
-          DBG(DEMUX_DBG_INFO, "HEVC fixme: stream_info.extra_data too small! %i\n", stream_info.extra_data_size + NumBytesInNalUnit);
-        }
-      }
+      if (m_NeedPPS && AppendExtraData(buf_ptr, NumBytesInNalUnit))
+        m_NeedPPS = false;
       break;
     }
 
@@ -267,6 +236,41 @@ void ES_hevc::Parse_HEVC(int buf_ptr, unsigned int NumBytesInNalUnit, bool &comp
       break;
     }
   }
+}
+
+// Append a parameter set NAL (VPS/SPS/PPS) to the extra data as Annex B.
+// numBytes spans to the end of the next start code (3 or 4 bytes), stripped here if present.
+bool ES_hevc::AppendExtraData(int buf_ptr, unsigned int numBytes)
+{
+  if (numBytes < 3)
+    return false;
+
+  unsigned int nalSize = numBytes;
+  const unsigned char* tail = es_buf + buf_ptr + numBytes;
+  if (numBytes >= 4 && std::memcmp(tail - 4, "\0\0\0\x01", 4) == 0)
+    nalSize = numBytes - 4;
+  else if (std::memcmp(tail - 3, "\0\0\x01", 3) == 0)
+    nalSize = numBytes - 3;
+
+  if (nalSize == 0)
+    return false;
+
+  if (static_cast<size_t>(stream_info.extra_data_size) + 4 + nalSize >
+      sizeof(stream_info.extra_data))
+  {
+    DBG(DEMUX_DBG_INFO, "HEVC fixme: stream_info.extra_data too small! %u\n",
+        static_cast<unsigned int>(stream_info.extra_data_size) + 4 + nalSize);
+    return false;
+  }
+
+  uint8_t* ed = stream_info.extra_data + stream_info.extra_data_size;
+  ed[0] = 0;
+  ed[1] = 0;
+  ed[2] = 0;
+  ed[3] = 1;
+  std::memcpy(ed + 4, es_buf + buf_ptr, nalSize);
+  stream_info.extra_data_size += 4 + nalSize;
+  return true;
 }
 
 void ES_hevc::Parse_PPS(uint8_t *buf, int len)
