@@ -189,7 +189,7 @@ UTILS::CURL::CUrl::CUrl(std::string_view url)
 
     // Default curl options
     m_file.CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "seekable", "0");
-    m_file.CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "acceptencoding", "gzip, deflate");
+    m_file.CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "acceptencoding", ""); // Empty to accept all encodings, e.g. gzip, deflate, br
     m_file.CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "failonerror", "false");
     if (!kodiProps.GetConfig().curlSSLVerifyPeer)
       m_file.CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "verifypeer", "false");
