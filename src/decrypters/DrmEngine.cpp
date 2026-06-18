@@ -752,40 +752,74 @@ bool DRM::CDRMEngine::ConfigureClearKey(std::vector<DRM::DRMInfo>& drmInfos)
 {
   const auto& kodiProps = CSrvBroker::GetKodiProps();
 
-  if (!kodiProps.HasDrmConfig(KS_CLEARKEY) || drmInfos.empty())
+  if (drmInfos.empty())
     return false;
 
+  // Get common info from CENC keysystem or else from first DRMInfo with a default KID
+  DRMInfo* baseDrmInfo = GetDRMInfoByKS(drmInfos, "", true);
+  if (!baseDrmInfo)
+  {
+    auto it = std::find_if(drmInfos.begin(), drmInfos.end(),
+                           [](const DRM::DRMInfo& s) { return !s.defaultKid.empty(); });
+    if (it != drmInfos.end())
+      baseDrmInfo = &(*it);
+  }
+
+  const CryptoMode commonCryptoMode = baseDrmInfo ? baseDrmInfo->cryptoMode : CryptoMode::NONE;
+  const std::string commonDefaultKid = baseDrmInfo ? baseDrmInfo->defaultKid : "";
+
+  // No DRM configuration provided, but the manifest has ClearKey DRMInfo, try force ClearKey usage
+  // by removing all other DRMInfo, so that ClearKey will beused to play the stream
+  // e.g. HLS that provide initdata with the manifest, so it can be played by default
+  if (kodiProps.GetDrmConfigs().empty() &&
+      std::any_of(drmInfos.cbegin(), drmInfos.cend(),
+                  [](const DRM::DRMInfo& info) { return info.keySystem == KS_CLEARKEY; }))
+  {
+    drmInfos.erase(std::remove_if(drmInfos.begin(), drmInfos.end(), [](const DRM::DRMInfo& info)
+                                  { return info.keySystem != KS_CLEARKEY; }),
+                   drmInfos.end());
+
+    DRMInfo* ckDrmInfo = GetDRMInfoByKS(drmInfos, KS_CLEARKEY, true);
+    if (ckDrmInfo)
+    {
+      // Copy missing info
+      if (ckDrmInfo->defaultKid.empty())
+        ckDrmInfo->defaultKid = commonDefaultKid;
+      if (ckDrmInfo->cryptoMode == CryptoMode::NONE)
+        ckDrmInfo->cryptoMode = commonCryptoMode;
+    }
+    return true;
+  }
+
+  if (!kodiProps.HasDrmConfig(KS_CLEARKEY))
+    return false;
+
+  // At this point we have a ClearKey DRM configuration
   const ADP::KODI_PROPS::DrmCfg& drmCfg = kodiProps.GetDrmConfig(KS_CLEARKEY);
 
-  // The ClearKey configuration can add (or replace) CK DRMInfo when
-  // it finds a custom license uri or keys
+  // Check if custom license data is provided
   const bool isCustomLicense = !drmCfg.license.serverUri.empty() || !drmCfg.license.keys.empty();
-
+  // If no custom license data is provided, we will try to use the ClearKey DRMInfo as is from the manifest
   if (!isCustomLicense)
   {
-    // If exists DRMInfo with CENC keysystem, copy the Kid to the CK DRMInfo
-    DRMInfo* cencDrmInfo = GetDRMInfoByKS(drmInfos, "", true);
     DRMInfo* ckDrmInfo = GetDRMInfoByKS(drmInfos, KS_CLEARKEY, true);
 
-    if (cencDrmInfo && ckDrmInfo)
+    if (ckDrmInfo)
     {
-      ckDrmInfo->defaultKid = cencDrmInfo->defaultKid;
+      // Copy missing info
+      if (ckDrmInfo->defaultKid.empty())
+        ckDrmInfo->defaultKid = commonDefaultKid;
+      if (ckDrmInfo->cryptoMode == CryptoMode::NONE)
+        ckDrmInfo->cryptoMode = commonCryptoMode;
+
       // Delete CENC to prevent using it
       drmInfos.erase(std::remove_if(drmInfos.begin(), drmInfos.end(), [](const DRM::DRMInfo& info)
                                     { return info.keySystem.empty(); }),
                      drmInfos.end());
     }
 
-    return false;
+    return true;
   }
-
-  // Copy common info from the first DRMInfo with a default KID
-  auto it = std::find_if(drmInfos.begin(), drmInfos.end(),
-                         [](const DRM::DRMInfo& s) { return !s.defaultKid.empty(); });
-  DRMInfo& drmInfoBase = (it != drmInfos.end()) ? *it : drmInfos.front();
-
-  const CryptoMode cryptoMode = drmInfoBase.cryptoMode;
-  const std::string defaultKid = drmInfoBase.defaultKid;
 
   if (kodiProps.GetDrmConfigs().size() == 1) // Single config (CK)
   {
@@ -798,6 +832,8 @@ bool DRM::CDRMEngine::ConfigureClearKey(std::vector<DRM::DRMInfo>& drmInfos)
                                   { return info.keySystem == KS_CLEARKEY; }),
                    drmInfos.end());
   }
+
+  // Create a custom DRM info for ClearKey
 
   std::string licenseUri;
 
@@ -834,8 +870,8 @@ bool DRM::CDRMEngine::ConfigureClearKey(std::vector<DRM::DRMInfo>& drmInfos)
 
   DRM::DRMInfo drmInfo;
   drmInfo.keySystem = KS_CLEARKEY;
-  drmInfo.cryptoMode = cryptoMode;
-  drmInfo.defaultKid = defaultKid;
+  drmInfo.cryptoMode = commonCryptoMode;
+  drmInfo.defaultKid = commonDefaultKid;
   drmInfo.licenseServerUri = licenseUri;
   drmInfos.emplace_back(drmInfo);
 
