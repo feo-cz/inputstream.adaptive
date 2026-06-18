@@ -193,6 +193,21 @@ std::vector<DRM::DRMInfo> DrmInfosUnion(std::vector<DRM::DRMInfo> mediaDrmInfos,
 
   return drmInfos;
 }
+
+void LogDRMInfo(const std::vector<DRM::DRMInfo>& drmInfos)
+{
+  LOG::Log(LOGDEBUG, "[DRM Info list]");
+  for (const auto& drmInfo : drmInfos)
+  {
+    LOG::Log(LOGDEBUG,
+             "[DRM Info] Key system: %s\nDefault KID: %s\nInit data: %s\nCrypto mode: %d\n"
+             "License server URI: %s\nServer certification: %s\nRobustness: %s",
+             drmInfo.keySystem.c_str(), drmInfo.defaultKid.c_str(),
+             BASE64::Encode(drmInfo.initData).c_str(), drmInfo.cryptoMode,
+             drmInfo.licenseServerUri.c_str(), BASE64::Encode(drmInfo.serverCert).c_str(),
+             drmInfo.robustness.c_str());
+  }
+}
 } // unnamed namespace
 
 bool DRM::CDRMEngine::Initialize()
@@ -377,6 +392,9 @@ const std::shared_ptr<DRMSession> DRM::CDRMEngine::InitializeSession(
     mediaDrmInfos.clear();
 
   std::vector<DRM::DRMInfo> drmInfos = DrmInfosUnion(mediaDrmInfos, manifestDrmInfos);
+
+  if (CSrvBroker::GetSettings().IsDebugVerbose())
+    LogDRMInfo(drmInfos);
 
   if (drmInfos.empty())
     return nullptr;
