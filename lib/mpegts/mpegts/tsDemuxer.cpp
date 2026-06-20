@@ -471,20 +471,26 @@ int AVContext::ProcessTSPacket()
   }
 
   it = this->packets.find(this->pid);
-  if (it == this->packets.end())
+  if (it == this->packets.end()) // Not registered PID.
   {
-    // Not registred PID
-    // We are waiting for unit start of PID 0 else next packet is required
-    if (this->pid == 0 && this->payload_unit_start)
+    // Only auto-register if this payload_unit_start actually contains a PSI table
+    if (this->payload_unit_start && this->payload && this->payload_len > 1)
     {
-      // Registering PID 0
-      Packet pid0;
-      pid0.pid = this->pid;
-      pid0.packet_type = PACKET_TYPE_PSI;
-      pid0.continuity = continuity_counter;
-      it = this->packets.insert(it, std::make_pair(this->pid, pid0));
+      const uint8_t pointerField = av_rb8(this->payload); // pointer_field is at payload[0];
+      if (static_cast<size_t>(pointerField) + 1 < this->payload_len)
+      {
+        const uint8_t tableId = av_rb8(this->payload + 1 + pointerField); // table_id is at payload + 1 + pointer_field
+        if (tableId == 0x00 || tableId == 0x02) // table_id 0x00 = PAT, 0x02 = PMT
+        {
+          Packet p;
+          p.pid = this->pid;
+          p.packet_type = PACKET_TYPE_PSI;
+          p.continuity = continuity_counter;
+          it = this->packets.insert(it, std::make_pair(this->pid, p));
+        }
+      }
     }
-    else
+    if (it == this->packets.end())
       return AVCONTEXT_CONTINUE;
   }
   else
