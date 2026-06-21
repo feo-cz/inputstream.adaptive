@@ -1,3 +1,8 @@
+v21.5.20 (2026-06-21)
+- Add support to other HTTP encodings such as x-gzip
+- [HLS] Add support to m4f extension
+- [HLS] Add support to encrypted AES-128 init data
+
 v21.5.19 (2026-06-12)
 - [Dash] Improved support to MPD SegmentBase with multi-periods
 - Fix missing subtitles due to unsupported SegmentBase with multi-periods
