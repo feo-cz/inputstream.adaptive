@@ -98,7 +98,8 @@ ContainerType DetectContainerTypeFromExt(std::string_view extension)
     return ContainerType::TS;
   else if (STRING::CompareNoCase(extension, "aac"))
     return ContainerType::ADTS;
-  else if (STRING::CompareNoCase(extension, "mp4") || STRING::CompareNoCase(extension, "m4s"))
+  else if (STRING::CompareNoCase(extension, "mp4") || STRING::CompareNoCase(extension, "m4s") ||
+           STRING::CompareNoCase(extension, "m4f"))
     return ContainerType::MP4;
   else if (STRING::CompareNoCase(extension, "vtt") || STRING::CompareNoCase(extension, "webvtt"))
     return ContainerType::TEXT;
@@ -553,6 +554,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
         segInit.SetIsInitialization(true);
         segInit.url = attribs["URI"];
         segInit.startPTS_ = NO_PTS_VALUE;
+        segInit.AESKeyInfo() = aesKey;
         rep->SetInitSegment(segInit);
         rep->SetContainerType(ContainerType::MP4);
       }
