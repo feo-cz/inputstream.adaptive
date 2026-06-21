@@ -573,10 +573,19 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
 
       if (STRING::KeyExists(attribs, "URI"))
       {
+        if (currentEncryptionType == EncryptionType::AES128 && psshSetPos == PSSHSET_POS_DEFAULT)
+        {
+          if (!m_currentKidUrl.empty())
+          {
+            psshSetPos = InsertPsshSet(StreamType::NOTYPE, period, adp, m_currentPssh,
+                                       m_currentDefaultKID, m_currentKidUrl, m_currentIV);
+          }
+        }
+
         segInit.SetIsInitialization(true);
         segInit.url = attribs["URI"];
         segInit.startPTS_ = NO_PTS_VALUE;
-        segInit.pssh_set_ = PSSHSET_POS_DEFAULT;
+        segInit.pssh_set_ = psshSetPos;
         rep->SetInitSegment(segInit);
         rep->SetContainerType(ContainerType::MP4);
       }
