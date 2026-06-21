@@ -1,3 +1,12 @@
+v22.3.16 (2026-06-21)
+- Add support to other HTTP encodings such as x-gzip
+- Add support to play Clearkey streams without DRM configuration (e.g. HLS)
+- [HLS] Add support to m4f extension
+- [HLS] Add support to encrypted AES-128 init data
+- Improved TS demuxer to handle non standard data (missing PAT)
+- Fix TS demuxer to handle HEVC with 3 byte startcode NAL
+- Fix a crash that occurs when a DRM stream playback fails
+
 v22.3.15 (2026-06-12)
 - Fix broken playback with TS H264 streams that use higher codec levels
 - Fix broken playback regression when changing video quality by using OSD
