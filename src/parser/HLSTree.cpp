@@ -554,6 +554,7 @@ bool adaptive::CHLSTree::ProcessChildManifest(PLAYLIST::CPeriod* period,
         segInit.SetIsInitialization(true);
         segInit.url = attribs["URI"];
         segInit.startPTS_ = NO_PTS_VALUE;
+        segInit.AESKeyInfo() = aesKey;
         rep->SetInitSegment(segInit);
         rep->SetContainerType(ContainerType::MP4);
       }
