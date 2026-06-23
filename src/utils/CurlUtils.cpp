@@ -196,7 +196,10 @@ UTILS::CURL::CUrl::CUrl(const std::string& url, const RequestType reqType /* = R
 
     // Default curl options
     m_file.CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "seekable", "0");
-    m_file.CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "acceptencoding", "all"); // Accept all encodings, e.g. gzip, deflate, br
+
+    if (!kodiProps.GetConfig().curlDisableAcceptEncoding)
+      m_file.CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "acceptencoding", "all"); // Accept all encodings, e.g. gzip, deflate, br
+
     m_file.CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "failonerror", "false");
     if (!kodiProps.GetConfig().curlSSLVerifyPeer)
       m_file.CURLAddOption(ADDON_CURL_OPTION_PROTOCOL, "verifypeer", "false");
