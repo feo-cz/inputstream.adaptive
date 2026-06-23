@@ -1,3 +1,6 @@
+v21.5.21 (2026-06-23)
+- Fix HTTP encodings from previous release
+
 v21.5.20 (2026-06-21)
 - Add support to other HTTP encodings such as x-gzip
 - [HLS] Add support to m4f extension
