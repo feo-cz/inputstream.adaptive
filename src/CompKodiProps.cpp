@@ -325,6 +325,10 @@ void ADP::KODI_PROPS::CCompKodiProps::ParseConfig(const std::string& data)
     {
       m_config.curlSSLVerifyPeer = jValue.get<bool>();
     }
+    else if (configName == "disable_accept_encoding" && jValue.is_boolean())
+    {
+      m_config.curlDisableAcceptEncoding = jValue.get<bool>();
+    }
     else if (configName == "internal_cookies" && jValue.is_boolean())
     {
       m_config.internalCookies = jValue.get<bool>();

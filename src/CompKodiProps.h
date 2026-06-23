@@ -54,6 +54,9 @@ struct Config
   // Determines whether curl verifies the authenticity of the peer's certificate,
   // if set to false CA certificates are not loaded and verification will be skipped.
   bool curlSSLVerifyPeer{true};
+  // Determines whether curl disables the Accept-Encoding header
+  // if set to true, the header will not be sent
+  bool curlDisableAcceptEncoding{false};
   // Determines if cookies are internally handled by InputStream Adaptive add-on
   bool internalCookies{false};
   // Determines how HDCP should be checked
