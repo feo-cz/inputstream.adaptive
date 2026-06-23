@@ -1,3 +1,7 @@
+v22.3.17 (2026-06-23)
+- Fix HTTP encodings from previous release
+- [inputstream.adaptive.config] Add disable_accept_encoding, see wiki
+
 v22.3.16 (2026-06-21)
 - Add support to other HTTP encodings such as x-gzip
 - Add support to play Clearkey streams without DRM configuration (e.g. HLS)
