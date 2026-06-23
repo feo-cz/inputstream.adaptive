@@ -142,7 +142,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.required-variables.outputs.version }}-${{ steps.required-variables.outputs.branch }}
-          release_name: ${{ steps.required-variables.outputs.version }}-${{ steps.required-variables.outputs.branch }}
+          name: ${{ steps.required-variables.outputs.version }}-${{ steps.required-variables.outputs.branch }}
           body: ${{ steps.required-variables.outputs.changes }}
           draft: false
           prerelease: false
