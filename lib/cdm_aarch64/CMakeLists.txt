@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.18...4.0)
 project(cdm_aarch64_loader)
 
 add_library(cdm_aarch64_loader SHARED
