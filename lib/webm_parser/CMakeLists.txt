@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.18...4.0)
 project(webm_parser)
 
 set(webm_parser_sources

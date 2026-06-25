@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.18...4.0)
 project(cdm_library)
 
 if(WIN32)
