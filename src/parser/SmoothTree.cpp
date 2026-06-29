@@ -631,12 +631,6 @@ void adaptive::CSmoothTree::OnUpdateSegments()
 
         LOG::LogF(LOGDEBUG, "SS update - Done (repr. id \"%s\")", updRepr->GetId().c_str());
       }
-
-      if (repr->IsWaitForSegment() && repr->GetNextSegment())
-      {
-        repr->SetIsWaitForSegment(false);
-        LOG::LogF(LOGDEBUG, "End WaitForSegment repr. id %s", repr->GetId().c_str());
-      }
     }
   }
 

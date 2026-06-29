@@ -812,7 +812,7 @@ bool SESSION::CSession::GetNextSample(ISampleReader*& sampleReader)
         {
           if (!res || streamReader->DTSorPTSManifest() < res->GetReader()->DTSorPTSManifest())
           {
-            if (stream->m_adStream.waitingForSegment())
+            if (stream->m_adStream.OnSampleRequested())
             {
               waiting = stream.get();
             }

@@ -1738,12 +1738,6 @@ void adaptive::CDashTree::OnUpdateSegments()
               LOG::LogF(LOGDEBUG, "MPD update - Done (repr. id \"%s\", period id \"%s\")",
                         updRepr->GetId().c_str(), period->GetId().c_str());
             }
-
-            if (repr->IsWaitForSegment() && repr->GetNextSegment())
-            {
-              repr->SetIsWaitForSegment(false);
-              LOG::LogF(LOGDEBUG, "End WaitForSegment repr. id %s", repr->GetId().c_str());
-            }
           }
         }
       }
@@ -1875,14 +1869,6 @@ void adaptive::CDashTree::InsertLiveSegment(PLAYLIST::CPeriod* currPeriod,
                                             PLAYLIST::CAdaptationSet* currAdpSet,
                                             PLAYLIST::CRepresentation* currRepr)
 {
-  // InsertLiveSegment is called very frequently, since this implementation update all manifest data
-  // you do not need to have all these callbacks in such a short time
-  auto now = std::chrono::steady_clock::now();
-  if (now - m_insertLiveSegUpdate < std::chrono::milliseconds(500))
-    return;
-
-  m_insertLiveSegUpdate = now;
-
   // This code will keep updated the timeline on all representations
   // (across all periods) with current now time (TSB included),
   // exclusive case of representations having SegmentTemplate without defined timeline
@@ -1951,12 +1937,6 @@ void adaptive::CDashTree::InsertLiveSegment(PLAYLIST::CPeriod* currPeriod,
                 rep->Timeline().GetDuration() * period->GetTimescale() / rep->GetTimescale();
             period->SetTlDuration(tlDuration);
           }
-        }
-
-        if (rep->IsWaitForSegment())
-        {
-          rep->SetIsWaitForSegment(false);
-          LOG::LogF(LOGDEBUG, "End WaitForSegment repr. id %s", rep->GetId().c_str());
         }
       }
     }

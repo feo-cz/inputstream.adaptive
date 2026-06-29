@@ -71,6 +71,7 @@ void adaptive::AdaptiveStream::Reset()
   segment_read_pos_ = 0;
   currentPTSOffset_ = 0;
   absolutePTSOffset_ = 0;
+  m_isWaitingForSegment = false;
 }
 
 bool adaptive::AdaptiveStream::Download(const DownloadInfo& downloadInfo,
@@ -969,15 +970,15 @@ bool adaptive::AdaptiveStream::ensureSegment()
     }
     else if (!m_tree->IsLastSegment(current_period_, current_rep_, current_rep_->current_segment_))
     {
-      if (m_segBuffers.IsEmpty() && !current_rep_->IsWaitForSegment())
+      if (m_segBuffers.IsEmpty() && !m_isWaitingForSegment)
       {
-        current_rep_->SetIsWaitForSegment(true);
-        LOG::LogF(LOGDEBUG, "[AS-%u] Begin WaitForSegment stream rep. id \"%s\" period id \"%s\"",
+        m_isWaitingForSegment = true;
+        LOG::LogF(LOGDEBUG, "[AS-%u] Begin WaitForSegment (buffer is empty) stream rep. id \"%s\" period id \"%s\"",
                   clsId, current_rep_->GetId().c_str(), current_period_->GetId().c_str());
       }
       return false;
     }
-    else if (current_rep_->IsWaitForSegment() &&
+    else if (m_isWaitingForSegment &&
              (m_tree->HasManifestUpdates() || m_tree->HasManifestUpdatesSegs()))
     {
       return false;
@@ -1115,7 +1116,7 @@ bool adaptive::AdaptiveStream::seek(uint64_t const pos, bool& isEos)
     if (ensureSegment())
       return true;
 
-    if (!current_rep_->IsWaitForSegment())
+    if (!m_isWaitingForSegment)
       isEos = true;
 
     return false;
@@ -1254,21 +1255,49 @@ bool adaptive::AdaptiveStream::seek_time(double seek_seconds)
   return true;
 }
 
-bool adaptive::AdaptiveStream::waitingForSegment() const
+bool adaptive::AdaptiveStream::OnSampleRequested()
 {
-  if (m_tree->IsLive() && thread_data_->State() == THREADDATA::ThState::RUNNING)
+  if (!m_tree->IsLive() || !thread_data_)
+    return false;
+
+  //! @todo: its missing an appropriate buffering management, example:
+  //!        if the bandwidth is too low stuttering may occur due to constant buffering
+  //!        it should wait that buffer if full before to resume the playback,
+  //!        it should also help to manage adaptive streaming (CRepresentationChooserDefault)
+  //!        the mechanism to auto-increase/decrease stream quality based on the actual network conditions
+
+  const auto now = std::chrono::steady_clock::now();
+  const long long elapsedMs =
+      std::chrono::duration_cast<std::chrono::milliseconds>(now - m_tsOnSampleRequest).count();
+
+  // Sample are requested in a very fast way, limit the requests to a minimum interval of 500 ms
+  if (elapsedMs >= 500)
   {
+    m_tsOnSampleRequest = now;
     std::lock_guard<adaptive::AdaptiveTree::TreeUpdateThread> lckUpdTree(m_tree->GetTreeUpdMutex());
 
     // Some manifests require segments to be generated and managed by the client
     // so they are not provided by the server through periodic manifest updates
     m_tree->InsertLiveSegment(current_period_, current_adp_, current_rep_);
 
-    // Although IsWaitForSegment may be true, do not anticipate the wait for segments
-    // if there are still segments in the buffer that can be read and/or downloaded
-    return current_rep_ && current_rep_->IsWaitForSegment() && m_segBuffers.IsEmpty();
+    if (m_isWaitingForSegment)
+    {
+      if (thread_data_->State() != THREADDATA::ThState::RUNNING)
+        return false;
+
+      // Unlocks buffering wait, if a segment exists and the buffer level is full
+      m_isWaitingForSegment = !current_rep_->GetNextSegment() ||
+                              m_segBuffers.GetSizeDownloaded() < m_segBuffers.GetSize();
+
+      if (!m_isWaitingForSegment)
+      {
+        LOG::LogF(LOGDEBUG, "[AS-%u] End WaitForSegment stream rep. id \"%s\" period id \"%s\"",
+                  clsId, current_rep_->GetId().c_str(), current_period_->GetId().c_str());
+      }
+    }
   }
-  return false;
+
+  return m_isWaitingForSegment;
 }
 
 void adaptive::AdaptiveStream::FixateInitialization(bool on)
@@ -1355,6 +1384,8 @@ void adaptive::AdaptiveStream::Stop()
   // otherwise if read some segments may invalidate this change
   if (current_rep_)
     current_rep_->SetIsEnabled(false);
+
+  m_isWaitingForSegment = false;
 }
 
 void adaptive::AdaptiveStream::clear()

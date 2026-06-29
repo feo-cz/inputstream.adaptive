@@ -59,7 +59,7 @@ AP4_Result CAdaptiveByteStream::GetSize(AP4_LargeSize& size)
 
 bool CAdaptiveByteStream::waitingForSegment() const
 {
-  return m_adStream->waitingForSegment();
+  return m_adStream->IsWaitingForSegment();
 }
 
 void CAdaptiveByteStream::FixateInitialization(bool on)
