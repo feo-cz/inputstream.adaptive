@@ -61,7 +61,7 @@ namespace TSDemux
     int                   bit_rate;
     int                   bits_per_sample;
     bool                  interlaced;
-    uint8_t               extra_data[512];
+    uint8_t               extra_data[1024];
     int                   extra_data_size;
   };
 
