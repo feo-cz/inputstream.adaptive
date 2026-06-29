@@ -615,6 +615,20 @@ void AVContext::clear_pes(uint16_t channel)
  * AVCONTEXT_TS_ERROR
  *  Parsing error !
  */
+// MPEG-2 systems CRC-32 (poly 0x04C11DB7, MSB-first, init 0xFFFFFFFF, no final
+// XOR / no reflection). Computing it over a whole PSI section (table_id .. CRC)
+// yields 0 when the section is intact.
+static uint32_t crc32_mpeg(uint32_t crc, const unsigned char* data, size_t len)
+{
+  for (size_t i = 0; i < len; ++i)
+  {
+    crc ^= static_cast<uint32_t>(data[i]) << 24;
+    for (int b = 0; b < 8; ++b)
+      crc = (crc & 0x80000000) ? ((crc << 1) ^ 0x04c11db7) : (crc << 1);
+  }
+  return crc;
+}
+
 int AVContext::parse_ts_psi()
 {
   size_t len;
@@ -691,6 +705,36 @@ int AVContext::parse_ts_psi()
   }
 
   // now entire table is filled
+
+  // Validate the section CRC32 before trusting it. Every PSI section (PAT/PMT)
+  // is protected by a trailing CRC32; random TS payload that merely began with a
+  // PSI-like table_id will not satisfy it. Without this check such payload is
+  // misparsed as a PAT/PMT, spuriously (de)registers streams / forces a program
+  // change, corrupts the demux state and can crash on the next resync. This also
+  // lets us safely accept a PMT carried on a non-standard PID (issue #2010).
+  {
+    const uint16_t section_len = this->packet->packet_table.len;
+    if (section_len < 4 || section_len > TABLE_BUFFER_SIZE)
+      return AVCONTEXT_TS_ERROR;
+    // The 3-byte section header (table_id + syntax/length word) is not kept in
+    // buf; reconstruct it (PAT/PMT are long syntax sections, top bits '1011').
+    const unsigned char header[3] = {
+      this->packet->packet_table.table_id,
+      static_cast<unsigned char>(0xb0 | ((section_len >> 8) & 0x0f)),
+      static_cast<unsigned char>(section_len & 0xff)
+    };
+    uint32_t crc = 0xffffffff;
+    crc = crc32_mpeg(crc, header, 3);
+    crc = crc32_mpeg(crc, this->packet->packet_table.buf, section_len);
+    if (crc != 0)
+    {
+      DBG(DEMUX_DBG_DEBUG, "%s: bad PSI CRC on pid %.4x table_id %.2x; ignoring section\n",
+          __FUNCTION__, this->packet->pid, this->packet->packet_table.table_id);
+      this->packet->packet_table.Reset();
+      return AVCONTEXT_CONTINUE;
+    }
+  }
+
   const unsigned char* psi = this->packet->packet_table.buf;
   const unsigned char* end_psi = psi + this->packet->packet_table.len;
 
