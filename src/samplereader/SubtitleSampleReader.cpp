@@ -136,7 +136,7 @@ bool CSubtitleSampleReader::IsReady()
   // 2) segmented subtitles, and its not waiting for segments,
   //    it need to wait for the next manifest live update to get new segments (like HLS)
   return !m_adByteStream ||
-         (m_adByteStream && m_adStream && !m_adStream->getRepresentation()->IsWaitForSegment());
+         (m_adByteStream && m_adStream && !m_adStream->IsWaitingForSegment());
 }
 
 AP4_Result CSubtitleSampleReader::ReadSample()
@@ -197,7 +197,7 @@ AP4_Result CSubtitleSampleReader::ReadSample()
       else
         LOG::LogF(LOGERROR, "Failed to get Representation of subtitle stream");
     }
-    else if (m_adStream->getRepresentation()->IsWaitForSegment())
+    else if (m_adStream->IsWaitingForSegment())
     {
       // Wait for manifest live update to get next segment
       return AP4_SUCCESS;

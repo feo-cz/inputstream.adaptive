@@ -145,9 +145,6 @@ public:
   bool IsEnabled() const { return m_isEnabled; }
   void SetIsEnabled(bool isEnabled) { m_isEnabled = isEnabled; }
 
-  bool IsWaitForSegment() const { return m_isWaitForSegment; }
-  void SetIsWaitForSegment(bool isWaitForSegment) { m_isWaitForSegment = isWaitForSegment; }
-
   // Define if it is a dummy representation for audio stream, that is embedded on the video stream
   bool IsIncludedStream() const { return m_isIncludedStream; }
   void SetIsIncludedStream(bool isIncludedStream) { m_isIncludedStream = isIncludedStream; }
@@ -229,7 +226,6 @@ protected:
   bool m_isSubtitleFileStream{false};
 
   bool m_isEnabled{false};
-  bool m_isWaitForSegment{false};
 
   bool m_isIncludedStream{false};
   std::vector<DRM::DRMInfo> m_drmInfo;

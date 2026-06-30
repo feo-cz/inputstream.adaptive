@@ -139,6 +139,11 @@ public:
   */
   const size_t GetSize() const;
 
+  /*!
+  * \brief Get the current number of elements contained in the segment buffers container that are in download or downloaded.
+  */
+  const size_t GetSizeDownloaded() const;
+
  /*!
   * \brief Determines whether the segment buffers container is empty.
   * \return True if empty, otherwise false.

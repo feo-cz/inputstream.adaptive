@@ -266,7 +266,12 @@ AP4_Result CFragmentedSampleReader::ReadSample()
         }
         else
         {
-          if (!adByteStream->waitingForSegment())
+          if (adByteStream->waitingForSegment())
+          {
+            // if waiting for segment, we will return success to avoid EOS and let the caller to call ReadSample again
+            result = AP4_SUCCESS;
+          }
+          else
             m_eos = true;
         }
       }

@@ -125,7 +125,9 @@ enum class EVENT_TYPE
 
     uint64_t GetCurrentPTSOffset() const { return currentPTSOffset_; }
     uint64_t GetAbsolutePTSOffset() const { return absolutePTSOffset_; }
-    bool waitingForSegment() const;
+
+    bool OnSampleRequested();
+
     void FixateInitialization(bool on);
     void AllowBufferQueue(bool isAllowed) { m_isAllowedBufferQueue = isAllowed; }
     void SetSegmentFileOffset(uint64_t offset) { m_segmentFileOffset = offset; };
@@ -139,6 +141,8 @@ enum class EVENT_TYPE
     * \return True if its required to create Movie (MOOV) atom, otherwise false
     */
     bool IsRequiredCreateMovieAtom();
+
+    bool IsWaitingForSegment() const { return m_isWaitingForSegment; }
 
   protected:
     virtual bool parseIndexRange(PLAYLIST::CRepresentation* rep,
@@ -161,6 +165,9 @@ enum class EVENT_TYPE
 
     std::string m_streamParams;
     std::map<std::string, std::string> m_streamHeaders;
+
+    bool m_isWaitingForSegment{false};
+    mutable std::chrono::time_point<std::chrono::steady_clock> m_tsOnSampleRequest{};
 
    /*!
     * \brief Download a file, the representation chooser will be updated with current download speed.

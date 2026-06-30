@@ -144,6 +144,21 @@ const size_t ADP::CSegmentBuffers::GetSize() const
   return m_buffers.size();
 }
 
+const size_t ADP::CSegmentBuffers::GetSizeDownloaded() const
+{
+  std::lock_guard<std::mutex> lock(m_mutex);
+  size_t size{0};
+  for (const auto& segBuffer : m_buffers)
+  {
+    if (segBuffer.State() == BufferState::DOWNLOADED ||
+        segBuffer.State() == BufferState::DOWNLOADING)
+      size++;
+    else
+      break;
+  }
+  return size;
+}
+
 const bool ADP::CSegmentBuffers::IsEmpty() const
 {
   std::lock_guard<std::mutex> lock(m_mutex);

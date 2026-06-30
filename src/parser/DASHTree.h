@@ -126,9 +126,6 @@ protected:
   uint64_t m_minimumUpdatePeriod{PLAYLIST::NO_VALUE}; // in seconds, NO_VALUE if not set
   std::optional<int64_t> m_clockOffset; // Clock offset in ms, based on UTCTiming element
 
-  // The time point when the last live "insert segment update" has been called
-  mutable std::chrono::time_point<std::chrono::steady_clock> m_insertLiveSegUpdate{};
-
   std::string m_locationUrl; // Redirect manifest updates
 };
 } // namespace adaptive

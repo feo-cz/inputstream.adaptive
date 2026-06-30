@@ -933,15 +933,6 @@ void adaptive::CHLSTree::PrepareSegments(PLAYLIST::CPeriod* period,
       rep->current_segment_.reset();
     }
   }
-
-  //! @todo: m_currentPeriod != m_periods.back().get() condition should be removed from here
-  //! this is done on AdaptiveStream::ensureSegment on IsLastSegment check
-  if (rep->IsWaitForSegment() &&
-      (rep->GetNextSegment() || m_currentPeriod != m_periods.back().get()))
-  {
-    LOG::LogF(LOGDEBUG, "End WaitForSegment stream id \"%s\"", rep->GetId().c_str());
-    rep->SetIsWaitForSegment(false);
-  }
 }
 
 void adaptive::CHLSTree::OnDataArrived(uint64_t segNum,

@@ -47,6 +47,13 @@ AP4_Result CADTSSampleReader::ReadSample()
     UpdatePts();
     return AP4_SUCCESS;
   }
+
+  if (m_adByteStream->waitingForSegment())
+  {
+    // if waiting for segment, we will return success to avoid EOS and let the caller to call ReadSample again
+    return AP4_SUCCESS;
+  }
+
   if (!m_adByteStream || !m_adByteStream->waitingForSegment())
   {
     m_eos = true;
