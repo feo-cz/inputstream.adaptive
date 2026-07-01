@@ -1,3 +1,12 @@
+v22.3.18 (2026-07-01)
+- Updated GoogleTest to v1.17.0
+- Updated PugiXML to v1.16
+- Updated Bento4 to v1.6.0-641-6-Piers
+- [Bento4] Decryption fix to some streams (e.g. YouTube TV, YouTube Music)
+- Fix TS demuxer PSI sections validation, to prevent possible crashes
+- Fix TS demuxer to support large H264 SPS/PPS extradata, cause of broken playback (e.g. Wowza)
+- [Dash] Fix possible playback freeze on live streams
+
 v22.3.17 (2026-06-23)
 - Fix HTTP encodings from previous release
 - [inputstream.adaptive.config] Add disable_accept_encoding, see wiki
