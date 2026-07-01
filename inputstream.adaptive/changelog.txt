@@ -1,3 +1,7 @@
+v21.5.22 (2026-07-01)
+- Fix TS demuxer to validate PSI sections, prevent possible crashes
+- Fix TS demuxer to support large H264 SPS/PPS extradata, cause of broken playback (e.g. Wowza)
+
 v21.5.21 (2026-06-23)
 - Fix HTTP encodings from previous release
 
