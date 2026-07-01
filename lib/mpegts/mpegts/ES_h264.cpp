@@ -158,18 +158,30 @@ void ES_h264::Parse(STREAM_PKT* pkt)
       {
         if (m_streamData.sps[0].raw_data_size)
         {
-          uint8_t *ed(stream_info.extra_data);
-          stream_info.extra_data_size = 4 + m_streamData.sps[0].raw_data_size;
-          ed[0] = ed[1] = ed[2] = 0, ed[3] = 1, ed += 4;
-          memcpy(ed, m_streamData.sps[0].raw_data, m_streamData.sps[0].raw_data_size), ed += m_streamData.sps[0].raw_data_size;
+          uint8_t* ed = stream_info.extra_data;
+          const uint8_t* edEnd = stream_info.extra_data + sizeof(stream_info.extra_data);
+          stream_info.extra_data_size = 0;
+
+          // Append a parameter set NAL (SPS/PPS) as Annex B, bounded by the
+          // destination buffer to avoid overflowing stream_info.extra_data
+          auto appendNal = [&](const uint8_t* src, size_t n) -> bool {
+            if (ed + 4 + n > edEnd)
+            {
+              DBG(DEMUX_DBG_INFO, "H.264: stream_info.extra_data too small! %u\n",
+                  static_cast<unsigned int>(stream_info.extra_data_size + 4 + n));
+              return false;
+            }
+            ed[0] = ed[1] = ed[2] = 0, ed[3] = 1, ed += 4;
+            memcpy(ed, src, n), ed += n;
+            stream_info.extra_data_size += 4 + n;
+            return true;
+          };
+
+          appendNal(m_streamData.sps[0].raw_data, m_streamData.sps[0].raw_data_size);
           for (int i = 0; i < 256; ++i)
           {
             if (m_streamData.pps[i].raw_data_size)
-            {
-              ed[0] = ed[1] = ed[2] = 0, ed[3] = 1, ed += 4;
-              memcpy(ed, m_streamData.pps[i].raw_data, m_streamData.pps[i].raw_data_size), ed += m_streamData.pps[i].raw_data_size;
-              stream_info.extra_data_size += 4 + m_streamData.pps[i].raw_data_size;
-            }
+              appendNal(m_streamData.pps[i].raw_data, m_streamData.pps[i].raw_data_size);
           }
         }
         else
