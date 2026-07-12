@@ -5,23 +5,23 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: translations@kodi.tv\n"
-"PO-Revision-Date: 2025-01-17 02:09+0000\n"
-"Last-Translator: Anonymous <noreply@weblate.org>\n"
+"PO-Revision-Date: 2026-07-12 21:16+0000\n"
+"Last-Translator: Michal Várady <miko.vaji@gmail.com>\n"
 "Language-Team: Czech <https://kodi.weblate.cloud/projects/kodi-add-ons-videoplayer-inputstream/inputstream-adaptive/cs_cz/>\n"
 "Language: cs_cz\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
-"X-Generator: Weblate 5.9.2\n"
+"X-Generator: Weblate 2026.7.1\n"
 
 msgctxt "Addon Summary"
 msgid "InputStream client for adaptive streams"
-msgstr "Klient adaptivních toků protokolu InputStream"
+msgstr "Klient InputStream pro adaptivní streamy"
 
 msgctxt "Addon Description"
 msgid "InputStream client for adaptive streams. Common streaming protocols such as MPEG-DASH, HLS and Microsoft Smooth Streaming are supported.[CR][CR]The add-on also has support for DRM protected streams, such as Google Widevine, Microsoft PlayReady and others.[CR][CR]For documentation visit: https://github.com/xbmc/inputstream.adaptive"
-msgstr "Klient adaptivních toků protokolu InputStream"
+msgstr "Klient InputStream pro adaptivní streamy. Podporovány jsou běžné streamovací protokoly, jako jsou MPEG-DASH, HLS a Microsoft Smooth Streaming.[CR][CR]Doplněk podporuje také streamy chráněné pomocí DRM, například Google Widevine, Microsoft PlayReady a další.[CR][CR]Dokumentaci najdete na: https://github.com/xbmc/inputstream.adaptive"
 
 #. Category title
 msgctxt "#30100"
@@ -31,54 +31,54 @@ msgstr "Obecné"
 #. The minimum bandwidth which should not be deceeded
 msgctxt "#30101"
 msgid "Minimum bandwidth (Kbps)"
-msgstr ""
+msgstr "Minimální datový tok (kb/s)"
 
 #. The maximum bandwidth which should not be exceeded
 msgctxt "#30102"
 msgid "Maximum bandwidth (Kbps)"
-msgstr ""
+msgstr "Maximální datový tok (kb/s)"
 
 #. Description of setting with label #30101, 30102
 msgctxt "#30103"
 msgid "Establishes the bandwidth limit not to be exceeded with the audio / video streams. Set to 0 to disable it."
-msgstr ""
+msgstr "Nastavuje limit datového toku pro audio/video streamy. Nastavením na 0 ho vypnete."
 
 # empty strings from id 30104 to 30109
 #. Maximum video resolution non-protected videos
 msgctxt "#30110"
 msgid "Maximum resolution"
-msgstr ""
+msgstr "Maximální rozlišení"
 
 # empty string with id 30111
 #. Type of media streams that will be handled for the playback
 msgctxt "#30112"
 msgid "Type of media streams played"
-msgstr ""
+msgstr "Typ přehrávaných mediálních streamů"
 
 #. Maximum video resolution for DRM-protected videos
 msgctxt "#30113"
 msgid "Maximum resolution for DRM videos"
-msgstr ""
+msgstr "Maximální rozlišení pro videa s DRM"
 
 # empty string with id 30114
 # Do not respect display resolution when selecting streams
 msgctxt "#30115"
 msgid "Ignore screen resolution"
-msgstr ""
+msgstr "Ignorovat rozlišení obrazovky"
 
 #. Description of setting with label #30115
 msgctxt "#30116"
 msgid "If enabled, the screen resolution (or window size when in windowed mode) will no longer be considered when selecting the best video stream resolution when video starts and while in playback."
-msgstr ""
+msgstr "Pokud je povoleno, při výběru nejlepšího rozlišení video streamu při spuštění videa a během přehrávání se už nebude brát v úvahu rozlišení obrazovky (nebo velikost okna v režimu okna)."
 
 msgctxt "#30117"
 msgid "Manual stream selection mode"
-msgstr ""
+msgstr "Režim ručního výběru streamu"
 
 #. Description of setting with label #30117
 msgctxt "#30118"
 msgid "Defines which type of streams to make available for manual selection on Kodi OSD settings during playback."
-msgstr ""
+msgstr "Určuje, které typy streamů budou během přehrávání dostupné pro ruční výběr v nastavení OSD Kodi."
 
 #. Category title
 msgctxt "#30120"
@@ -88,23 +88,23 @@ msgstr "Expert"
 # empty string with id 30121
 msgctxt "#30122"
 msgid "Disable secure decoder"
-msgstr ""
+msgstr "Zakázat zabezpečený dekodér"
 
 #. Description of setting with label #30122
 msgctxt "#30123"
 msgid "Some Android devices defined as Widevine L1, may not work properly, which may result in a black screen during playback. In this case try to enable it. This setting may be overridden by the video add-on used."
-msgstr ""
+msgstr "Některá zařízení Android označená jako Widevine L1 nemusí fungovat správně, což může během přehrávání způsobit černou obrazovku. V takovém případě zkuste tuto volbu zapnout. Toto nastavení může být přepsáno použitým video doplňkem."
 
 # empty strings from id 30124 to 30155
 #. Item list value of setting with label #30117
 msgctxt "#30156"
 msgid "Audio / Video streams"
-msgstr ""
+msgstr "Audio/video streamy"
 
 #. Item list value of setting with label #30112
 msgctxt "#30157"
 msgid "All"
-msgstr "Všechno"
+msgstr "Vše"
 
 #. Item list value of setting with label #30112
 msgctxt "#30158"
@@ -114,285 +114,285 @@ msgstr "Zvuk"
 #. Item list value of setting with label #30112
 msgctxt "#30159"
 msgid "Video"
-msgstr "Obraz"
+msgstr "Video"
 
 #. Item list value of setting with label #30117
 msgctxt "#30160"
 msgid "Video streams"
-msgstr ""
+msgstr "Video streamy"
 
 #. Item list value of setting with label #30112
 msgctxt "#30161"
 msgid "Video / Subtitles"
-msgstr ""
+msgstr "Video / titulky"
 
 #. Category group title
 msgctxt "#30162"
 msgid "Adaptive stream"
-msgstr ""
+msgstr "Adaptivní stream"
 
 # empty strings from id 30163 to 30165
 #. Category group title
 msgctxt "#30166"
 msgid "DRM Widevine"
-msgstr ""
+msgstr "DRM Widevine"
 
 msgctxt "#30167"
 msgid "WARNING: This is a TEST feature, may not work appropriately and may change on future versions."
-msgstr ""
+msgstr "UPOZORNĚNÍ: Toto je TESTOVACÍ funkce, nemusí fungovat správně a v budoucích verzích se může změnit."
 
 msgctxt "#30168"
 msgid "Auto determines initial bandwidth"
-msgstr ""
+msgstr "Automaticky určovat počáteční datový tok"
 
 #. Description of setting with label #30168
 msgctxt "#30169"
 msgid "If enabled, the bandwidth will be determined by the first download, however it may not be accurate. If the video quality at the start of playback is too low try disabling it."
-msgstr ""
+msgstr "Pokud je povoleno, datový tok se určí podle prvního stažení, nemusí však být přesný. Pokud je kvalita videa na začátku přehrávání příliš nízká, zkuste tuto volbu vypnout."
 
 msgctxt "#30170"
 msgid "Initial bandwidth (Kbps)"
-msgstr ""
+msgstr "Počáteční datový tok (kb/s)"
 
 #. Description of setting with label #30170
 msgctxt "#30171"
 msgid "Defines the initial bandwidth when it cannot be automatically determined. This value can be overridden by the minimum bandwidth setting."
-msgstr ""
+msgstr "Určuje počáteční datový tok v případě, že ho nelze zjistit automaticky. Tato hodnota může být přepsána nastavením minimálního datového toku."
 
 msgctxt "#30172"
 msgid "Resolution limit"
-msgstr ""
+msgstr "Limit rozlišení"
 
 #. Description of setting with label #30172
 msgctxt "#30173"
 msgid "If set, based on the capabilities of the video stream an attempt will be made to limit the range of resolutions to the one chosen."
-msgstr ""
+msgstr "Pokud je nastaveno, doplněk se na základě možností video streamu pokusí omezit rozsah rozlišení na vybrané rozlišení."
 
 #. To set the stream selection type (refer to RepresentationChooser's)
 msgctxt "#30174"
 msgid "Stream selection type"
-msgstr ""
+msgstr "Typ výběru streamu"
 
 #. Description of setting with label #30174
 msgctxt "#30175"
 msgid "Set how the audio / video streams quality will be chosen during playback. This setting may be overridden by the video add-on used. See Wiki for more information."
-msgstr ""
+msgstr "Nastavuje, jak se bude během přehrávání vybírat kvalita audio/video streamů. Toto nastavení může být přepsáno použitým video doplňkem. Další informace najdete na wiki."
 
 #. Item list value of setting with label #30174
 msgctxt "#30176"
 msgid "Adaptive (default)"
-msgstr ""
+msgstr "Adaptivní (výchozí)"
 
 #. Item list value of setting with label #30174
 msgctxt "#30177"
 msgid "Manual OSD"
-msgstr ""
+msgstr "Ručně v OSD"
 
 #. Item list value of setting with label #30174
 msgctxt "#30178"
 msgid "Fixed resolution"
-msgstr ""
+msgstr "Pevné rozlišení"
 
 #. Item list value of setting with label #30174
 msgctxt "#30179"
 msgid "Ask quality"
-msgstr ""
+msgstr "Zeptat se na kvalitu"
 
 #. Item list value of setting with label #30174
 msgctxt "#30180"
 msgid "Test"
-msgstr ""
+msgstr "Test"
 
 # empty strings reserved for "stream selection types" from id 30181 to 30190
 #. Assured buffer length duration (seconds)
 msgctxt "#30200"
 msgid "Assured buffer duration (sec)"
-msgstr ""
+msgstr "Zaručená délka bufferu (s)"
 
 #. Max buffer length duration (seconds)
 msgctxt "#30201"
 msgid "Maximum buffer duration (sec)"
-msgstr ""
+msgstr "Maximální délka bufferu (s)"
 
 #. Ignore screen resolution change e.g. window resize
 msgctxt "#30202"
 msgid "Ignore screen resolution change"
-msgstr ""
+msgstr "Ignorovat změnu rozlišení obrazovky"
 
 #. Description of setting with label #30202
 msgctxt "#30203"
 msgid "If enabled, the screen resolution (or window size when in windowed mode) will no longer be considered when selecting the best video stream resolution while in playback."
-msgstr ""
+msgstr "Pokud je povoleno, při výběru nejlepšího rozlišení video streamu během přehrávání se už nebude brát v úvahu rozlišení obrazovky (nebo velikost okna v režimu okna)."
 
 #. Absolute path to the folder containing the DRM binary files
 msgctxt "#30204"
 msgid "Decrypter path"
-msgstr ""
+msgstr "Cesta k dešifrovači"
 
 # empty strings from id 30205 to 30208
 #. Item list value of setting with label #30172
 msgctxt "#30209"
 msgid "Disabled"
-msgstr ""
+msgstr "Vypnuto"
 
 # empty strings from id 30205 to 30209
 #. Item list value of setting with label #30110, #30113
 msgctxt "#30210"
 msgid "Auto"
-msgstr ""
+msgstr "Automaticky"
 
 #. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30211"
 msgid "480p"
-msgstr ""
+msgstr "480p"
 
 #. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30212"
 msgid "640p"
-msgstr ""
+msgstr "640p"
 
 #. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30213"
 msgid "720p"
-msgstr ""
+msgstr "720p"
 
 #. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30214"
 msgid "1080p"
-msgstr ""
+msgstr "1080p"
 
 #. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30215"
 msgid "2K"
-msgstr ""
+msgstr "2K"
 
 #. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30216"
 msgid "1440p"
-msgstr ""
+msgstr "1440p"
 
 #. Item list value of setting with label #30110, #30113, #30172
 msgctxt "#30217"
 msgid "4K"
-msgstr ""
+msgstr "4K"
 
 # empty strings reserved for resolution values of id #30110, #30113, from id 30217 to 30230
 #. Dialog window to select the video stream
 msgctxt "#30231"
 msgid "Select video stream"
-msgstr ""
+msgstr "Vyberte video stream"
 
 #. Description of each list item in #30231 dialog window
 #. Do not translate placeholders: {codec} {quality} {hdr-type}
 #. Use of double graphes e.g. {whatyouwant{hdr-type}whatyouwant} allows you to add additional text printed only when a value is present
 msgctxt "#30232"
 msgid "Video stream {codec}{ [{hdr-type}]} {quality}"
-msgstr ""
+msgstr "Video stream {codec}{ [{hdr-type}]} {quality}"
 
 #. Enum setting to set the test mode
 msgctxt "#30233"
 msgid "Test mode"
-msgstr ""
+msgstr "Testovací režim"
 
 #. Item list value of setting with label #30233
 msgctxt "#30234"
 msgid "Switch by segments"
-msgstr ""
+msgstr "Přepínat po segmentech"
 
 #. Stand for video stream segments, referred to setting with label #30234
 msgctxt "#30235"
 msgid "Video segments (set 0 to disable)"
-msgstr ""
+msgstr "Video segmenty (0 = vypnuto)"
 
 #. Category group title
 msgctxt "#30236"
 msgid "Override settings"
-msgstr ""
+msgstr "Přepsání nastavení"
 
 #. Category group title for debug settings
 msgctxt "#30237"
 msgid "Debug logging"
-msgstr ""
+msgstr "Ladicí protokolování"
 
 #. Debug setting to save stream manifests
 msgctxt "#30238"
 msgid "Save stream manifests"
-msgstr ""
+msgstr "Ukládat manifesty streamů"
 
 #. Description of setting with label #30238
 msgctxt "#30239"
 msgid "Saves stream manifests downloaded during playback in the user data folder of InputStream Adaptive."
-msgstr ""
+msgstr "Ukládá manifesty streamů stažené během přehrávání do složky uživatelských dat doplňku InputStream Adaptive."
 
 #. Debug setting to save license data
 msgctxt "#30240"
 msgid "Save license data"
-msgstr ""
+msgstr "Ukládat licenční data"
 
 #. Description of setting with label #30240
 msgctxt "#30241"
 msgid "Saves the license data for example: initial data, challenge data and response data, in the \"cdm\" folder of the Kodi data folder."
-msgstr ""
+msgstr "Ukládá licenční data, například počáteční data, data výzvy a data odpovědi, do složky \"cdm\" ve složce dat Kodi."
 
 #. Setting to enable verbose debug
 msgctxt "#30242"
 msgid "Enable verbose debug"
-msgstr ""
+msgstr "Povolit podrobné ladění"
 
 #. Description of setting with label #30242
 msgctxt "#30243"
 msgid "Verbose debugging can be useful for debugging components, but in some cases it may expose sensitive information in the log."
-msgstr ""
+msgstr "Podrobné ladění může být užitečné při ladění komponent, ale v některých případech může v protokolu odhalit citlivé informace."
 
 # empty strings reserved for settings from id 30244 to 30299
 #. A GUI window title, "InputStream Adaptive" its the add-on name, not to be translated
 msgctxt "#30300"
 msgid "InputStream Adaptive error"
-msgstr ""
+msgstr "Chyba InputStream Adaptive"
 
 #. A GUI message that is displayed when there is a problem playing a stream
 #. Do not translate placeholders: {error-details}
 #. Use of double graphes e.g. {whatyouwant{error-details}whatyouwant} allows you to add additional text printed only when a value is present
 msgctxt "#30301"
 msgid "Unable to play the stream.{[CR]Error: {error-details}}"
-msgstr ""
+msgstr "Stream nelze přehrát.{[CR]Chyba: {error-details}}"
 
 msgctxt "#30302"
 msgid "The decryptor path is not set in the add-on settings."
-msgstr ""
+msgstr "Cesta k dešifrovači není v nastavení doplňku nastavena."
 
 msgctxt "#30303"
 msgid "A problem occurred with the DRM decryptor."
-msgstr ""
+msgstr "Došlo k problému s dešifrovačem DRM."
 
 msgctxt "#30304"
 msgid "Cannot load Widevine CDM library."
-msgstr ""
+msgstr "Knihovnu Widevine CDM nelze načíst."
 
 msgctxt "#30305"
 msgid "Cannot initialize Widevine CDM library."
-msgstr ""
+msgstr "Knihovnu Widevine CDM nelze inicializovat."
 
 msgctxt "#30306"
 msgid "The configuration to play the stream is incomplete or missing."
-msgstr ""
+msgstr "Konfigurace pro přehrání streamu je neúplná nebo chybí."
 
 msgctxt "#30307"
 msgid "Cannot download the stream manifest file."
-msgstr ""
+msgstr "Soubor manifestu streamu nelze stáhnout."
 
 msgctxt "#30308"
 msgid "A problem occurred in the stream initialization."
-msgstr ""
+msgstr "Došlo k problému při inicializaci streamu."
 
 msgctxt "#30309"
 msgid "No audio/video stream can be played."
-msgstr ""
+msgstr "Nelze přehrát žádný audio/video stream."
 
 #. Stand for audio stream segments, referred to setting with label #30234
 msgctxt "#30350"
 msgid "Audio segments (set 0 to disable)"
-msgstr ""
+msgstr "Audio segmenty (0 = vypnuto)"
 
 # The minimum bandwidth which should not be deceeded.
 #~ msgctxt "#30101"
