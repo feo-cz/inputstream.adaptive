@@ -22,7 +22,7 @@
     </assets>
     <summary lang="bs_BA">InputStream klijent za adaptivne tokove</summary>
     <summary lang="ca_ES">Client InputStream per a transmissions adaptatives</summary>
-    <summary lang="cs_CZ">Klient adaptivních toků protokolu InputStream</summary>
+    <summary lang="cs_CZ">Klient InputStream pro adaptivní streamy</summary>
     <summary lang="da_DK">InputStream-klient til adaptive streams</summary>
     <summary lang="de_DE">InputStream-Client für adaptive Streams</summary>
     <summary lang="en_GB">InputStream client for adaptive streams</summary>
@@ -46,7 +46,7 @@
     <summary lang="zh_CN">用于自适应流的 InputStream 客户端</summary>
     <description lang="bs_BA">InputStream klijent za adaptivne tokove. Podržani su uobičajeni protokoli tokinga kao što su MPEG-DASH, HLS i Microsoft Smooth Streaming.[CR][CR]Dodatak također ima podršku za DRM zaštićene tokove, kao što su Google Widevine, Microsoft PlayReady i drugi.[CR][CR]Za dokumentaciju posjetite: https://github.com/xbmc/inputtok.adaptive</description>
     <description lang="ca_ES">Client InputStream per a transmissions adaptatives</description>
-    <description lang="cs_CZ">Klient adaptivních toků protokolu InputStream</description>
+    <description lang="cs_CZ">Klient InputStream pro adaptivní streamy. Podporovány jsou běžné streamovací protokoly, jako jsou MPEG-DASH, HLS a Microsoft Smooth Streaming.[CR][CR]Doplněk podporuje také streamy chráněné pomocí DRM, například Google Widevine, Microsoft PlayReady a další.[CR][CR]Dokumentaci najdete na: https://github.com/xbmc/inputstream.adaptive</description>
     <description lang="da_DK">InputStream-klient til adaptive streams</description>
     <description lang="de_DE">InputStream-Client für adaptive Streams. Unterstützt werden Streamingprotokolle wie MPEG-DASH, HLS und Microsoft Smooth Streaming.[CR][CR] Das Addon unterstützt ebenfalls DRM-geschützte Streams, wie Google Widevine, Microsoft Playready und andere.[CR][CR]Für Dokumentation https://github.com/xbmc/inputstream.adaptive besuchen</description>
     <description lang="en_GB">InputStream client for adaptive streams. Common streaming protocols such as MPEG-DASH, HLS and Microsoft Smooth Streaming are supported.[CR][CR]The add-on also has support for DRM protected streams, such as Google Widevine, Microsoft PlayReady and others.[CR][CR]For documentation visit: https://github.com/xbmc/inputstream.adaptive</description>
