@@ -828,8 +828,6 @@ bool SESSION::CSession::GetNextSample(ISampleReader*& sampleReader)
 
   if (waiting)
   {
-    // Prevents CPU usage spikes due to continuous Kodi VP requests
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     return true;
   }
   else if (res)
