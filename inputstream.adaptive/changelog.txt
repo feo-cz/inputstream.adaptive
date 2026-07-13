@@ -1,3 +1,7 @@
+v22.3.19 (2026-07-13)
+- Fix audio stuttering regression from v22.3.18
+- Updated translations
+
 v22.3.18 (2026-07-01)
 - Updated GoogleTest to v1.17.0
 - Updated PugiXML to v1.16
