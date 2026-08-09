@@ -118,6 +118,9 @@ namespace TSDemux
     const unsigned char* payload;
     size_t payload_len;
     Packet* packet;
+    // Set by parse_ts_psi() when an assembled section turns out not to be a
+    // valid PSI section, used to drop provisional PID registrations.
+    bool invalid_psi_section;
   };
 }
 
