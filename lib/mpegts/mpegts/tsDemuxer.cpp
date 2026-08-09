@@ -39,6 +39,7 @@ AVContext::AVContext(TSDemuxer* const demux, uint64_t pos, uint16_t channel)
   , payload(NULL)
   , payload_len(0)
   , packet(NULL)
+  , invalid_psi_section(false)
 {
   m_demux = demux;
   memset(av_buf, 0, sizeof(av_buf));
@@ -58,6 +59,7 @@ void AVContext::Reset(void)
   payload_unit_pos = 0;
   prev_payload_unit_pos = 0;
   packet = NULL;
+  invalid_psi_section = false;
 }
 
 uint16_t AVContext::GetPID() const
@@ -486,6 +488,11 @@ int AVContext::ProcessTSPacket()
           p.pid = this->pid;
           p.packet_type = PACKET_TYPE_PSI;
           p.continuity = continuity_counter;
+          // The heuristic above cannot distinguish a PSI table from arbitrary
+          // payload, e.g. a PES packet starts with the start code prefix
+          // 00 00 01, which reads as pointer_field 0 and table_id 0x00 (PAT).
+          // Keep the registration provisional until a section validates.
+          p.auto_registered = true;
           it = this->packets.insert(it, std::make_pair(this->pid, p));
         }
       }
@@ -558,7 +565,27 @@ int AVContext::ProcessTSPayload()
   switch (this->packet->packet_type)
   {
     case PACKET_TYPE_PSI:
+      this->invalid_psi_section = false;
       ret = parse_ts_psi();
+      // A provisionally registered PID that fails to deliver a valid section was
+      // never a PSI PID. Drop the registration, otherwise its payload keeps being
+      // parsed as PSI and discarded, and the elementary stream is lost for good
+      // (seen at HLS/TS segment boundaries on discontinuous live streams, where
+      // PES packets can reach the demuxer before the PAT/PMT of the new segment).
+      // A real PSI PID whose section was merely damaged in transit is registered
+      // again on the next section start.
+      if (this->packet && this->packet->auto_registered &&
+          (this->invalid_psi_section || ret == AVCONTEXT_TS_ERROR))
+      {
+        const uint16_t unregPid = this->packet->pid;
+        DBG(DEMUX_DBG_DEBUG, "%s: pid %.4x is not PSI, dropping provisional registration\n",
+            __FUNCTION__, unregPid);
+        this->packets.erase(unregPid);
+        this->packet = NULL;
+        // The failure was caused by our own registration, not by a stream error,
+        // so do not force the caller into a resync.
+        ret = AVCONTEXT_CONTINUE;
+      }
       break;
     case PACKET_TYPE_PES:
       ret = parse_ts_pes();
@@ -731,9 +758,14 @@ int AVContext::parse_ts_psi()
       DBG(DEMUX_DBG_DEBUG, "%s: bad PSI CRC on pid %.4x table_id %.2x; ignoring section\n",
           __FUNCTION__, this->packet->pid, this->packet->packet_table.table_id);
       this->packet->packet_table.Reset();
+      this->invalid_psi_section = true;
       return AVCONTEXT_CONTINUE;
     }
   }
+
+  // The section is intact, so this PID really does carry PSI and the
+  // registration is no longer provisional.
+  this->packet->auto_registered = false;
 
   const unsigned char* psi = this->packet->packet_table.buf;
   const unsigned char* end_psi = psi + this->packet->packet_table.len;
