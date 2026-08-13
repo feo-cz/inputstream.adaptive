@@ -1,3 +1,6 @@
+v21.5.23 (2026-08-13)
+- Fix TS demuxer from possible invalid PSI registration causing crashes
+
 v21.5.22 (2026-07-01)
 - Fix TS demuxer to validate PSI sections, prevent possible crashes
 - Fix TS demuxer to support large H264 SPS/PPS extradata, cause of broken playback (e.g. Wowza)
