@@ -295,6 +295,13 @@ void SESSION::CSession::InitializePeriod()
     // Complete the transition into the new period
     m_adaptiveTree->m_currentPeriod = m_adaptiveTree->m_nextPeriod;
     m_adaptiveTree->OnPeriodChange();
+    {
+      // Block manifest updates so the snapshot is built from a stable m_periods.
+      // This runs once per period change, not on the player callback path.
+      std::lock_guard<adaptive::AdaptiveTree::TreeUpdateThread> lckUpdTree(
+          m_adaptiveTree->GetTreeUpdMutex());
+      m_adaptiveTree->RefreshChaptersSnapshot();
+    }
   }
 
   // Clean to create new SESSION::STREAM objects. One for each AdaptationSet/Representation
@@ -679,6 +686,14 @@ bool SESSION::CSession::PrepareStream(CStream& stream)
     {
       if (!m_adaptiveTree->PrepareRepresentation(period, adp, repr))
         return false;
+
+      {
+        // PrepareRepresentation can process a child manifest (HLS) and by that add and
+        // remove periods. This runs after InitializePeriod, so refresh the snapshot.
+        std::lock_guard<adaptive::AdaptiveTree::TreeUpdateThread> lckUpdTree(
+            m_adaptiveTree->GetTreeUpdMutex());
+        m_adaptiveTree->RefreshChaptersSnapshot();
+      }
     }
   }
 
@@ -853,31 +868,42 @@ bool SESSION::CSession::SeekTime(double seekTime, bool& isError)
     seekTime = 0;
 
   // Check if we leave our current period
-  double chapterTime{0};
-  auto pi = m_adaptiveTree->m_periods.cbegin();
-
-  for (; pi != m_adaptiveTree->m_periods.cend(); pi++)
   {
-    chapterTime += double((*pi)->GetTlDuration()) / (*pi)->GetTimescale();
-    if (chapterTime > seekTime)
-      break;
+    // Block manifest updates, the update thread can add and remove periods at any time.
+    // Unlike the chapter callbacks this is not called on every player loop iteration,
+    // so blocking updates here is acceptable.
+    std::lock_guard<adaptive::AdaptiveTree::TreeUpdateThread> lckUpdTree(
+        m_adaptiveTree->GetTreeUpdMutex());
+
+    if (m_adaptiveTree->m_periods.empty())
+      return false;
+
+    double chapterTime{0};
+    auto pi = m_adaptiveTree->m_periods.cbegin();
+
+    for (; pi != m_adaptiveTree->m_periods.cend(); pi++)
+    {
+      chapterTime += double((*pi)->GetTlDuration()) / (*pi)->GetTimescale();
+      if (chapterTime > seekTime)
+        break;
+    }
+
+    if (pi == m_adaptiveTree->m_periods.cend())
+      --pi;
+
+    chapterTime -= double((*pi)->GetTlDuration()) / (*pi)->GetTimescale();
+
+    if ((*pi).get() != m_adaptiveTree->m_currentPeriod)
+    {
+      LOG::Log(LOGDEBUG, "SeekTime: seeking into new chapter: %d",
+               static_cast<int>((pi - m_adaptiveTree->m_periods.begin()) + 1));
+      SeekChapter(static_cast<int>(pi - m_adaptiveTree->m_periods.begin()) + 1);
+      m_chapterSeekTime = seekTime;
+      return true;
+    }
+
+    seekTime -= chapterTime;
   }
-
-  if (pi == m_adaptiveTree->m_periods.cend())
-    --pi;
-
-  chapterTime -= double((*pi)->GetTlDuration()) / (*pi)->GetTimescale();
-
-  if ((*pi).get() != m_adaptiveTree->m_currentPeriod)
-  {
-    LOG::Log(LOGDEBUG, "SeekTime: seeking into new chapter: %d",
-             static_cast<int>((pi - m_adaptiveTree->m_periods.begin()) + 1));
-    SeekChapter(static_cast<int>(pi - m_adaptiveTree->m_periods.begin()) + 1);
-    m_chapterSeekTime = seekTime;
-    return true;
-  }
-
-  seekTime -= chapterTime;
 
   if (m_adaptiveTree->IsLive())
   {
@@ -1127,18 +1153,11 @@ uint32_t SESSION::CSession::GetIncludedStreamMask() const
 
 int CSession::GetChapter() const
 {
-  if (m_adaptiveTree)
-  {
-    for (auto itPeriod = m_adaptiveTree->m_periods.cbegin();
-         itPeriod != m_adaptiveTree->m_periods.cend(); itPeriod++)
-    {
-      if ((*itPeriod).get() == m_adaptiveTree->m_currentPeriod)
-      {
-        return static_cast<int>(std::distance(m_adaptiveTree->m_periods.cbegin(), itPeriod)) + 1;
-      }
-    }
-  }
-  return 0;
+  if (!m_adaptiveTree)
+    return 0;
+
+  const int index = m_adaptiveTree->GetChaptersSnapshot()->currentIndex;
+  return index < 0 ? 0 : index + 1;
 }
 
 int SESSION::CSession::GetChapterCount() const
@@ -1146,7 +1165,7 @@ int SESSION::CSession::GetChapterCount() const
   if (!m_adaptiveTree)
     return 0;
 
-  return static_cast<int>(m_adaptiveTree->m_periods.size());
+  return static_cast<int>(m_adaptiveTree->GetChaptersSnapshot()->chapters.size());
 }
 
 const char* SESSION::CSession::GetChapterName(int number) const
@@ -1157,8 +1176,16 @@ const char* SESSION::CSession::GetChapterName(int number) const
   if (CSrvBroker::GetSettings().IsDebugVerbose() && m_adaptiveTree)
   {
     --number; // To convert chapter number to index
-    if (number >= 0 && number < static_cast<int>(m_adaptiveTree->m_periods.size()))
-      return m_adaptiveTree->m_periods[number]->GetId().c_str();
+
+    const auto snapshot = m_adaptiveTree->GetChaptersSnapshot();
+    const auto& chapters = snapshot->chapters;
+
+    if (number >= 0 && number < static_cast<int>(chapters.size()))
+    {
+      // Cached in a member to keep the returned pointer valid, see m_chapterName
+      m_chapterName = chapters[number].id;
+      return m_chapterName.c_str();
+    }
 
     return CHAPTER_NAME_UNKNOWN;
   }
@@ -1172,20 +1199,19 @@ int64_t SESSION::CSession::GetChapterPos(int number) const
 
   --number; // To convert chapter number to index
 
-  //! @todo: Fragile check, accessing to m_periods can potentially cause problems because
-  //! manifest updates can make changes (add/remove) to periods asynchronously.
-  //! An appropriate solution must be found, taking into account that these methods
-  //! can be called many times during playback. This issue must also be checked in
-  //! all other CSession methods on which Kodi core makes callbacks.
-  if (number < 0 || number >= static_cast<int>(m_adaptiveTree->m_periods.size()))
+  const auto snapshot = m_adaptiveTree->GetChaptersSnapshot();
+  const auto& chapters = snapshot->chapters;
+
+  if (number < 0 || number >= static_cast<int>(chapters.size()))
     return 0;
 
   int64_t sum{0};
 
   for (; number; --number)
   {
-    sum += (m_adaptiveTree->m_periods[number - 1]->GetTlDuration() * STREAM_TIME_BASE) /
-           m_adaptiveTree->m_periods[number - 1]->GetTimescale();
+    const auto& chapter = chapters[number - 1];
+    if (chapter.timescale > 0)
+      sum += (chapter.tlDuration * STREAM_TIME_BASE) / chapter.timescale;
   }
 
   return sum / STREAM_TIME_BASE;
@@ -1193,13 +1219,18 @@ int64_t SESSION::CSession::GetChapterPos(int number) const
 
 uint64_t SESSION::CSession::GetChapterStartTime() const
 {
+  if (!m_adaptiveTree)
+    return 0;
+
+  const auto snapshot = m_adaptiveTree->GetChaptersSnapshot();
+  const int currentIndex = snapshot->currentIndex;
+
   uint64_t start_time = 0;
-  for (std::unique_ptr<CPeriod>& p : m_adaptiveTree->m_periods)
+  for (int i = 0; i < currentIndex && i < static_cast<int>(snapshot->chapters.size()); ++i)
   {
-    if (p.get() == m_adaptiveTree->m_currentPeriod)
-      break;
-    else
-      start_time += (p->GetTlDuration() * STREAM_TIME_BASE) / p->GetTimescale();
+    const auto& chapter = snapshot->chapters[i];
+    if (chapter.timescale > 0)
+      start_time += (chapter.tlDuration * STREAM_TIME_BASE) / chapter.timescale;
   }
   return start_time;
 }
@@ -1221,6 +1252,11 @@ bool SESSION::CSession::SeekChapter(int number)
     return true;
 
   --number; // To convert chapter number to index
+
+  // Block manifest updates, the update thread can add and remove periods at any time
+  std::lock_guard<adaptive::AdaptiveTree::TreeUpdateThread> lckUpdTree(
+      m_adaptiveTree->GetTreeUpdMutex());
+
   if (number >= 0 && number < static_cast<int>(m_adaptiveTree->m_periods.size()) &&
       m_adaptiveTree->m_periods[number].get() != m_adaptiveTree->m_currentPeriod)
   {

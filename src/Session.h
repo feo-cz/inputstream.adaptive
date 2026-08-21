@@ -270,5 +270,13 @@ private:
   uint64_t m_chapterStartTime{0}; // In STREAM_TIME_BASE
   double m_chapterSeekTime{0.0}; // In seconds
   uint8_t m_mediaTypeMask{0};
+
+  //! @todo: the InputStream API method GetChapterName returns a "const char*" whose
+  //! lifetime the addon cannot control, so the value has to be cached here to keep the
+  //! returned pointer valid after the method returns. Kodi core copies the string right
+  //! away (CInputStreamAddon::GetChapterName), and the only two callers are on the GUI
+  //! thread, so this is safe in practice but remains a workaround for a bad API.
+  //! The API should be reworked to return a std::string, then this member can be removed.
+  mutable std::string m_chapterName;
 };
 } // namespace SESSION
