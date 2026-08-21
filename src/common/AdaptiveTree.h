@@ -327,6 +327,44 @@ public:
   TreeUpdateThread& GetTreeUpdMutex() { return m_updThread; };
 
   /*!
+   * \brief Immutable description of a period, used to serve the chapter
+   *        callbacks that Kodi core makes on the player thread.
+   */
+  struct ChapterInfo
+  {
+    std::string id;
+    uint64_t tlDuration{0};
+    uint64_t timescale{0};
+  };
+
+  /*!
+   * \brief Snapshot of the period layout at a given point in time.
+   *        m_periods must never be accessed directly to serve Kodi core
+   *        callbacks: the manifest update thread can add and remove periods
+   *        at any time, which invalidates both indices and element pointers.
+   */
+  struct ChaptersSnapshot
+  {
+    std::vector<ChapterInfo> chapters;
+    int currentIndex{-1}; //!< 0 based index of the period being played, -1 if unknown
+  };
+
+  /*!
+   * \brief Get the current chapter snapshot. Safe to call from any thread.
+   * \return A snapshot, never nullptr.
+   */
+  std::shared_ptr<const ChaptersSnapshot> GetChaptersSnapshot() const;
+
+  /*!
+   * \brief Rebuild the chapter snapshot from m_periods.
+   *        Must be called with manifest updates blocked, i.e. either from the
+   *        update thread itself or while holding GetTreeUpdMutex().
+   *        Every code path that adds or removes periods must call this, otherwise
+   *        the Kodi core chapter callbacks will keep serving stale data.
+   */
+  void RefreshChaptersSnapshot();
+
+  /*!
    * \brief Specifies if TTML subtitle time is relative to sample time.
    * \return True if relative to sample time, otherwise false.
    */
@@ -398,6 +436,12 @@ protected:
 
   bool m_isTTMLTimeRelative{false};
   bool m_isReqPrepareStream{false};
+
+private:
+  std::shared_ptr<const ChaptersSnapshot> m_chaptersSnapshot{
+      std::make_shared<const ChaptersSnapshot>()};
+  // Guards the m_chaptersSnapshot pointer only, never held while doing any work
+  mutable std::mutex m_chaptersSnapshotMutex;
 };
 
 } // namespace adaptive

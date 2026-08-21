@@ -802,6 +802,10 @@ bool adaptive::AdaptiveStream::ensureSegment()
       if (SecondsSinceUpdate() > 1)
       {
         m_tree->OnRequestSegments(current_period_, current_adp_, current_rep_);
+        // OnRequestSegments updates the manifest and by that can add and remove periods,
+        // refresh while updates are still blocked. Note that for these streams
+        // (HasManifestUpdatesSegs) the tree update thread does not perform any update.
+        m_tree->RefreshChaptersSnapshot();
         lastUpdated_ = std::chrono::system_clock::now();
       }
     }
@@ -920,6 +924,9 @@ bool adaptive::AdaptiveStream::ensureSegment()
               GenerateSidxSegments(newRep);
 
             m_tree->OnStreamChange(current_period_, current_adp_, prevRep, newRep);
+            // OnStreamChange can process a manifest and by that add and
+            // remove periods, refresh while updates are still blocked
+            m_tree->RefreshChaptersSnapshot();
             // Try aligning the segment to ensure that it exists on the changed representation
             m_tree->OnAlignSegment(current_period_, current_adp_, prevRep, newRep, queueSegment);
             // Do not allow quality change with only init segment (if used), ensure at least one segment

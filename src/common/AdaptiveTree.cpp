@@ -81,6 +81,37 @@ namespace adaptive
     m_updThread.Stop();
   }
 
+  std::shared_ptr<const AdaptiveTree::ChaptersSnapshot> AdaptiveTree::GetChaptersSnapshot() const
+  {
+    std::lock_guard<std::mutex> lock(m_chaptersSnapshotMutex);
+    return m_chaptersSnapshot;
+  }
+
+  void AdaptiveTree::RefreshChaptersSnapshot()
+  {
+    auto snapshot = std::make_shared<ChaptersSnapshot>();
+    snapshot->chapters.reserve(m_periods.size());
+
+    for (const auto& period : m_periods)
+    {
+      if (!period)
+        continue;
+
+      if (period.get() == m_currentPeriod)
+        snapshot->currentIndex = static_cast<int>(snapshot->chapters.size());
+
+      ChapterInfo info;
+      info.id = period->GetId();
+      info.tlDuration = period->GetTlDuration();
+      info.timescale = period->GetTimescale();
+
+      snapshot->chapters.emplace_back(std::move(info));
+    }
+
+    std::lock_guard<std::mutex> lock(m_chaptersSnapshotMutex);
+    m_chaptersSnapshot = std::move(snapshot);
+  }
+
   void AdaptiveTree::PostOpen()
   {
     SortTree();
@@ -94,6 +125,9 @@ namespace adaptive
       m_liveDelay = liveDelay;
     else if (m_liveDelay < 16)
       m_liveDelay = 16;
+
+    // Build the initial snapshot before the update thread can modify m_periods
+    RefreshChaptersSnapshot();
 
     StartUpdateThread();
 
@@ -439,6 +473,9 @@ namespace adaptive
         m_tree->m_updateInterval = PLAYLIST::NO_VALUE;
 
       m_tree->OnUpdateSegments();
+      // Periods may have been added or removed, refresh while updates are still
+      // blocked so readers never observe a half updated m_periods
+      m_tree->RefreshChaptersSnapshot();
     }
   }
 
