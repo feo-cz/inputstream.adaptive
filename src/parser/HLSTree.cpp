@@ -1319,13 +1319,35 @@ void adaptive::CHLSTree::ProcessEncryption(
     else if (encryptMethod == "SAMPLE-AES")
       drmInfo.cryptoMode = CryptoMode::AES_CBC;
   }
-  // FAIRPLAY (unsupported, added to test MP4 stream with Clearkey)
+  // FAIRPLAY (key management is unsupported, encrypted MP4 can be used with ClearKey)
   else if (STRING::CompareNoCase(keyFormat, "com.apple.streamingkeydelivery"))
   {
     DRM::DRMInfo& drmInfo = drmInfos[DRM::KS_FAIRPLAY]; // Create or update
     drmInfo.keySystem = DRM::KS_FAIRPLAY;
 
-    // There is no DRM/Key management implementation
+    // FairPlay HLS can identify the content key with an skd:// URI. Although FairPlay
+    // key management is not implemented, preserve a valid KID so a configured
+    // ClearKey decrypter can handle SAMPLE-AES fMP4 streams.
+    static constexpr std::string_view URI_SKD_SCHEME{"skd://"};
+    if (STRING::StartsWith(uriUrl, URI_SKD_SCHEME))
+    {
+      std::string keyId = uriUrl.substr(URI_SKD_SCHEME.size());
+      // e.g. skd://linear/00112233445566778899AABBCCDDEEFF?mt=FOUR_K_H&vendorId=example
+      const size_t queryPos = keyId.find_first_of("?#");
+      if (queryPos != std::string::npos)
+        keyId.erase(queryPos);
+
+      const size_t separatorPos = keyId.find_last_of("/:");
+      if (separatorPos != std::string::npos)
+        keyId.erase(0, separatorPos + 1);
+
+      if (STRING::StartsWith(keyId, "0x"))
+        keyId.erase(0, 2);
+      STRING::ReplaceAll(keyId, "-", "");
+
+      if (DRM::IsValidKID(keyId))
+        drmInfo.defaultKid = STRING::ToLower(keyId);
+    }
 
     if (encryptMethod == "SAMPLE-AES-CTR")
       drmInfo.cryptoMode = CryptoMode::AES_CTR;
