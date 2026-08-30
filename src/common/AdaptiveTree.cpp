@@ -299,9 +299,17 @@ namespace adaptive
 
       updLck.lock();
 
+      // Store the interval before it is cleared, skipping a value that a parser
+      // lowered as a temporary backoff
+      if (!m_resetInterval && m_tree->m_updateInterval != NO_VALUE && m_tree->m_updateInterval > 0)
+        m_tree->m_lastValidUpdateInterval = m_tree->m_updateInterval.load();
+
       // Reset interval value to allow forced update from manifest
       if (m_resetInterval)
+      {
         m_tree->m_updateInterval = PLAYLIST::NO_VALUE;
+        m_resetInterval = false;
+      }
 
       m_tree->OnUpdateSegments();
     }

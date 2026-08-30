@@ -385,6 +385,11 @@ protected:
   // Non-zero value: refresh interval starting from the moment mpd download was initiated
   // Value 0: refresh each time we need to make new segments
   std::atomic<uint64_t> m_updateInterval{PLAYLIST::NO_VALUE};
+
+  // Last update interval that came from a manifest, as opposed to one a parser
+  // applied as a temporary backoff. Since m_updateInterval is set to NO_VALUE
+  // before each update, a parser that backs off has no other usable base value.
+  std::atomic<uint64_t> m_lastValidUpdateInterval{0};
   TreeUpdateThread m_updThread;
   std::atomic<std::chrono::time_point<std::chrono::system_clock>> lastUpdated_{std::chrono::system_clock::now()};
 

@@ -34,6 +34,10 @@ namespace
 // Timescale for ms
 constexpr uint64_t TIMESCALE = 1000;
 
+// Lower bound for the update interval backoff, in ms, to keep the halving from
+// reaching zero and stopping the update thread
+constexpr uint64_t MIN_UPDATE_INTERVAL_MS = 500;
+
 // \brief Parse a tag (e.g. #EXT-X-VERSION:1) to extract name and value
 void ParseTagNameValue(const std::string& line, std::string& tagName, std::string& tagValue)
 {
@@ -1157,7 +1161,7 @@ void adaptive::CHLSTree::OnUpdateSegments()
     // so avoid requesting updates too quickly but you also need to make sure
     // that we have segments to mitigate a buffering problem
     // so try halve the interval time in a temporary way
-    m_updateInterval = m_updateInterval / 2;
+    m_updateInterval = std::max<uint64_t>(m_lastValidUpdateInterval / 2, MIN_UPDATE_INTERVAL_MS);
     // Reset the interval on the next update, to restore the original value
     m_updThread.ResetInterval();
   }
