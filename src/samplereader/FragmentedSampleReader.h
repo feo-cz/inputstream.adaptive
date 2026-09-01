@@ -59,6 +59,11 @@ private:
   void UpdateSampleDescription();
   void ParseTrafTfrf(AP4_UuidAtom* uuidAtom);
 
+  // \brief Parse the TRAF/SGPD/SEIG boxes of a media segment to obtain the KID
+  //        used by the current fragment (in-band key rotation).
+  // \return The 16-byte KID found in the SEIG box, or an empty vector if none
+  std::vector<uint8_t> ParseTrafSgpd(AP4_ContainerAtom* traf);
+
   AP4_Track* m_track;
   AP4_UI32 m_poolId{0};
   AP4_UI32 m_streamId;
@@ -78,6 +83,9 @@ private:
   AP4_DataBuffer m_sampleData;
   CodecHandler* m_codecHandler{nullptr};
   std::vector<uint8_t> m_defaultKey;
+  bool m_useInbandKid{false}; // default KID is a placeholder; read real KID from SEIG per fragment
+  bool m_inbandKidWarned{false};
+  bool m_multiKeyWarned{false};
   AP4_ProtectedSampleDescription* m_protectedDesc{nullptr};
   Adaptive_CencSingleSampleDecrypter* m_singleSampleDecryptor{nullptr};
   std::unique_ptr<CAdaptiveCencSampleDecrypter> m_decrypter;

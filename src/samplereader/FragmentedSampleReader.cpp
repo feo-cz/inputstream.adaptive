@@ -18,9 +18,12 @@
 #include "codechandler/VP9CodecHandler.h"
 #include "codechandler/WebVTTCodecHandler.h"
 #include "common/AdaptiveCencSampleDecrypter.h"
+#include "utils/Bento4Utils.h"
 #include "utils/CharArrayParser.h"
 #include "utils/Utils.h"
 #include "utils/log.h"
+
+#include <algorithm>
 
 #include <bento4/Ap4SencAtom.h>
 
@@ -30,6 +33,14 @@ namespace
 {
 constexpr uint8_t MP4_TFRFBOX_UUID[] = {0xd4, 0x80, 0x7e, 0xf2, 0xca, 0x39, 0x46, 0x95,
                                         0x8e, 0x54, 0x26, 0xcb, 0x9e, 0x46, 0xa7, 0x9f};
+
+// A default_KID of all zeros is a placeholder meaning "no usable default KID";
+// such streams carry the real KID in-band (SEIG box of each media segment).
+bool IsAllZeroKey(const std::vector<uint8_t>& key)
+{
+  return !key.empty() &&
+         std::all_of(key.begin(), key.end(), [](uint8_t b) { return b == 0; });
+}
 } // unnamed namespace
 
 
@@ -74,6 +85,12 @@ bool CFragmentedSampleReader::Initialize(SESSION::CStream* stream)
           m_defaultKey.assign(piff->GetDefaultKid(), piff->GetDefaultKid() + 16);
       }
     }
+
+    // When the manifest/init segment provides no usable default KID (missing or
+    // all-zero placeholder), the real per-fragment KID is carried in-band in each
+    // media segment's SEIG box - enable reading it per fragment (in-band key
+    // rotation). Streams with a valid default KID are left on the normal path.
+    m_useInbandKid = m_defaultKey.empty() || IsAllZeroKey(m_defaultKey);
   }
 
   m_timeBaseExt = STREAM_TIME_BASE;
@@ -390,6 +407,32 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
       if (!traf)
         return AP4_ERROR_INVALID_FORMAT;
 
+      // In-band key rotation: for streams flagged at init as having no usable
+      // default KID, read the per-fragment KID from the SEIG box on every fragment
+      // and update the key when it changes. Streams with a valid default KID never
+      // set m_useInbandKid, so their behaviour is unchanged.
+      if (m_useInbandKid)
+      {
+        const std::vector<uint8_t> rotatedKid = ParseTrafSgpd(traf);
+
+        if (!rotatedKid.empty() && !IsAllZeroKey(rotatedKid))
+        {
+          if (rotatedKid != m_defaultKey)
+          {
+            LOG::LogF(LOGDEBUG, "Updated in-band KID from SEIG box");
+            m_defaultKey = rotatedKid;
+          }
+        }
+        else if (!m_inbandKidWarned)
+        {
+          // Protected fragment but no usable in-band KID. Warn once (early
+          // fragments may legitimately be clear), then stay quiet.
+          m_inbandKidWarned = true;
+          LOG::LogF(LOGWARNING,
+                    "Protected stream with placeholder default KID and no usable SEIG KID");
+        }
+      }
+
       // If the boxes saiz, saio, senc are missing, the stream does not conform to the specs and
       // may not be decrypted, so try create an empty senc where all samples will use the same default IV
       if (!traf->GetChild(AP4_ATOM_TYPE_SAIO) && !traf->GetChild(AP4_ATOM_TYPE_SAIZ) &&
@@ -561,4 +604,62 @@ void CFragmentedSampleReader::ParseTrafTfrf(AP4_UuidAtom* uuidAtom)
     }
     m_observer->OnTFRFatom(time, duration, m_track->GetMediaTimeScale());
   }
+}
+
+std::vector<uint8_t> CFragmentedSampleReader::ParseTrafSgpd(AP4_ContainerAtom* traf)
+{
+  // Reads the KID carried by the SEIG sample group of a media segment (in-band
+  // key rotation). The SEIG box is parsed by utils/Bento4Utils.
+  std::vector<BENTO4::CencSeigGroupEntry> seigEntries;
+
+  AP4_Atom* childAtom{nullptr};
+  unsigned int atomIndex{0};
+
+  while ((childAtom = traf->GetChild(AP4_ATOM_TYPE_SGPD, atomIndex++)) != nullptr)
+  {
+    // Validate the dynamic type via the registered AP4_SgpdAtom (a malformed box
+    // becomes a generic atom and yields nullptr here); FMP4SgpdAtom is only an
+    // accessor subclass with no extra members, so the following cast is safe.
+    // Note: AP4_DYNAMIC_CAST cannot target FMP4SgpdAtom directly - it is not part
+    // of Bento4's RTTI and would always return nullptr.
+    AP4_SgpdAtom* sgpd = AP4_DYNAMIC_CAST(AP4_SgpdAtom, childAtom);
+    if (!sgpd)
+      continue;
+    auto sgpdAtom = static_cast<BENTO4::FMP4SgpdAtom*>(sgpd);
+    if (sgpdAtom->GetGroupingType() != AP4_ATOM_TYPE('s', 'e', 'i', 'g'))
+      continue;
+
+    seigEntries = sgpdAtom->GetSeigEntries();
+
+    break; // Assume that only a single SGPD can contain SEIG
+  }
+
+  // This reader applies a single KID to the whole fragment and does not consult
+  // the SBGP sample-to-group mapping, so multiple protected entries with different
+  // KIDs are not fully supported; warn once rather than silently pick the wrong key.
+  if (!m_multiKeyWarned)
+  {
+    size_t protectedCount{0};
+    for (const auto& entry : seigEntries)
+      if (entry.isProtected && !entry.keySets.empty())
+        ++protectedCount;
+    if (protectedCount > 1)
+    {
+      m_multiKeyWarned = true;
+      LOG::LogF(LOGWARNING, "SEIG box has %zu protected entries; only the first KID is used",
+                protectedCount);
+    }
+  }
+
+  for (const auto& entry : seigEntries)
+  {
+    if (entry.isProtected && !entry.keySets.empty())
+    {
+      const auto& firstKid = entry.keySets.front().kid;
+      if (firstKid.size() == 16)
+        return firstKid;
+    }
+  }
+
+  return {};
 }

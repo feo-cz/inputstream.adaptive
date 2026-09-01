@@ -1,5 +1,6 @@
 set(SOURCES
   Base64Utils.cpp
+  Bento4Utils.cpp
   CharArrayParser.cpp
   CurlUtils.cpp
   DigestMD5Utils.cpp
@@ -12,6 +13,7 @@ set(SOURCES
 
 set(HEADERS
   Base64Utils.h
+  Bento4Utils.h
   CharArrayParser.h
   CryptoUtils.h
   CurlUtils.h
