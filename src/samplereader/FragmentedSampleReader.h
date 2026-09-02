@@ -64,6 +64,11 @@ private:
   // \return The 16-byte KID found in the SEIG box, or an empty vector if none
   std::vector<uint8_t> ParseTrafSgpd(AP4_ContainerAtom* traf);
 
+  // \brief Read the Widevine PSSH proto payload from a media segment's moof
+  //        (in-band key rotation: each crypto period carries its own PSSH).
+  // \return The PSSH Data field of the Widevine pssh box, or empty if none
+  std::vector<uint8_t> ParseMoofPssh(AP4_ContainerAtom* moof);
+
   AP4_Track* m_track;
   AP4_UI32 m_poolId{0};
   AP4_UI32 m_streamId;

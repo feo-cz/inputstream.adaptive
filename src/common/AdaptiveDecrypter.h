@@ -37,6 +37,30 @@ public:
     throw std::logic_error("SetDefaultKeyId method not implemented.");
   };
 
+  /*! \brief In-band key rotation: make sure the CDM holds a usable key for keyId.
+   *         If it does not, request a new license from the per-segment PSSH.
+   *  \param keyId    the rotated KID read from the SEIG box of the current fragment
+   *  \param psshData Widevine PSSH proto payload (the Data field of the moof pssh
+   *                  box), or empty if the segment carries no Widevine PSSH
+   *  \return true if a usable key for keyId is now available (so the caller may
+   *          switch to it); false if it could not be obtained (caller should keep
+   *          the previous key and retry on a later fragment).
+   *  Default: returns true so decrypters that do not implement in-band rotation
+   *  (ClearKey, widevineandroid) keep their unchanged behaviour.
+   */
+  virtual bool RenewSessionForKey(const std::vector<uint8_t>& keyId,
+                                  const std::vector<uint8_t>& psshData)
+  {
+    return true;
+  }
+
+  /*! \brief In-band key rotation: should the reader (re)request a license for keyId?
+   *  True when there is no usable key yet AND the renewal for this KID has not been
+   *  permanently given up. Default false, so decrypters without in-band rotation
+   *  (ClearKey etc.) never trigger re-requests.
+   */
+  virtual bool NeedsKeyRenewal(const std::vector<uint8_t>& keyId) { return false; }
+
   virtual AP4_Result SetFragmentInfo(AP4_UI32 poolId,
                                      const std::vector<uint8_t>& keyId,
                                      const AP4_UI08 nalLengthSize,

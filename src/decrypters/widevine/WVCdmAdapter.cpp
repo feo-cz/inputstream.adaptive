@@ -116,7 +116,7 @@ CWVCdmAdapter::~CWVCdmAdapter()
   if (wv_adapter)
   {
     wv_adapter->RemoveClient();
-    LOG::Log(LOGERROR, "Instances: %u", wv_adapter.use_count());
+    LOG::Log(LOGDEBUG, "Instances: %u", wv_adapter.use_count());
     wv_adapter = nullptr;
   }
 }
@@ -129,9 +129,14 @@ void CWVCdmAdapter::OnCDMMessage(const char* session,
                           uint32_t status)
 {
   LOG::Log(LOGDEBUG, "CDMMessage: %u arrived!", msg);
+  // Hold m_ssdsLock across the whole lookup and dispatch: it keeps removessd (called
+  // from a decrypter's destructor) from removing/freeing an ssd while we are calling
+  // into it, and SessionIdMatches compares m_strSession under its own lock so a
+  // concurrent in-band renewal clearing the session id cannot cause a torn read.
+  std::lock_guard<std::mutex> lock(m_ssdsLock);
   std::vector<CWVCencSingleSampleDecrypter*>::iterator b(ssds.begin()), e(ssds.end());
   for (; b != e; ++b)
-    if (!(*b)->GetSessionId() || strncmp((*b)->GetSessionId(), session, session_size) == 0)
+    if ((*b)->SessionIdMatches(session, session_size))
       break;
 
   if (b == ssds.end())

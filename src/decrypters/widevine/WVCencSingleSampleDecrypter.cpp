@@ -31,6 +31,16 @@
 
 using namespace UTILS;
 
+namespace
+{
+// In-band key rotation: how long RenewSessionForKey waits (poll step * count) for
+// the new session to open and for the license key to arrive via the async callback.
+constexpr int RENEWAL_WAIT_STEP_MS = 10;
+constexpr int RENEWAL_SESSION_WAIT_STEPS = 100; // ~1 s for CreateSessionAndGenerateRequest
+constexpr int RENEWAL_KEY_WAIT_STEPS = 50; // ~0.5 s for the key callback
+constexpr int RENEWAL_MAX_ATTEMPTS = 5; // total tries per KID across re-queues before giving up
+} // namespace
+
 void CWVCencSingleSampleDecrypter::SetSession(const char* session,
                                               uint32_t sessionSize,
                                               const uint8_t* data,
@@ -109,7 +119,7 @@ CWVCencSingleSampleDecrypter::CWVCencSingleSampleDecrypter(CWVCdmAdapter& drm,
     UTILS::FILESYS::SaveFile(debugFilePath, data, true);
   }
 
-  drm.GetCdmAdapter()->CreateSessionAndGenerateRequest(m_promiseId++, cdm::SessionType::kTemporary,
+  drm.CdmCreateSessionAndGenerateRequest(m_promiseId++, cdm::SessionType::kTemporary,
                                                        cdm::InitDataType::kCenc, m_pssh.data(),
                                                        static_cast<uint32_t>(m_pssh.size()));
 
@@ -132,6 +142,16 @@ CWVCencSingleSampleDecrypter::CWVCencSingleSampleDecrypter(CWVCdmAdapter& drm,
 
 CWVCencSingleSampleDecrypter::~CWVCencSingleSampleDecrypter()
 {
+  // Stop the in-band renewal worker before tearing down, so it is not mid-request
+  // when the session state and CDM adapter go away.
+  {
+    std::lock_guard<std::mutex> lock(m_renewalQueueLock);
+    m_renewalStop = true;
+  }
+  m_renewalQueueCv.notify_all();
+  if (m_renewalThread.joinable())
+    m_renewalThread.join();
+
   m_wvCdmAdapter.removessd(this);
 }
 
@@ -149,10 +169,13 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
 
   caps.flags = DecrypterCapabilites::SSD_SUPPORTS_DECODING;
 
-  if (m_keys.empty())
   {
-    LOG::LogF(LOGDEBUG, "Keys empty");
-    return;
+    std::lock_guard<std::mutex> lock(m_keysLock);
+    if (m_keys.empty())
+    {
+      LOG::LogF(LOGDEBUG, "Keys empty");
+      return;
+    }
   }
 
   if (!caps.hdcpLimit)
@@ -182,7 +205,10 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
   if ((caps.flags & DecrypterCapabilites::SSD_SUPPORTS_DECODING) != 0)
   {
     AP4_UI32 poolId(AddPool());
-    m_fragmentPool[poolId].m_key = keyId.empty() ? m_keys.front().m_keyId : keyId;
+    {
+      std::lock_guard<std::mutex> lock(m_keysLock);
+      m_fragmentPool[poolId].m_key = keyId.empty() ? m_keys.front().m_keyId : keyId;
+    }
     m_fragmentPool[poolId].m_cryptoInfo.m_mode = m_EncryptionMode;
 
     AP4_DataBuffer in;
@@ -230,7 +256,23 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
 
 const char* CWVCencSingleSampleDecrypter::GetSessionId()
 {
+  // Read under the same lock that guards writes to m_strSession (SetSession and the
+  // in-band renewal clear/restore).
+  std::lock_guard<std::mutex> lock(m_renewalLock);
   return m_strSession.empty() ? nullptr : m_strSession.c_str();
+}
+
+bool CWVCencSingleSampleDecrypter::SessionIdMatches(const char* session, uint32_t sessionSize)
+{
+  // Compared under m_renewalLock, so an in-band renewal clearing/restoring
+  // m_strSession on the worker thread cannot cause a torn read here. An empty id
+  // matches (a renewing decrypter is the intended target of its new session's
+  // first message), mirroring the previous GetSessionId()-based routing.
+  std::lock_guard<std::mutex> lock(m_renewalLock);
+  if (m_strSession.empty())
+    return true;
+  return m_strSession.size() == sessionSize &&
+         strncmp(m_strSession.c_str(), session, sessionSize) == 0;
 }
 
 void CWVCencSingleSampleDecrypter::CloseSessionId()
@@ -238,8 +280,8 @@ void CWVCencSingleSampleDecrypter::CloseSessionId()
   if (!m_strSession.empty())
   {
     LOG::LogF(LOGDEBUG, "Closing widevine session ID: %s", m_strSession.c_str());
-    m_wvCdmAdapter.GetCdmAdapter()->CloseSession(++m_promiseId, m_strSession.data(),
-                                                 m_strSession.size());
+    m_wvCdmAdapter.CdmCloseSession(++m_promiseId, m_strSession.data(),
+                                   static_cast<uint32_t>(m_strSession.size()));
 
     LOG::LogF(LOGDEBUG, "Widevine session ID %s closed", m_strSession.c_str());
     m_strSession.clear();
@@ -253,6 +295,16 @@ AP4_DataBuffer CWVCencSingleSampleDecrypter::GetChallengeData()
 
 void CWVCencSingleSampleDecrypter::CheckLicenseRenewal()
 {
+  // Serialize against the in-band renewal worker (DoRenewSession) so SendSessionMessage
+  // never runs on two threads at once over the shared session state (m_strSession,
+  // m_challenge, m_defaultKeyId). This is called before every decrypt on the decode
+  // thread, so only TRY the lock: if the worker is mid-renewal, skip this round -
+  // the automatic renewal is not urgent (the CDM raised it ahead of expiry) and the
+  // next decrypt will retry. Blocking here would stall decoding for the whole
+  // renewal HTTP round-trip, which is exactly what caused the stuttering start.
+  std::unique_lock<std::mutex> action(m_sessionActionLock, std::try_to_lock);
+  if (!action.owns_lock())
+    return;
   {
     std::lock_guard<std::mutex> lock(m_renewalLock);
     if (!m_challenge.GetDataSize())
@@ -564,7 +616,7 @@ bool CWVCencSingleSampleDecrypter::SendSessionMessage()
           respData = BASE64::DecodeToStr(respData);
         }
 
-        m_wvCdmAdapter.GetCdmAdapter()->UpdateSession(
+        m_wvCdmAdapter.CdmUpdateSession(
             ++m_promiseId, m_strSession.data(), m_strSession.size(),
             reinterpret_cast<const uint8_t*>(respData.c_str()), respData.size());
       }
@@ -582,7 +634,7 @@ bool CWVCencSingleSampleDecrypter::SendSessionMessage()
       {
         payloadPos += 4;
         if (blocks[3][1] == 'B')
-          m_wvCdmAdapter.GetCdmAdapter()->UpdateSession(
+          m_wvCdmAdapter.CdmUpdateSession(
               ++m_promiseId, m_strSession.data(), m_strSession.size(),
               reinterpret_cast<const uint8_t*>(response.c_str() + payloadPos),
               response.size() - payloadPos);
@@ -602,7 +654,7 @@ bool CWVCencSingleSampleDecrypter::SendSessionMessage()
     {
       std::string decRespData{BASE64::DecodeToStr(response)};
 
-      m_wvCdmAdapter.GetCdmAdapter()->UpdateSession(
+      m_wvCdmAdapter.CdmUpdateSession(
           ++m_promiseId, m_strSession.data(), m_strSession.size(),
           reinterpret_cast<const uint8_t*>(decRespData.c_str()), decRespData.size());
     }
@@ -614,12 +666,17 @@ bool CWVCencSingleSampleDecrypter::SendSessionMessage()
   }
   else // its binary - simply push the returned data as update
   {
-    m_wvCdmAdapter.GetCdmAdapter()->UpdateSession(
+    m_wvCdmAdapter.CdmUpdateSession(
         ++m_promiseId, m_strSession.data(), m_strSession.size(),
         reinterpret_cast<const uint8_t*>(response.data()), response.size());
   }
 
-  if (m_keys.empty())
+  bool haveKeys;
+  {
+    std::lock_guard<std::mutex> lock(m_keysLock);
+    haveKeys = !m_keys.empty();
+  }
+  if (!haveKeys)
   {
     LOG::LogF(LOGERROR, "License update not successful (no keys)");
     CloseSessionId();
@@ -637,6 +694,9 @@ void CWVCencSingleSampleDecrypter::AddSessionKey(const uint8_t* data,
   WVSKEY key;
   key.m_keyId.assign(data, data + dataSize);
 
+  // Runs on the CDM callback thread; guard m_keys against concurrent readers
+  // (HasKeyId / the in-band renewal wait loop on the reader thread).
+  std::lock_guard<std::mutex> lock(m_keysLock);
   std::vector<WVSKEY>::iterator res;
   if ((res = std::find(m_keys.begin(), m_keys.end(), key)) == m_keys.end())
     res = m_keys.insert(res, key);
@@ -645,11 +705,31 @@ void CWVCencSingleSampleDecrypter::AddSessionKey(const uint8_t* data,
 
 bool CWVCencSingleSampleDecrypter::HasKeyId(const std::vector<uint8_t>& keyid)
 {
+  // Any known key (regardless of status). Used e.g. for CDM-session sharing in
+  // Session.cpp; must NOT filter by kUsable or HDCP-restricted keys (kOutputRestricted,
+  // common on CoreELEC/HDMI) would stop legitimate session reuse.
   if (!keyid.empty())
   {
+    std::lock_guard<std::mutex> lock(m_keysLock);
     for (const WVSKEY& key : m_keys)
     {
       if (key.m_keyId == keyid)
+        return true;
+    }
+  }
+  return false;
+}
+
+bool CWVCencSingleSampleDecrypter::HasUsableKey(const std::vector<uint8_t>& keyId)
+{
+  // In-band key rotation only: a key delivered as expired/released/restricted must
+  // not make the renewal path believe the period is already covered.
+  if (!keyId.empty())
+  {
+    std::lock_guard<std::mutex> lock(m_keysLock);
+    for (const WVSKEY& key : m_keys)
+    {
+      if (key.m_keyId == keyId && key.status == cdm::KeyStatus::kUsable)
         return true;
     }
   }
@@ -1004,7 +1084,7 @@ AP4_Result CWVCencSingleSampleDecrypter::DecryptSampleData(AP4_UI32 poolId,
     cdmOut.SetDecryptedBuffer(&buf);
 
     CheckLicenseRenewal();
-    ret = m_wvCdmAdapter.GetCdmAdapter()->Decrypt(cdmIn, &cdmOut);
+    ret = m_wvCdmAdapter.CdmDecrypt(cdmIn, &cdmOut);
 
     if (ret == cdm::Status::kSuccess)
     {
@@ -1044,12 +1124,17 @@ bool CWVCencSingleSampleDecrypter::OpenVideoDecoder(const VIDEOCODEC_INITDATA* i
     if (currVidConfig.codec == vconfig.codec && currVidConfig.profile == vconfig.profile)
       return true;
 
+    std::lock_guard<std::mutex> cdmLock(m_wvCdmAdapter.GetCdmLock());
     m_wvCdmAdapter.GetCdmAdapter()->DeinitializeDecoder(cdm::StreamType::kStreamTypeVideo);
   }
 
   m_currentVideoDecConfig = vconfig;
 
-  cdm::Status ret = m_wvCdmAdapter.GetCdmAdapter()->InitializeVideoDecoder(vconfig);
+  cdm::Status ret;
+  {
+    std::lock_guard<std::mutex> cdmLock(m_wvCdmAdapter.GetCdmLock());
+    ret = m_wvCdmAdapter.GetCdmAdapter()->InitializeVideoDecoder(vconfig);
+  }
   m_videoFrames.clear();
   m_isDrained = true;
 
@@ -1102,6 +1187,19 @@ VIDEOCODEC_RETVAL CWVCencSingleSampleDecrypter::DecryptAndDecodeVideo(
   }
   else if (status == cdm::Status::kNoKey)
   {
+    // In-band key rotation: if a renewal for this KID is queued or in flight, the
+    // key just has not arrived yet - do NOT report end of stream. Return VC_NONE so
+    // the player waits and the buffered fragments decode once the async key lands.
+    std::vector<uint8_t> kid(inputBuffer.key_id, inputBuffer.key_id + inputBuffer.key_id_size);
+    bool renewing;
+    {
+      std::lock_guard<std::mutex> lock(m_renewalQueueLock);
+      renewing = std::find(m_renewalPending.begin(), m_renewalPending.end(), kid) !=
+                 m_renewalPending.end();
+    }
+    if (renewing)
+      return VC_NONE;
+
     LOG::LogF(LOGERROR, "Returned CDM status \"kNoKey\" for KID: %s",
               STRING::ToHexadecimal(inputBuffer.key_id, inputBuffer.key_id_size).c_str());
     return VC_EOF;
@@ -1156,12 +1254,18 @@ VIDEOCODEC_RETVAL CWVCencSingleSampleDecrypter::VideoFrameDataToPicture(
 
 void CWVCencSingleSampleDecrypter::ResetVideo()
 {
-  m_wvCdmAdapter.GetCdmAdapter()->ResetDecoder(cdm::kStreamTypeVideo);
+  {
+    std::lock_guard<std::mutex> cdmLock(m_wvCdmAdapter.GetCdmLock());
+    m_wvCdmAdapter.GetCdmAdapter()->ResetDecoder(cdm::kStreamTypeVideo);
+  }
   m_isDrained = true;
 }
 
 void CWVCencSingleSampleDecrypter::SetDefaultKeyId(const std::vector<uint8_t>& keyId)
 {
+  // m_defaultKeyId is also written by the renewal worker (DoRenewSession) under
+  // m_renewalLock; guard here too for a consistent locking discipline.
+  std::lock_guard<std::mutex> lock(m_renewalLock);
   m_defaultKeyId = keyId;
 }
 
@@ -1171,8 +1275,203 @@ void CWVCencSingleSampleDecrypter::AddKeyId(const std::vector<uint8_t>& keyId)
   key.m_keyId = keyId;
   key.status = cdm::KeyStatus::kUsable;
 
+  std::lock_guard<std::mutex> lock(m_keysLock);
   if (std::find(m_keys.begin(), m_keys.end(), key) == m_keys.end())
   {
     m_keys.push_back(key);
   }
+}
+
+bool CWVCencSingleSampleDecrypter::RenewSessionForKey(const std::vector<uint8_t>& keyId,
+                                                      const std::vector<uint8_t>& psshData)
+{
+  // Called on the reader (demux) thread while filling the buffer. Must NOT block on
+  // the license HTTP round-trip, otherwise a run of new periods stalls demux and the
+  // playback stutters at the start. Queue the request and let the worker thread do
+  // the renewal in parallel, with a head start over the decode position. Returns true
+  // so the caller adopts the new KID optimistically - the key follows asynchronously.
+  if (HasUsableKey(keyId))
+    return true;
+
+  if (psshData.empty())
+  {
+    LOG::LogF(LOGWARNING, "In-band renewal: no Widevine PSSH in segment for KID %s",
+              STRING::ToHexadecimal(keyId).c_str());
+    return true; // nothing to queue, but do not stall the reader
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(m_renewalQueueLock);
+    // Skip if this KID is already awaiting a key (dedup) or was permanently given up.
+    if (std::find(m_renewalPending.begin(), m_renewalPending.end(), keyId) != m_renewalPending.end())
+      return true;
+    if (std::find(m_renewalGaveUp.begin(), m_renewalGaveUp.end(), keyId) != m_renewalGaveUp.end())
+      return true;
+    m_renewalPending.push_back(keyId);
+    m_renewalQueue.push_back(RenewalRequest{keyId, psshData, 0});
+  }
+  StartRenewalThread();
+  m_renewalQueueCv.notify_one();
+  return true;
+}
+
+bool CWVCencSingleSampleDecrypter::NeedsKeyRenewal(const std::vector<uint8_t>& keyId)
+{
+  // Reader asks whether to (re)request a license for this rotated KID. Take the key
+  // locks in a fixed order (m_keysLock via HasUsableKey, released, THEN
+  // m_renewalQueueLock) to stay consistent with RenewalThreadLoop and avoid a
+  // lock-order inversion.
+  if (HasUsableKey(keyId))
+    return false;
+  std::lock_guard<std::mutex> lock(m_renewalQueueLock);
+  return std::find(m_renewalGaveUp.begin(), m_renewalGaveUp.end(), keyId) == m_renewalGaveUp.end();
+}
+
+void CWVCencSingleSampleDecrypter::StartRenewalThread()
+{
+  std::lock_guard<std::mutex> lock(m_renewalQueueLock);
+  // Also honour m_renewalStop: if the destructor already set it (and possibly passed
+  // its joinable() check), we must not spin up a worker on an object being torn down.
+  if (m_renewalThreadStarted || m_renewalStop)
+    return;
+  // Set the flag only after the thread is successfully constructed: if std::thread
+  // throws (resource exhaustion), the flag stays false so a later request can retry,
+  // and the exception does not leak to the demux thread with the flag latched true.
+  m_renewalThread = std::thread(&CWVCencSingleSampleDecrypter::RenewalThreadLoop, this);
+  m_renewalThreadStarted = true;
+}
+
+void CWVCencSingleSampleDecrypter::RenewalThreadLoop()
+{
+  for (;;)
+  {
+    RenewalRequest req;
+    {
+      std::unique_lock<std::mutex> lock(m_renewalQueueLock);
+      m_renewalQueueCv.wait(lock, [this] { return m_renewalStop || !m_renewalQueue.empty(); });
+      if (m_renewalStop)
+        return;
+      req = m_renewalQueue.front();
+      m_renewalQueue.pop_front();
+    }
+
+    ++req.attempts;
+    // One attempt per cycle. HasUsableKey short-circuits if the key arrived meanwhile.
+    // Called before taking m_renewalQueueLock (fixed lock order m_keysLock -> queue).
+    const bool ok = DoRenewSession(req.keyId, req.pssh) || HasUsableKey(req.keyId);
+
+    {
+      std::lock_guard<std::mutex> lock(m_renewalQueueLock);
+      auto pendingIt = std::find(m_renewalPending.begin(), m_renewalPending.end(), req.keyId);
+      if (ok)
+      {
+        // Success: stop waiting on this KID.
+        if (pendingIt != m_renewalPending.end())
+          m_renewalPending.erase(pendingIt);
+      }
+      else if (req.attempts < RENEWAL_MAX_ATTEMPTS && !m_renewalStop)
+      {
+        // Transient failure: keep the KID in m_renewalPending so decode keeps waiting
+        // (VC_NONE) with no give-up/re-queue race, and try again.
+        m_renewalQueue.push_back(req);
+        m_renewalQueueCv.notify_one();
+      }
+      else if (!m_renewalStop)
+      {
+        // Give up permanently: stop waiting and remember the KID, so the reader stops
+        // re-requesting (NeedsKeyRenewal) and decode returns a clean VC_EOF instead of
+        // buffering forever.
+        LOG::LogF(LOGWARNING, "In-band renewal gave up on KID %s after %d attempts",
+                  STRING::ToHexadecimal(req.keyId).c_str(), req.attempts);
+        if (pendingIt != m_renewalPending.end())
+          m_renewalPending.erase(pendingIt);
+        m_renewalGaveUp.push_back(req.keyId);
+      }
+    }
+  }
+}
+
+bool CWVCencSingleSampleDecrypter::DoRenewSession(const std::vector<uint8_t>& keyId,
+                                                  const std::vector<uint8_t>& psshData)
+{
+  // Runs on the renewal worker thread. Serialized against the automatic renewal path
+  // in CheckLicenseRenewal via m_sessionActionLock so SendSessionMessage never runs
+  // on two threads at once over the shared session state.
+  std::lock_guard<std::mutex> action(m_sessionActionLock);
+
+  if (HasUsableKey(keyId))
+    return true;
+
+  if (psshData.size() < 4 || psshData.size() > 4096)
+  {
+    LOG::LogF(LOGERROR, "In-band renewal: implausible PSSH size %zu for KID %s",
+              psshData.size(), STRING::ToHexadecimal(keyId).c_str());
+    return false;
+  }
+
+  // Wrap the proto payload in a version 0 PSSH box using the shared helper (correct
+  // 32-bit size fields), the same way the initial license is built.
+  std::vector<uint8_t> initData;
+  if (!DRM::MakePssh(DRM::ID_WIDEVINE, psshData, initData))
+  {
+    LOG::LogF(LOGERROR, "In-band renewal: failed to build PSSH for KID %s",
+              STRING::ToHexadecimal(keyId).c_str());
+    return false;
+  }
+
+  // The CDM routes the new session's message back to the ssd whose GetSessionId()
+  // is empty (WVCdmAdapter::OnCDMMessage). Clear the current session id so the new
+  // session-message reaches us, keep the old one to restore on failure, and set the
+  // {KID} placeholder for SendSessionMessage. All under m_renewalLock, which guards
+  // this shared session state against the CDM callback thread. Old sessions are left
+  // open so keys of earlier periods stay valid.
+  std::string savedSession;
+  {
+    std::lock_guard<std::mutex> lock(m_renewalLock);
+    savedSession = m_strSession;
+    m_strSession.clear();
+    m_challenge.SetDataSize(0);
+    m_defaultKeyId = keyId;
+  }
+
+  LOG::LogF(LOGDEBUG, "In-band renewal: requesting license for KID %s",
+            STRING::ToHexadecimal(keyId).c_str());
+
+  m_wvCdmAdapter.CdmCreateSessionAndGenerateRequest(
+      ++m_promiseId, cdm::SessionType::kTemporary, cdm::InitDataType::kCenc, initData.data(),
+      static_cast<uint32_t>(initData.size()));
+
+  // Wait for SetSession (do NOT hold m_renewalLock during the sleep - SetSession needs it).
+  int retrycount = 0;
+  for (;;)
+  {
+    {
+      std::lock_guard<std::mutex> lock(m_renewalLock);
+      if (!m_strSession.empty())
+        break;
+    }
+    if (m_renewalStop || ++retrycount >= RENEWAL_SESSION_WAIT_STEPS)
+    {
+      if (!m_renewalStop)
+        LOG::LogF(LOGERROR, "In-band renewal: no new session for KID %s",
+                  STRING::ToHexadecimal(keyId).c_str());
+      std::lock_guard<std::mutex> lock(m_renewalLock);
+      if (m_strSession.empty())
+        m_strSession = savedSession; // keep auto-renewal pointed at a valid session
+      return false;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(RENEWAL_WAIT_STEP_MS));
+  }
+
+  // Same loop as the constructor - also handles the server-certificate two-step.
+  while (m_challenge.GetDataSize() > 0 && SendSessionMessage())
+    ;
+
+  // The key is delivered asynchronously via the OnSessionKeysChange callback, which
+  // can fire slightly after SendSessionMessage returns. Wait briefly for it.
+  int keyWait = 0;
+  while (!HasUsableKey(keyId) && !m_renewalStop && ++keyWait < RENEWAL_KEY_WAIT_STEPS)
+    std::this_thread::sleep_for(std::chrono::milliseconds(RENEWAL_WAIT_STEP_MS));
+
+  return HasUsableKey(keyId);
 }

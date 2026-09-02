@@ -537,7 +537,16 @@ void CdmAdapter::timerfunc(CdmAdapter* adp, int64_t delay, void* context)
     if (isClosing)
       return;
   }
-  adp->TimerExpired(context);
+  // Serialize with decode/session operations: the CDM is single-threaded, and this
+  // runs on an async timer thread, so without the client's CDM lock TimerExpired
+  // would race Decrypt/UpdateSession over the CDM's internal state.
+  if (std::mutex* cdmMutex = client_->GetCdmMutex())
+  {
+    std::lock_guard<std::mutex> cdmLock(*cdmMutex);
+    adp->TimerExpired(context);
+  }
+  else
+    adp->TimerExpired(context);
 }
 
 void CdmAdapter::SetTimer(int64_t delay_ms, void* context)

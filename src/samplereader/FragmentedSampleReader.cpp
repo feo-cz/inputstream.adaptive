@@ -18,13 +18,16 @@
 #include "codechandler/VP9CodecHandler.h"
 #include "codechandler/WebVTTCodecHandler.h"
 #include "common/AdaptiveCencSampleDecrypter.h"
+#include "decrypters/Helpers.h"
 #include "utils/Bento4Utils.h"
 #include "utils/CharArrayParser.h"
 #include "utils/Utils.h"
 #include "utils/log.h"
 
 #include <algorithm>
+#include <cstring>
 
+#include <bento4/Ap4PsshAtom.h>
 #include <bento4/Ap4SencAtom.h>
 
 using namespace UTILS;
@@ -417,9 +420,27 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
 
         if (!rotatedKid.empty() && !IsAllZeroKey(rotatedKid))
         {
-          if (rotatedKid != m_defaultKey)
+          // Re-run while the KID is new OR while the decrypter still has no usable
+          // key for it. RenewSessionForKey queues an asynchronous license request
+          // (it returns immediately, key arrives later on a worker thread), so we
+          // adopt the new KID optimistically and keep asking on later fragments
+          // until the key is actually usable. This gives a real retry when a
+          // renewal transiently fails, instead of switching once and freezing the
+          // period. HasUsableKey/RenewSessionForKey default to "yes"/no-op on
+          // decrypters without in-band rotation (ClearKey etc.), so this loop ends
+          // immediately for them. Dedup inside RenewSessionForKey prevents piling up
+          // duplicate requests for the same KID.
+          const bool needKey =
+              m_singleSampleDecryptor && m_singleSampleDecryptor->NeedsKeyRenewal(rotatedKid);
+          if (rotatedKid != m_defaultKey || needKey)
           {
-            LOG::LogF(LOGDEBUG, "Updated in-band KID from SEIG box");
+            if (rotatedKid != m_defaultKey)
+              LOG::LogF(LOGDEBUG, "Updated in-band KID from SEIG box");
+            // Only build the PSSH and queue a renewal when actually needed (no usable
+            // key yet and not already given up); dedup inside RenewSessionForKey keeps
+            // this from piling up duplicate work while we wait.
+            if (needKey)
+              m_singleSampleDecryptor->RenewSessionForKey(rotatedKid, ParseMoofPssh(moof));
             m_defaultKey = rotatedKid;
           }
         }
@@ -659,6 +680,52 @@ std::vector<uint8_t> CFragmentedSampleReader::ParseTrafSgpd(AP4_ContainerAtom* t
       if (firstKid.size() == 16)
         return firstKid;
     }
+  }
+
+  return {};
+}
+
+std::vector<uint8_t> CFragmentedSampleReader::ParseMoofPssh(AP4_ContainerAtom* moof)
+{
+  // In-band key rotation: each crypto period carries its own Widevine PSSH box.
+  // It normally sits as a direct child of the moof, but some packagers place it
+  // inside the traf, so search both. Return the proto payload (Data field) of the
+  // Widevine box; a common-system PSSH (1077efec-...) may sit next to it and is
+  // skipped.
+  auto findWidevinePssh = [](AP4_ContainerAtom* container) -> std::vector<uint8_t>
+  {
+    AP4_Atom* childAtom{nullptr};
+    unsigned int atomIndex{0};
+    while ((childAtom = container->GetChild(AP4_ATOM_TYPE_PSSH, atomIndex++)) != nullptr)
+    {
+      AP4_PsshAtom* pssh = AP4_DYNAMIC_CAST(AP4_PsshAtom, childAtom);
+      if (!pssh)
+        continue;
+
+      if (std::memcmp(pssh->GetSystemId(), DRM::ID_WIDEVINE, 16) != 0)
+        continue;
+
+      const AP4_DataBuffer& data = pssh->GetData();
+      return std::vector<uint8_t>(data.GetData(), data.GetData() + data.GetDataSize());
+    }
+    return {};
+  };
+
+  std::vector<uint8_t> pssh = findWidevinePssh(moof);
+  if (!pssh.empty())
+    return pssh;
+
+  AP4_Atom* trafAtom{nullptr};
+  unsigned int trafIndex{0};
+  while ((trafAtom = moof->GetChild(AP4_ATOM_TYPE_TRAF, trafIndex++)) != nullptr)
+  {
+    AP4_ContainerAtom* traf = AP4_DYNAMIC_CAST(AP4_ContainerAtom, trafAtom);
+    if (!traf)
+      continue;
+
+    pssh = findWidevinePssh(traf);
+    if (!pssh.empty())
+      return pssh;
   }
 
   return {};

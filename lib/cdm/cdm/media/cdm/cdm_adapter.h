@@ -42,6 +42,12 @@ public:
 
   virtual void OnCDMMessage(const char* session, uint32_t session_size, CDMADPMSG msg, const uint8_t *data, size_t data_size, uint32_t status) = 0;
   virtual cdm::Buffer *AllocateBuffer(size_t sz) = 0;
+
+  // In-band key rotation: the client may serialize all entries into the single-
+  // threaded CDM with a mutex. Returning it here lets the CDM adapter guard the
+  // timer-driven TimerExpired path too (it otherwise runs on an async thread and
+  // would race Decrypt/UpdateSession). Default null = no external serialization.
+  virtual std::mutex* GetCdmMutex() { return nullptr; }
 };
 
 class CdmVideoFrame : public cdm::VideoFrame, public cdm::VideoFrame_2 {

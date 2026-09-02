@@ -12,9 +12,13 @@
 #include "cdm/media/cdm/api/content_decryption_module.h"
 #include "common/AdaptiveCencSampleDecrypter.h"
 
+#include <atomic>
+#include <condition_variable>
+#include <deque>
 #include <list>
 #include <mutex>
 #include <optional>
+#include <thread>
 
 class CWVDecrypter;
 class CWVCdmAdapter;
@@ -42,6 +46,10 @@ public:
                        uint32_t media,
                        DecrypterCapabilites& caps);
   virtual const char* GetSessionId() override;
+  // Compare the given CDM session id against m_strSession under m_renewalLock (safe
+  // against a concurrent in-band renewal clearing the id). Empty id matches, so a
+  // renewing decrypter still receives its new session's first message.
+  bool SessionIdMatches(const char* session, uint32_t sessionSize);
   void CloseSessionId();
   AP4_DataBuffer GetChallengeData();
 
@@ -49,6 +57,8 @@ public:
 
   void AddSessionKey(const uint8_t* data, size_t dataSize, uint32_t status);
   bool HasKeyId(const std::vector<uint8_t>& keyid);
+  bool HasUsableKey(const std::vector<uint8_t>& keyId);
+  bool NeedsKeyRenewal(const std::vector<uint8_t>& keyId) override;
 
   virtual AP4_Result SetFragmentInfo(AP4_UI32 poolId,
                                      const std::vector<uint8_t>& keyId,
@@ -84,10 +94,20 @@ public:
   void ResetVideo();
   void SetDefaultKeyId(const std::vector<uint8_t>& keyId) override;
   void AddKeyId(const std::vector<uint8_t>& keyId) override;
+  bool RenewSessionForKey(const std::vector<uint8_t>& keyId,
+                          const std::vector<uint8_t>& psshData) override;
 
 private:
   void CheckLicenseRenewal();
   bool SendSessionMessage();
+
+  // In-band key rotation renewal runs on a dedicated worker thread so the reader
+  // (demux) thread that calls RenewSessionForKey never blocks on the license HTTP
+  // round-trip. Requests are queued (deduplicated by KID) and processed one at a
+  // time; the actual synchronous renewal lives in DoRenewSession.
+  void StartRenewalThread();
+  void RenewalThreadLoop();
+  bool DoRenewSession(const std::vector<uint8_t>& keyId, const std::vector<uint8_t>& psshData);
 
   CWVCdmAdapter& m_wvCdmAdapter;
   std::string m_strSession;
@@ -101,6 +121,7 @@ private:
     cdm::KeyStatus status;
   };
   std::vector<WVSKEY> m_keys;
+  std::mutex m_keysLock; // guards m_keys (written from the CDM callback thread)
 
   AP4_UI16 m_hdcpVersion;
   int m_hdcpLimit;
@@ -138,11 +159,28 @@ private:
                 const uint8_t* iv,
                 const FINFO& fragInfo,
                 const std::vector<cdm::SubsampleEntry>& subsamples);
-  uint32_t m_promiseId;
+  std::atomic<uint32_t> m_promiseId;
   bool m_isDrained;
 
   std::list<media::CdmVideoFrame> m_videoFrames;
   std::mutex m_renewalLock;
+  std::mutex m_sessionActionLock; // serializes in-band and automatic license renewals
+
+  // Async in-band renewal worker (see StartRenewalThread / RenewalThreadLoop).
+  std::thread m_renewalThread;
+  std::mutex m_renewalQueueLock;
+  std::condition_variable m_renewalQueueCv;
+  struct RenewalRequest
+  {
+    std::vector<uint8_t> keyId;
+    std::vector<uint8_t> pssh;
+    int attempts{0}; // total attempts across re-queues, for the give-up cap
+  };
+  std::deque<RenewalRequest> m_renewalQueue;
+  std::vector<std::vector<uint8_t>> m_renewalPending; // KIDs awaiting a key (VC_NONE while present)
+  std::vector<std::vector<uint8_t>> m_renewalGaveUp; // KIDs whose renewal was permanently abandoned
+  bool m_renewalThreadStarted{false};
+  std::atomic<bool> m_renewalStop{false};
   CryptoMode m_EncryptionMode;
 
   std::optional<cdm::VideoDecoderConfig_3> m_currentVideoDecConfig;
