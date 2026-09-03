@@ -21,6 +21,7 @@
 #include "decrypters/Helpers.h"
 #include "utils/Bento4Utils.h"
 #include "utils/CharArrayParser.h"
+#include "utils/StringUtils.h"
 #include "utils/Utils.h"
 #include "utils/log.h"
 
@@ -420,22 +421,22 @@ AP4_Result CFragmentedSampleReader::ProcessMoof(AP4_ContainerAtom* moof,
 
         if (!rotatedKid.empty() && !IsAllZeroKey(rotatedKid))
         {
-          // Re-run while the KID is new OR while the decrypter still has no usable
-          // key for it. RenewSessionForKey queues an asynchronous license request
-          // (it returns immediately, key arrives later on a worker thread), so we
-          // adopt the new KID optimistically and keep asking on later fragments
-          // until the key is actually usable. This gives a real retry when a
-          // renewal transiently fails, instead of switching once and freezing the
-          // period. HasUsableKey/RenewSessionForKey default to "yes"/no-op on
-          // decrypters without in-band rotation (ClearKey etc.), so this loop ends
-          // immediately for them. Dedup inside RenewSessionForKey prevents piling up
-          // duplicate requests for the same KID.
+          // Act when the KID is new OR while the decrypter still has no usable key for
+          // it. RenewSessionForKey queues an asynchronous license request (returns
+          // immediately, key arrives later on a worker thread), so we adopt the new KID
+          // optimistically and keep asking on later fragments until the key is actually
+          // usable. This gives a real retry when a renewal transiently fails, instead of
+          // switching once and freezing the period. NeedsKeyRenewal defaults to false on
+          // decrypters without in-band rotation (ClearKey etc.), so nothing happens for
+          // them. Dedup inside RenewSessionForKey prevents piling up duplicate requests
+          // for the same KID.
           const bool needKey =
               m_singleSampleDecryptor && m_singleSampleDecryptor->NeedsKeyRenewal(rotatedKid);
           if (rotatedKid != m_defaultKey || needKey)
           {
             if (rotatedKid != m_defaultKey)
-              LOG::LogF(LOGDEBUG, "Updated in-band KID from SEIG box");
+              LOG::LogF(LOGDEBUG, "Updated in-band KID from SEIG box: %s",
+                        STRING::ToHexadecimal(rotatedKid).c_str());
             // Only build the PSSH and queue a renewal when actually needed (no usable
             // key yet and not already given up); dedup inside RenewSessionForKey keeps
             // this from piling up duplicate work while we wait.
@@ -655,34 +656,31 @@ std::vector<uint8_t> CFragmentedSampleReader::ParseTrafSgpd(AP4_ContainerAtom* t
     break; // Assume that only a single SGPD can contain SEIG
   }
 
-  // This reader applies a single KID to the whole fragment and does not consult
-  // the SBGP sample-to-group mapping, so multiple protected entries with different
-  // KIDs are not fully supported; warn once rather than silently pick the wrong key.
-  if (!m_multiKeyWarned)
-  {
-    size_t protectedCount{0};
-    for (const auto& entry : seigEntries)
-      if (entry.isProtected && !entry.keySets.empty())
-        ++protectedCount;
-    if (protectedCount > 1)
-    {
-      m_multiKeyWarned = true;
-      LOG::LogF(LOGWARNING, "SEIG box has %zu protected entries; only the first KID is used",
-                protectedCount);
-    }
-  }
-
+  // This reader applies a single KID to the whole fragment and does not consult the
+  // SBGP sample-to-group mapping, so multiple protected entries with different KIDs are
+  // not fully supported. In one pass pick the first protected 16-byte KID and count the
+  // protected entries, warning once if there is more than one rather than silently
+  // picking the wrong key.
+  std::vector<uint8_t> firstKid;
+  size_t protectedCount{0};
   for (const auto& entry : seigEntries)
   {
     if (entry.isProtected && !entry.keySets.empty())
     {
-      const auto& firstKid = entry.keySets.front().kid;
-      if (firstKid.size() == 16)
-        return firstKid;
+      ++protectedCount;
+      if (firstKid.empty() && entry.keySets.front().kid.size() == 16)
+        firstKid = entry.keySets.front().kid;
     }
   }
 
-  return {};
+  if (protectedCount > 1 && !m_multiKeyWarned)
+  {
+    m_multiKeyWarned = true;
+    LOG::LogF(LOGWARNING, "SEIG box has %zu protected entries; only the first KID is used",
+              protectedCount);
+  }
+
+  return firstKid;
 }
 
 std::vector<uint8_t> CFragmentedSampleReader::ParseMoofPssh(AP4_ContainerAtom* moof)

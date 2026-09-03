@@ -33,7 +33,8 @@ std::vector<CencSeigGroupEntry> UTILS::BENTO4::FMP4SgpdAtom::GetSeigEntries()
     AP4_MemoryByteStream stream(data->GetData(), data->GetDataSize());
     BENTO4::CencSeigGroupEntry entry;
 
-    // First byte: multi_key_flag (1 bit) + reserved (7 bit)
+    // First byte: multi_key_flag (1 bit) + reserved (7 bit). Bits 0-6 are reserved and
+    // per spec ignored rather than rejected (some muxers set them).
     AP4_UI08 firstByte;
     AP4_Result res = stream.ReadUI08(firstByte);
     if (AP4_FAILED(res))
@@ -41,13 +42,10 @@ std::vector<CencSeigGroupEntry> UTILS::BENTO4::FMP4SgpdAtom::GetSeigEntries()
       LOG::LogF(LOGERROR, "Failed to parse multi_key_flag from SEIG group desc entry");
       continue;
     }
-    entry.multiKeyFlag = (firstByte & 0x80) != 0; // Bit 7 (MSB)
-    // Bits 0-6 are reserved; per spec a decoder ignores them rather than
-    // rejecting the entry (some muxers set them), so we only note it.
-    if ((firstByte & 0x7F) != 0)
-      LOG::LogF(LOGDEBUG, "Non-zero reserved bits in SEIG group desc entry");
+    const bool multiKeyFlag = (firstByte & 0x80) != 0; // Bit 7 (MSB)
 
-    // Second byte: crypt_byte_block (4 bit MSB) + skip_byte_block (4 bit LSB)
+    // Second byte: crypt_byte_block + skip_byte_block. Read to advance the stream only;
+    // this reader applies one KID per fragment and does not use the encryption pattern.
     AP4_UI08 secondByte;
     res = stream.ReadUI08(secondByte);
     if (AP4_FAILED(res))
@@ -56,8 +54,6 @@ std::vector<CencSeigGroupEntry> UTILS::BENTO4::FMP4SgpdAtom::GetSeigEntries()
                 "Failed to parse crypt_byte_block/skip_byte_block from SEIG group desc entry");
       continue;
     }
-    entry.cryptByteBlock = (secondByte >> 4) & 0x0F;
-    entry.skipByteBlock = secondByte & 0x0F;
 
     // Third byte: isProtected (8 bit)
     res = stream.ReadUI08(entry.isProtected);
@@ -69,7 +65,7 @@ std::vector<CencSeigGroupEntry> UTILS::BENTO4::FMP4SgpdAtom::GetSeigEntries()
 
     // Key count
     uint16_t keyCount = 1;
-    if (entry.multiKeyFlag)
+    if (multiKeyFlag)
     {
       AP4_UI16 value; // 16 bit
       res = stream.ReadUI16(value);
@@ -81,13 +77,15 @@ std::vector<CencSeigGroupEntry> UTILS::BENTO4::FMP4SgpdAtom::GetSeigEntries()
       keyCount = value;
     }
 
-    // Read key sets. On any short read the remaining bytes of this entry are
-    // gone, so stop reading further key sets (break, not continue).
+    // Read key sets. On any short read the remaining bytes of this entry are gone, so
+    // stop reading further key sets (break, not continue). Only the KID is kept;
+    // per_sample_iv_size and constant_IV are read purely to advance the stream.
     for (uint16_t k = 0; k < keyCount; ++k)
     {
       BENTO4::CencSeigKeySet kset;
 
-      res = stream.ReadUI08(kset.perSampleIvSize);
+      AP4_UI08 perSampleIvSize;
+      res = stream.ReadUI08(perSampleIvSize);
       if (AP4_FAILED(res))
       {
         LOG::LogF(LOGERROR, "Failed to parse Per_Sample_IV_Size from SEIG group desc entry");
@@ -104,19 +102,20 @@ std::vector<CencSeigGroupEntry> UTILS::BENTO4::FMP4SgpdAtom::GetSeigEntries()
 
       // constant_IV is present only for protected key sets with no per-sample IV
       // (ISO/IEC 23001-7). For multi-key entries the per-set flag governs it.
-      if (kset.perSampleIvSize == 0 && (entry.multiKeyFlag || entry.isProtected != 0))
+      if (perSampleIvSize == 0 && (multiKeyFlag || entry.isProtected != 0))
       {
-        res = stream.ReadUI08(kset.constantIvSize);
+        AP4_UI08 constantIvSize;
+        res = stream.ReadUI08(constantIvSize);
         if (AP4_FAILED(res))
         {
           LOG::LogF(LOGERROR, "Failed to parse constant_IV_size from SEIG group desc entry");
           break;
         }
 
-        if (kset.constantIvSize > 0)
+        if (constantIvSize > 0)
         {
-          kset.constantIv.resize(kset.constantIvSize);
-          res = stream.Read(kset.constantIv.data(), kset.constantIvSize);
+          std::vector<std::uint8_t> constantIv(constantIvSize);
+          res = stream.Read(constantIv.data(), constantIvSize);
           if (AP4_FAILED(res))
           {
             LOG::LogF(LOGERROR, "Failed to parse constant_IV from SEIG group desc entry");

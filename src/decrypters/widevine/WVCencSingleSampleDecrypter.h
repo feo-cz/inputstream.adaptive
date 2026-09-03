@@ -94,7 +94,7 @@ public:
   void ResetVideo();
   void SetDefaultKeyId(const std::vector<uint8_t>& keyId) override;
   void AddKeyId(const std::vector<uint8_t>& keyId) override;
-  bool RenewSessionForKey(const std::vector<uint8_t>& keyId,
+  void RenewSessionForKey(const std::vector<uint8_t>& keyId,
                           const std::vector<uint8_t>& psshData) override;
 
 private:
@@ -179,7 +179,6 @@ private:
   std::deque<RenewalRequest> m_renewalQueue;
   std::vector<std::vector<uint8_t>> m_renewalPending; // KIDs awaiting a key (VC_NONE while present)
   std::vector<std::vector<uint8_t>> m_renewalGaveUp; // KIDs whose renewal was permanently abandoned
-  bool m_renewalThreadStarted{false};
   std::atomic<bool> m_renewalStop{false};
   CryptoMode m_EncryptionMode;
 

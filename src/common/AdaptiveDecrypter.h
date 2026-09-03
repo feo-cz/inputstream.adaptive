@@ -42,16 +42,14 @@ public:
    *  \param keyId    the rotated KID read from the SEIG box of the current fragment
    *  \param psshData Widevine PSSH proto payload (the Data field of the moof pssh
    *                  box), or empty if the segment carries no Widevine PSSH
-   *  \return true if a usable key for keyId is now available (so the caller may
-   *          switch to it); false if it could not be obtained (caller should keep
-   *          the previous key and retry on a later fragment).
-   *  Default: returns true so decrypters that do not implement in-band rotation
-   *  (ClearKey, widevineandroid) keep their unchanged behaviour.
+   *  The request is served asynchronously; the reader keeps calling NeedsKeyRenewal
+   *  on later fragments until the key is actually usable, so there is nothing to
+   *  return. Default: no-op, so decrypters without in-band rotation (ClearKey,
+   *  widevineandroid) keep their unchanged behaviour.
    */
-  virtual bool RenewSessionForKey(const std::vector<uint8_t>& keyId,
+  virtual void RenewSessionForKey(const std::vector<uint8_t>& keyId,
                                   const std::vector<uint8_t>& psshData)
   {
-    return true;
   }
 
   /*! \brief In-band key rotation: should the reader (re)request a license for keyId?

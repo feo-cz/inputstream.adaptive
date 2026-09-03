@@ -93,13 +93,6 @@ public:
     std::lock_guard<std::mutex> lock(m_cdmLock);
     wv_adapter->CloseSession(promiseId, sessionId, sessionIdSize);
   }
-  cdm::Status CdmDecrypt(const cdm::InputBuffer_2& in, cdm::DecryptedBlock* out)
-  {
-    // Not holding m_cdmLock (see DecryptAndDecodeFrame): decrypt must not stall on an
-    // in-band renewal. CDM's decrypt_mutex_ still guards decrypt calls against each other.
-    return wv_adapter->Decrypt(in, out);
-  }
-
   cdm::Status DecryptAndDecodeFrame(cdm::InputBuffer_2& cdm_in,
                                     media::CdmVideoFrame* frame,
                                     kodi::addon::CInstanceVideoCodec* codecInstance)
@@ -108,13 +101,8 @@ public:
     // that cast hostInstance to CInstanceVideoCodec to get the frame buffer
     // so we have temporary set the host instance
     //
-    // NOTE: intentionally NOT holding m_cdmLock here. Serializing decoding against
-    // in-band renewal (UpdateSession, ~1 s) stalls playback at every key rotation.
-    // The CDM's own decrypt_mutex_ still serializes decode calls against each other;
-    // decode is only run from the single decode thread. This trades the strict
-    // single-thread CDM contract (decode may overlap a renewal session op) for smooth
-    // playback - acceptable on this device's L3 CDM (empirically stable). For an
-    // upstream build keep the lock.
+    // Intentionally NOT holding m_cdmLock (see GetCdmLock): decode must not stall on a
+    // ~1 s in-band renewal. The CDM's own decrypt_mutex_ still serializes decode.
     m_codecInstance = codecInstance;
     cdm::Status ret = wv_adapter->DecryptAndDecodeFrame(cdm_in, frame);
     m_codecInstance = nullptr;

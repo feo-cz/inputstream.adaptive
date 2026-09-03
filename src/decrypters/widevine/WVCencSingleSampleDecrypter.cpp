@@ -256,9 +256,9 @@ void CWVCencSingleSampleDecrypter::GetCapabilities(const std::vector<uint8_t>& k
 
 const char* CWVCencSingleSampleDecrypter::GetSessionId()
 {
-  // Read under the same lock that guards writes to m_strSession (SetSession and the
-  // in-band renewal clear/restore).
-  std::lock_guard<std::mutex> lock(m_renewalLock);
+  // Returns a raw pointer into m_strSession; a lock here would not protect the caller
+  // once it is released, so message routing that must be safe against a concurrent
+  // in-band renewal uses SessionIdMatches (compares under m_renewalLock) instead.
   return m_strSession.empty() ? nullptr : m_strSession.c_str();
 }
 
@@ -1084,7 +1084,11 @@ AP4_Result CWVCencSingleSampleDecrypter::DecryptSampleData(AP4_UI32 poolId,
     cdmOut.SetDecryptedBuffer(&buf);
 
     CheckLicenseRenewal();
-    ret = m_wvCdmAdapter.CdmDecrypt(cdmIn, &cdmOut);
+    // Decrypt is intentionally NOT serialized by m_cdmLock: serializing decode against
+    // a ~1 s in-band renewal (UpdateSession) stalls playback at every key rotation. The
+    // CDM's own decrypt_mutex_ still serializes decode calls against each other, and
+    // decode runs only from the single decode thread. For an upstream build keep a lock.
+    ret = m_wvCdmAdapter.GetCdmAdapter()->Decrypt(cdmIn, &cdmOut);
 
     if (ret == cdm::Status::kSuccess)
     {
@@ -1282,37 +1286,36 @@ void CWVCencSingleSampleDecrypter::AddKeyId(const std::vector<uint8_t>& keyId)
   }
 }
 
-bool CWVCencSingleSampleDecrypter::RenewSessionForKey(const std::vector<uint8_t>& keyId,
+void CWVCencSingleSampleDecrypter::RenewSessionForKey(const std::vector<uint8_t>& keyId,
                                                       const std::vector<uint8_t>& psshData)
 {
   // Called on the reader (demux) thread while filling the buffer. Must NOT block on
   // the license HTTP round-trip, otherwise a run of new periods stalls demux and the
   // playback stutters at the start. Queue the request and let the worker thread do
-  // the renewal in parallel, with a head start over the decode position. Returns true
-  // so the caller adopts the new KID optimistically - the key follows asynchronously.
+  // the renewal in parallel, with a head start over the decode position; the key
+  // follows asynchronously and the reader keeps polling via NeedsKeyRenewal.
   if (HasUsableKey(keyId))
-    return true;
+    return;
 
   if (psshData.empty())
   {
     LOG::LogF(LOGWARNING, "In-band renewal: no Widevine PSSH in segment for KID %s",
               STRING::ToHexadecimal(keyId).c_str());
-    return true; // nothing to queue, but do not stall the reader
+    return; // nothing to queue
   }
 
   {
     std::lock_guard<std::mutex> lock(m_renewalQueueLock);
     // Skip if this KID is already awaiting a key (dedup) or was permanently given up.
     if (std::find(m_renewalPending.begin(), m_renewalPending.end(), keyId) != m_renewalPending.end())
-      return true;
+      return;
     if (std::find(m_renewalGaveUp.begin(), m_renewalGaveUp.end(), keyId) != m_renewalGaveUp.end())
-      return true;
+      return;
     m_renewalPending.push_back(keyId);
-    m_renewalQueue.push_back(RenewalRequest{keyId, psshData, 0});
+    m_renewalQueue.push_back(RenewalRequest{keyId, psshData});
   }
   StartRenewalThread();
   m_renewalQueueCv.notify_one();
-  return true;
 }
 
 bool CWVCencSingleSampleDecrypter::NeedsKeyRenewal(const std::vector<uint8_t>& keyId)
@@ -1330,15 +1333,14 @@ bool CWVCencSingleSampleDecrypter::NeedsKeyRenewal(const std::vector<uint8_t>& k
 void CWVCencSingleSampleDecrypter::StartRenewalThread()
 {
   std::lock_guard<std::mutex> lock(m_renewalQueueLock);
-  // Also honour m_renewalStop: if the destructor already set it (and possibly passed
-  // its joinable() check), we must not spin up a worker on an object being torn down.
-  if (m_renewalThreadStarted || m_renewalStop)
+  // joinable() is the "already started" flag: the worker is never detached and runs
+  // until join() in the destructor. Also honour m_renewalStop: if the destructor
+  // already set it (and possibly passed its joinable() check), we must not spin up a
+  // worker on an object being torn down. If std::thread throws (resource exhaustion),
+  // m_renewalThread stays non-joinable so a later request can retry.
+  if (m_renewalThread.joinable() || m_renewalStop)
     return;
-  // Set the flag only after the thread is successfully constructed: if std::thread
-  // throws (resource exhaustion), the flag stays false so a later request can retry,
-  // and the exception does not leak to the demux thread with the flag latched true.
   m_renewalThread = std::thread(&CWVCencSingleSampleDecrypter::RenewalThreadLoop, this);
-  m_renewalThreadStarted = true;
 }
 
 void CWVCencSingleSampleDecrypter::RenewalThreadLoop()
